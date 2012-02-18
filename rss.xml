@@ -84,6 +84,13 @@
     <pubDate>No date found.</pubDate>
     <guid>http://8c6794b6.github.com/posts/2012-01-22_loading-dph-codes-in-ghci.html</guid>
 </item>
+<item>
+    <title>Serialization in a hurry</title>
+    <link>http://8c6794b6.github.com/posts/2012-02-18_serialization_in_a_hurry.html</link>
+    <description><![CDATA[Serializing user defined data in a hurry]]></description>
+    <pubDate>No date found.</pubDate>
+    <guid>http://8c6794b6.github.com/posts/2012-02-18_serialization_in_a_hurry.html</guid>
+</item>
 
     </channel> 
 </rss>
