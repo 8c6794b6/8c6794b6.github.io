@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>8c6794b6.github.com - Serialization in a hurry</title>
+    <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon">
+    <link rel="icon" href="favicon.ico" type="image/ico">
+    <link rel="stylesheet" type="text/css" href="../css/style.css">
+    <link rel="stylesheet" type="text/css" href="../css/hk-tango.css">
+    <link rel="alternate" type="application/rss+xml" title="8c6794b6" href="../rss.xml">
+  </head>
+  <body>
+    <div>
+      <div id="site_name">
+        <div id="site_name_contents">
+          <a href="../">8c6794b6.github.com</a>
+        </div>
+      </div>
+
+      <div id="header">
+        <div id="header_contents">
+          <div id="navigation">
+            <a href="../index.html">Home</a>
+            <a href="../archive.html">Archive</a>
+            <a href="../rss.xml">RSS</a>
+          </div>
+        </div>
+      </div>
+
+      <div id="content">
+
+        <h1>Serialization in a hurry</h1>
+<div id="post_date">
+  <strong>Feburary 18, 2012</strong>
+</div>
+
+<div id="post_body">
+<p>I need to serialize below data in 5 minutes:</p>
+<pre><code>| data Foo = Foo
+|  { one   :: Int
+|  , two   :: (Maybe Double, String)
+|  , three :: Vector Double
+|  }
+</code></pre>
+<p>Requires ghc–7.2.2 or above, and <a href="http://hackage.haskell.org/package/cereal">cereal</a> package.</p>
+<pre class="sourceCode"><code class="sourceCode haskell">&gt; <span class="ot">{-# LANGUAGE DeriveGeneric #-}</span><br />&gt; <span class="kw">module</span> <span class="dt">SerializationInAHurry</span> <span class="kw">where</span></code></pre>
+<p>We are using <code>DeriveGeneric</code> language pragma.</p>
+<pre class="sourceCode"><code class="sourceCode haskell">&gt; <span class="kw">import</span> <span class="dt">GHC.Generics</span><br />&gt; <span class="kw">import</span> <span class="dt">Data.Serialize</span><br />&gt; <span class="kw">import</span> <span class="dt">Data.Vector</span> (<span class="dt">Vector</span>(<span class="fu">..</span>))<br />&gt; <span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Data.ByteString</span> <span class="kw">as</span> <span class="dt">B</span><br />&gt; <span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Data.Vector</span> <span class="kw">as</span> <span class="dt">V</span></code></pre>
+<p>The target data type to serialize.</p>
+<pre class="sourceCode"><code class="sourceCode haskell">&gt; <span class="kw">data</span> <span class="dt">Foo</span> <span class="fu">=</span> <span class="dt">Foo</span><br />&gt;  {<span class="ot"> one   </span><span class="ot">::</span> <span class="dt">Int</span><br />&gt;  ,<span class="ot"> two   </span><span class="ot">::</span> (<span class="dt">Maybe</span> <span class="dt">Double</span>, <span class="dt">String</span>)<br />&gt;  ,<span class="ot"> three </span><span class="ot">::</span> <span class="dt">Vector</span> <span class="dt">Double</span><br />&gt;  } <span class="kw">deriving</span> (<span class="dt">Generic</span>, <span class="kw">Show</span>, <span class="kw">Eq</span>)</code></pre>
+<p>And sample data with target data type.</p>
+<pre class="sourceCode"><code class="sourceCode haskell">&gt; <span class="ot">foo1 </span><span class="ot">::</span> <span class="dt">Foo</span><br />&gt; foo1 <span class="fu">=</span> <span class="dt">Foo</span><br />&gt;   { one   <span class="fu">=</span> <span class="dv">100</span><br />&gt;   , two   <span class="fu">=</span> (<span class="kw">Just</span> <span class="dv">8</span><span class="fu">.</span><span class="dv">5</span>, <span class="st">&quot;eight point five&quot;</span>)<br />&gt;   , three <span class="fu">=</span> V.fromList [<span class="dv">11</span>,<span class="dv">13</span><span class="fu">..</span><span class="dv">21</span>]<br />&gt;   }</code></pre>
+<p>As haddock document in cereal package notes, when the target data type has <code>Generic</code> instance, <code>Serialize</code> class will use it. What we need is to make instance of <code>Serialize</code> with empty body.</p>
+<p><code>Data.Generics.Generic</code> class has couple instances already defined.</p>
+<pre><code>| instance Generic [a] -- Defined in `GHC.Generics'
+| instance Generic Ordering -- Defined in `GHC.Generics'
+| instance Generic Int -- Defined in `GHC.Generics'
+| instance Generic Float -- Defined in `GHC.Generics'
+| instance Generic Double -- Defined in `GHC.Generics'
+| instance Generic Char -- Defined in `GHC.Generics'
+| instance Generic Bool -- Defined in `GHC.Generics'
+| instance Generic (Maybe a) -- Defined in `Data.Maybe'
+| instance Generic (Either a b) -- Defined in `Data.Either'
+| instance Generic (a, b, c, d, e, f, g) -- Defined in `GHC.Tuple'
+| instance Generic (a, b, c, d, e, f) -- Defined in `GHC.Tuple'
+| instance Generic (a, b, c, d, e) -- Defined in `GHC.Tuple'
+| instance Generic (a, b, c, d) -- Defined in `GHC.Tuple'
+| instance Generic (a, b, c) -- Defined in `GHC.Tuple'
+| instance Generic (a, b) -- Defined in `GHC.Tuple'
+| instance Generic () -- Defined in `GHC.Tuple'
+</code></pre>
+<p>The only missing definition we need is:</p>
+<pre class="sourceCode"><code class="sourceCode haskell">&gt; <span class="kw">instance</span> <span class="dt">Serialize</span> a <span class="ot">=&gt;</span> <span class="dt">Serialize</span> (<span class="dt">Vector</span> a) <span class="kw">where</span><br />&gt;   put <span class="fu">=</span> put <span class="ot">`fmap`</span> V.toList<br />&gt;   get <span class="fu">=</span> V.fromList <span class="ot">`fmap`</span> get</code></pre>
+<p>There should be other way which shows better performance for serializing <code>Vector</code>, but recall the title of this post. Now we are ready to serialize.</p>
+<pre class="sourceCode"><code class="sourceCode haskell">&gt; <span class="kw">instance</span> <span class="dt">Serialize</span> <span class="dt">Foo</span></code></pre>
+<p>Testing it with write to file, reading from the file and comparing with original:</p>
+<pre class="sourceCode"><code class="sourceCode haskell">&gt; <span class="ot">main </span><span class="ot">::</span> <span class="dt">IO</span> ()<br />&gt; main <span class="fu">=</span> <span class="kw">do</span><br />&gt;   <span class="kw">let</span> file <span class="fu">=</span> <span class="st">&quot;foo1.data&quot;</span><br />&gt;   B.writeFile file (encode foo1)<br />&gt;   res <span class="ot">&lt;-</span> decode <span class="ot">`fmap`</span> B.readFile<span class="ot"> file </span><span class="ot">::</span> <span class="dt">IO</span> (<span class="dt">Either</span> <span class="dt">String</span> <span class="dt">Foo</span>)<br />&gt;   <span class="kw">case</span> res <span class="kw">of</span><br />&gt;      <span class="kw">Right</span> foo1' <span class="ot">-&gt;</span> <span class="fu">print</span> <span class="fu">$</span> foo1 <span class="fu">==</span> foo1'<br />&gt;      <span class="kw">Left</span>  err   <span class="ot">-&gt;</span> <span class="fu">error</span> err</code></pre>
+<p>Result:</p>
+<pre><code>| ghci&gt; main
+| True
+</code></pre>
+</div>
+
+<div class="post_tags">
+  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/generic.html">generic</a>, <a href="../tags/ghc.html">ghc</a>
+</div>
+
+
+      </div>
+      <div id="footer">
+        <div id="footer_content">
+          <p>
+            <a href="../index.html">Home</a> |
+            <a href="../archive.html">Archive</a> |
+            <a href="../rss.xml">RSS</a>
+          </p>
+
+          Site contents licensed under
+          <a href="http://creativecommons.org/licenses/by/3.0/">
+            CC Attribution 3.0
+          </a>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
