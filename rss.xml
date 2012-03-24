@@ -8,6 +8,13 @@
                    type="application/rss+xml" />
         <lastBuildDate>No date found.</lastBuildDate>
         <item>
+    <title>*</title>
+    <link>http://8c6794b6.github.com/posts/*.html</link>
+    <description><![CDATA[$description$]]></description>
+    <pubDate>No date found.</pubDate>
+    <guid>http://8c6794b6.github.com/posts/*.html</guid>
+</item>
+<item>
     <title>What to count in source code</title>
     <link>http://8c6794b6.github.com/posts/2011-10-21_what-to-count-in_source_code.html</link>
     <description><![CDATA[Counting expressions in haskell source code]]></description>
