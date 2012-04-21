@@ -112,6 +112,13 @@
     <pubDate>No date found.</pubDate>
     <guid>http://8c6794b6.github.com/posts/2012-04-21_howto_manage_this_site.html</guid>
 </item>
+<item>
+    <title>Cause of 3 nano seconds difference</title>
+    <link>http://8c6794b6.github.com/posts/2012-04-22_cause_of_3_nano_seconds.html</link>
+    <description><![CDATA[Seeking for faster way than looping with unboxed vector.]]></description>
+    <pubDate>No date found.</pubDate>
+    <guid>http://8c6794b6.github.com/posts/2012-04-22_cause_of_3_nano_seconds.html</guid>
+</item>
 
     </channel> 
 </rss>
