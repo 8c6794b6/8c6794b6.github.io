@@ -119,6 +119,13 @@
     <pubDate>No date found.</pubDate>
     <guid>http://8c6794b6.github.com/posts/2012-04-22_cause_of_3_nano_seconds.html</guid>
 </item>
+<item>
+    <title>Guard, case, and pattern match</title>
+    <link>http://8c6794b6.github.com/posts/2012-05-27-guard_case_patmatch.html</link>
+    <description><![CDATA[Comparision of performance difference in guard, case, and pattern match]]></description>
+    <pubDate>Sun, 27 May 2012 00:00:00 UT</pubDate>
+    <guid>http://8c6794b6.github.com/posts/2012-05-27-guard_case_patmatch.html</guid>
+</item>
 
     </channel> 
 </rss>
