@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>8c6794b6.github.com - Mapping 'show' to tuples with TH</title>
+    <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon">
+    <link rel="icon" href="favicon.ico" type="image/ico">
+    <link rel="stylesheet" type="text/css" href="../css/style.css">
+    <link rel="stylesheet" type="text/css" href="../css/hk-tango.css">
+    <link rel="alternate" type="application/rss+xml" title="8c6794b6" href="../rss.xml">
+  </head>
+  <body>
+    <div>
+      <div id="header">
+        <div id="header_contents">
+          <div id="header_left">
+            <a href="../">8c6794b6.github.com</a>
+          </div>
+          <div id="navigation">
+            <a href="../index.html">Home</a>
+            <a href="../archive.html">Archive</a>
+            <a href="../rss.xml">RSS</a>
+          </div>
+        </div>
+      </div>
+
+      <div id="content">
+
+        <h1>Mapping 'show' to tuples with TH</h1>
+<div id="post_date">
+  <strong>May 28, 2012</strong>
+</div>
+
+<div id="post_body">
+<p>Consider:</p>
+<pre><code>&gt; mapM_ putStrLn [show 1, show (1,2), show (1,2,3), show (1,2,3,4) ...]
+</code></pre>
+<p>The contents of list is String, but before applying ‘show’, type of elements differ. Goal of this post is to express above with using template haskell, like:</p>
+<pre><code>&gt; mapM_ putStrLn $(tups 3)
+</code></pre>
+<p>Which expands to:</p>
+<pre><code>&gt; mapM_ putStrLn [show 1, show (1,2), show (1,2,3))]
+</code></pre>
+<p>in caller module.</p>
+<pre class="sourceCode"><code class="sourceCode haskell">&gt; <span class="ot">{-# LANGUAGE TemplateHaskell #-}</span><br />&gt; <br />&gt; <span class="kw">module</span> <span class="dt">MappingShow</span> <span class="kw">where</span><br />&gt; <br />&gt; <span class="kw">import</span> <span class="dt">Control.Applicative</span><br />&gt; <span class="kw">import</span> <span class="dt">Control.Monad</span><br />&gt; <span class="kw">import</span> <span class="dt">Language.Haskell.TH</span></code></pre>
+<p>A pretty printer for template haskell Q monad:</p>
+<pre class="sourceCode"><code class="sourceCode haskell">&gt; <span class="ot">printQ </span><span class="ot">::</span> <span class="dt">Ppr</span> a <span class="ot">=&gt;</span> <span class="dt">Q</span> a <span class="ot">-&gt;</span> <span class="dt">IO</span> ()<br />&gt; printQ q <span class="fu">=</span> <span class="fu">print</span> <span class="fu">.</span> ppr <span class="fu">=&lt;&lt;</span> runQ q</code></pre>
+<p>Warming up, manually writing the tuple lists, and applying show to them:</p>
+<pre class="sourceCode"><code class="sourceCode haskell">&gt; <span class="ot">bTup </span><span class="ot">::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">ExpQ</span><br />&gt; bTup n <span class="fu">=</span> tupE [litE (integerL j) <span class="fu">|</span> j <span class="ot">&lt;-</span> [<span class="dv">1</span><span class="fu">..</span><span class="fu">fromIntegral</span> n]]<br />&gt; <br />&gt; <span class="ot">take01 </span><span class="ot">::</span> <span class="dt">ExpQ</span><br />&gt; take01 <span class="fu">=</span><br />&gt;   [e<span class="fu">|</span><br />&gt;    <span class="fu">mapM_</span> <span class="fu">putStrLn</span> [<span class="fu">show</span> <span class="fu">$</span>(bTup <span class="dv">1</span>), <span class="fu">show</span> <span class="fu">$</span>(bTup <span class="dv">2</span>), <span class="fu">show</span> <span class="fu">$</span>(bTup <span class="dv">3</span>)]<br />&gt;     <span class="fu">|</span>]</code></pre>
+<p>Result:</p>
+<pre><code>ghci&gt; printQ take01
+Control.Monad.mapM_ System.IO.putStrLn [GHC.Show.show (1),
+                                        GHC.Show.show (1, 2),
+                                        GHC.Show.show (1, 2, 3)]
+</code></pre>
+<p>We cannot write:</p>
+<pre><code>&gt; take02 = [e| map putStrLn [show $(bTup i) | i &lt;- [1..10]] |]
+</code></pre>
+<p>staging error occurs:</p>
+<pre><code>Stage error: `i' is bound at stage 2 but used at stage 1
+In the first argument of `bTup', namely `i'
+In the expression: bTup i
+In the first argument of `show', namely `$(bTup i)'
+</code></pre>
+<p>So we cannot directly build a list of tuple with passing argument, <code>i</code> in above case. Though, since ‘Q’ is a Monad, we can run it, and then rebind it:</p>
+<pre class="sourceCode"><code class="sourceCode haskell">&gt; <span class="ot">tups </span><span class="ot">::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">ExpQ</span><br />&gt; tups n <span class="fu">=</span> runQ <span class="fu">$</span> <span class="kw">do</span><br />&gt;   ts <span class="ot">&lt;-</span> foldM (\acc i <span class="ot">-&gt;</span> (<span class="fu">:</span>acc) <span class="fu">&lt;$&gt;</span> bTup i) [] [<span class="dv">1</span><span class="fu">..</span>n]<br />&gt;   <span class="fu">return</span> <span class="fu">$</span> <span class="dt">ListE</span> <span class="fu">$</span> <span class="fu">map</span> (<span class="dt">AppE</span> (<span class="dt">VarE</span> <span class="ch">'show)) (reverse ts)</span></code></pre>
+<p>Results:</p>
+<pre><code>ghci&gt; printQ $ tups 10
+[GHC.Show.show (1),
+ GHC.Show.show (1, 2),
+ GHC.Show.show (1, 2, 3),
+ GHC.Show.show (1, 2, 3, 4),
+ GHC.Show.show (1, 2, 3, 4, 5),
+ GHC.Show.show (1, 2, 3, 4, 5, 6),
+ GHC.Show.show (1, 2, 3, 4, 5, 6, 7),
+ GHC.Show.show (1, 2, 3, 4, 5, 6, 7, 8),
+ GHC.Show.show (1, 2, 3, 4, 5, 6, 7, 8, 9),
+ GHC.Show.show (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)]
+</code></pre>
+<p>We can build a list of String elements in caller module, or prepare a template haskell expression which does the ‘mapM_ putStrLn’:</p>
+<pre class="sourceCode"><code class="sourceCode haskell">&gt; <span class="ot">mapShowTuples </span><span class="ot">::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">ExpQ</span><br />&gt; mapShowTuples n <span class="fu">=</span> (varE <span class="ch">'mapM_ `appE` varE '</span>putStrLn) <span class="ot">`appE`</span> tups n</code></pre>
+<p>Results:</p>
+<pre><code>ghci&gt; printQ $ mapShowTuples 8
+Control.Monad.mapM_ System.IO.putStrLn [GHC.Show.show (1),
+                                        GHC.Show.show (1, 2),
+                                        GHC.Show.show (1, 2, 3),
+                                        GHC.Show.show (1, 2, 3, 4),
+                                        GHC.Show.show (1, 2, 3, 4, 5),
+                                        GHC.Show.show (1, 2, 3, 4, 5, 6),
+                                        GHC.Show.show (1, 2, 3, 4, 5, 6, 7),
+                                        GHC.Show.show (1, 2, 3, 4, 5, 6, 7, 8)]
+</code></pre>
+<p>Sample caller module may look like below:</p>
+<pre><code>{-# LANGUAGE TemplateHaskell #-}
+import MappingShow
+
+t8s :: [String]
+t8s = $(tups 8)
+
+t8s_view :: IO ()
+t8s_view = mapM_ putStrLn t8s
+
+t8s_view_th :: IO ()
+t8s_view_th = $(mapShowTuples 8)
+
+main :: IO ()
+main = t8s_view &gt;&gt; t8s_view_th
+</code></pre>
+<p>Result of running ‘main’:</p>
+<pre><code>ghci&gt; main
+1
+(1,2)
+(1,2,3)
+(1,2,3,4)
+(1,2,3,4,5)
+(1,2,3,4,5,6)
+(1,2,3,4,5,6,7)
+(1,2,3,4,5,6,7,8)
+1
+(1,2)
+(1,2,3)
+(1,2,3,4)
+(1,2,3,4,5)
+(1,2,3,4,5,6)
+(1,2,3,4,5,6,7)
+(1,2,3,4,5,6,7,8)
+</code></pre>
+</div>
+
+<div class="post_tags">
+  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/templatehaskell.html">templatehaskell</a>
+</div>
+
+
+      </div>
+      <div id="footer">
+        <div id="footer_content">
+          <p>
+            <a href="../index.html">Home</a> |
+            <a href="../archive.html">Archive</a> |
+            <a href="../rss.xml">RSS</a>
+          </p>
+
+          Site contents licensed under
+          <a href="http://creativecommons.org/licenses/by/3.0/">
+            CC Attribution 3.0
+          </a>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

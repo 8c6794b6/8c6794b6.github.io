@@ -126,6 +126,13 @@
     <pubDate>Sun, 27 May 2012 00:00:00 UT</pubDate>
     <guid>http://8c6794b6.github.com/posts/2012-05-27-guard_case_patmatch.html</guid>
 </item>
+<item>
+    <title>Mapping 'show' to tuples with TH</title>
+    <link>http://8c6794b6.github.com/posts/2012-05-28-mapping-show-with-th.html</link>
+    <description><![CDATA[Mapping 'show' to list containing variable sized tuples with TH]]></description>
+    <pubDate>Mon, 28 May 2012 00:00:00 UT</pubDate>
+    <guid>http://8c6794b6.github.com/posts/2012-05-28-mapping-show-with-th.html</guid>
+</item>
 
     </channel> 
 </rss>
