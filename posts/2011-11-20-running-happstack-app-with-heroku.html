@@ -43,13 +43,11 @@
 <li>Other files required by web app (html, css, images, etc)</li>
 </ul>
 <p>So compile the app, write configuration, add to git repository and push them to heroku.</p>
-<p>The executable file need to be runnable in heroku’s hosted environment. The OS used by cedar was Ubuntu Server 10.04 (Lucid Lynx), mentioned <a href="http://devcenter.heroku.com/articles/cedar#stack_software_versions">here</a>. Compiled on linux x86_64 architecture. Luckily, it was not difficult for me to compile on linux x86_64. Haven’t tried, but it may work with compiling under emulator. One more note for compiling: compile the app statically, or, make it runnable under Ubuntu 10.04 somehow. The actual option need to compile statically may vary on ghc version, linker, etc. In my case, with ghc 7.0.3, GNU ld (GNU Binutils) 2.21.1.20110627, linux 3.1.0–4-ARCH for x86_64, below option worked:</p>
-<pre><code>$ ghc --make -static -optl-pthread -optl-static main.hs
-</code></pre>
+<p>The executable file need to be runnable in heroku’s hosted environment. The OS used by cedar was Ubuntu Server 10.04 (Lucid Lynx), mentioned <a href="http://devcenter.heroku.com/articles/cedar#stack_software_versions">here</a>. Compiled on linux x86_64 architecture. Luckily, it was not difficult for me to compile on linux x86_64. Haven’t tried, but it may work with compiling under emulator. One more note for compiling: compile the app statically, or, make it runnable under Ubuntu 10.04 somehow. The actual option need to compile statically may vary on ghc version, linker, etc. In my case, with ghc 7.0.3, GNU ld (GNU Binutils) 2.21.1.20110627, linux 3.1.0-4-ARCH for x86_64, below option worked:</p>
+<pre><code>$ ghc --make -static -optl-pthread -optl-static main.hs</code></pre>
 <p>Using <code>Procfile</code> to specify what command to execute for which process type.</p>
 <pre><code>$ cat Procfile
-web: ./main serve -d state -s static -p  +RTS -N
-</code></pre>
+web: ./main serve -d state -s static -p  +RTS -N</code></pre>
 <p>Pass whatever option used by the web app. For instance, specifying port from environment variable ``.</p>
 <p>When uploading the app, need cedar to recognize the app somehow, otherwise, heroku will reject the git commit push. We can use dummy <code>Gemfile</code> to tell cedar that it’s a ruby app, or <code>requirements.txt</code> to tell as a python app, or whatever.</p>
 <p>After deploying the app, I found that Heroku’s Cedar stack and configuration done by Procfile was extremely flexible, way far flexible than I imagined.</p>

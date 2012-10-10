@@ -34,26 +34,47 @@
 <div id="post_body">
 <p>I tend to use case with tuples when a function takes more than one arguments. Alternate to tupling, we can write with guards or, with direct pattern match in function arguments.</p>
 <p>What differences we can find in compiled result?</p>
-<pre class="sourceCode"><code class="sourceCode haskell">&gt; <span class="ot">{-# LANGUAGE BangPatterns #-}</span><br />&gt; <span class="kw">module</span> <span class="dt">GuardCasePatmatch</span> <span class="kw">where</span><br />&gt; <br />&gt; <span class="kw">import</span> <span class="dt">Criterion.Main</span><br />&gt; <span class="kw">import</span> <span class="dt">Data.Int</span></code></pre>
+<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span> <span class="ot">{-# LANGUAGE BangPatterns #-}</span>
+<span class="fu">&gt;</span> <span class="kw">module</span> <span class="dt">GuardCasePatmatch</span> <span class="kw">where</span>
+<span class="fu">&gt;</span> 
+<span class="fu">&gt;</span> <span class="kw">import</span> <span class="dt">Criterion.Main</span>
+<span class="fu">&gt;</span> <span class="kw">import</span> <span class="dt">Data.Int</span></code></pre>
 <p>Target function is, naive power function. First, with guard:</p>
-<pre class="sourceCode"><code class="sourceCode haskell">&gt; <span class="ot">pow_guard </span><span class="ot">::</span> <span class="dt">Int64</span> <span class="ot">-&gt;</span> <span class="dt">Int64</span> <span class="ot">-&gt;</span> <span class="dt">Int64</span><br />&gt; pow_guard <span class="fu">!</span>a <span class="fu">!</span>b<br />&gt;   <span class="fu">|</span> b <span class="fu">==</span> <span class="dv">0</span>    <span class="fu">=</span> <span class="dv">1</span><br />&gt;   <span class="fu">|</span> <span class="fu">otherwise</span> <span class="fu">=</span> a <span class="fu">*</span> pow_guard a (b<span class="fu">-</span><span class="dv">1</span>)</code></pre>
+<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> pow_guard ::</span> <span class="dt">Int64</span> <span class="ot">-&gt;</span> <span class="dt">Int64</span> <span class="ot">-&gt;</span> <span class="dt">Int64</span>
+<span class="fu">&gt;</span> pow_guard <span class="fu">!</span>a <span class="fu">!</span>b
+<span class="fu">&gt;</span>   <span class="fu">|</span> b <span class="fu">==</span> <span class="dv">0</span>    <span class="fu">=</span> <span class="dv">1</span>
+<span class="fu">&gt;</span>   <span class="fu">|</span> <span class="fu">otherwise</span> <span class="fu">=</span> a <span class="fu">*</span> pow_guard a (b<span class="dv">-1</span>)</code></pre>
 <p>Next, tupled case:</p>
-<pre class="sourceCode"><code class="sourceCode haskell">&gt; <span class="ot">pow_case </span><span class="ot">::</span> <span class="dt">Int64</span> <span class="ot">-&gt;</span> <span class="dt">Int64</span> <span class="ot">-&gt;</span> <span class="dt">Int64</span><br />&gt; pow_case <span class="fu">!</span>a <span class="fu">!</span>b <span class="fu">=</span> <span class="kw">case</span> (a,b) <span class="kw">of</span><br />&gt;   (_,<span class="dv">0</span>) <span class="ot">-&gt;</span> <span class="dv">1</span><br />&gt;   _     <span class="ot">-&gt;</span> a <span class="fu">*</span> pow_case a (b<span class="fu">-</span><span class="dv">1</span>)</code></pre>
+<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> pow_case ::</span> <span class="dt">Int64</span> <span class="ot">-&gt;</span> <span class="dt">Int64</span> <span class="ot">-&gt;</span> <span class="dt">Int64</span>
+<span class="fu">&gt;</span> pow_case <span class="fu">!</span>a <span class="fu">!</span>b <span class="fu">=</span> <span class="kw">case</span> (a,b) <span class="kw">of</span>
+<span class="fu">&gt;</span>   (_,<span class="dv">0</span>) <span class="ot">-&gt;</span> <span class="dv">1</span>
+<span class="fu">&gt;</span>   _     <span class="ot">-&gt;</span> a <span class="fu">*</span> pow_case a (b<span class="dv">-1</span>)</code></pre>
 <p>Last, pattern match</p>
-<pre class="sourceCode"><code class="sourceCode haskell">&gt; <span class="ot">pow_patmatch </span><span class="ot">::</span> <span class="dt">Int64</span> <span class="ot">-&gt;</span> <span class="dt">Int64</span> <span class="ot">-&gt;</span> <span class="dt">Int64</span><br />&gt; pow_patmatch <span class="fu">!</span>a <span class="dv">0</span> <span class="fu">=</span> <span class="dv">1</span><br />&gt; pow_patmatch <span class="fu">!</span>a <span class="fu">!</span>b <span class="fu">=</span> a <span class="fu">*</span> pow_patmatch a (b<span class="fu">-</span><span class="dv">1</span>)</code></pre>
+<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> pow_patmatch ::</span> <span class="dt">Int64</span> <span class="ot">-&gt;</span> <span class="dt">Int64</span> <span class="ot">-&gt;</span> <span class="dt">Int64</span>
+<span class="fu">&gt;</span> pow_patmatch <span class="fu">!</span>a <span class="dv">0</span> <span class="fu">=</span> <span class="dv">1</span>
+<span class="fu">&gt;</span> pow_patmatch <span class="fu">!</span>a <span class="fu">!</span>b <span class="fu">=</span> a <span class="fu">*</span> pow_patmatch a (b<span class="dv">-1</span>)</code></pre>
 <p>Testing that all three give same result:</p>
-<pre class="sourceCode"><code class="sourceCode haskell">&gt; <span class="ot">test </span><span class="ot">::</span> <span class="dt">Bool</span><br />&gt; test <span class="fu">=</span> <span class="fu">all</span> <span class="fu">id</span> [f x y <span class="fu">|</span> x <span class="ot">&lt;-</span> [<span class="dv">1</span><span class="fu">..</span><span class="dv">32</span>], y <span class="ot">&lt;-</span> [<span class="dv">1</span><span class="fu">..</span><span class="dv">32</span>]] <span class="kw">where</span><br />&gt;   f a b <span class="fu">=</span><br />&gt;     <span class="kw">let</span> pc <span class="fu">=</span> pow_case a b<br />&gt;         pg <span class="fu">=</span> pow_guard a b<br />&gt;         pp <span class="fu">=</span> pow_patmatch a b<br />&gt;     <span class="kw">in</span>  pc <span class="fu">==</span> pg <span class="fu">&amp;&amp;</span> pg <span class="fu">==</span> pp</code></pre>
+<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> test ::</span> <span class="dt">Bool</span>
+<span class="fu">&gt;</span> test <span class="fu">=</span> <span class="fu">all</span> <span class="fu">id</span> [f x y <span class="fu">|</span> x <span class="ot">&lt;-</span> [<span class="dv">1</span><span class="fu">..</span><span class="dv">32</span>], y <span class="ot">&lt;-</span> [<span class="dv">1</span><span class="fu">..</span><span class="dv">32</span>]] <span class="kw">where</span>
+<span class="fu">&gt;</span>   f a b <span class="fu">=</span>
+<span class="fu">&gt;</span>     <span class="kw">let</span> pc <span class="fu">=</span> pow_case a b
+<span class="fu">&gt;</span>         pg <span class="fu">=</span> pow_guard a b
+<span class="fu">&gt;</span>         pp <span class="fu">=</span> pow_patmatch a b
+<span class="fu">&gt;</span>     <span class="kw">in</span>  pc <span class="fu">==</span> pg <span class="fu">&amp;&amp;</span> pg <span class="fu">==</span> pp</code></pre>
 <p>Result:</p>
 <pre><code>ghci&gt; test
-True
-</code></pre>
+True</code></pre>
 <p>Seems fine. Now benchmarking:</p>
-<pre class="sourceCode"><code class="sourceCode haskell">&gt; <span class="ot">main </span><span class="ot">::</span> <span class="dt">IO</span> ()<br />&gt; main <span class="fu">=</span> defaultMain<br />&gt;  [ bench <span class="st">&quot;guard&quot;</span> (nf (pow_guard <span class="dv">2</span>) <span class="dv">64</span>)<br />&gt;  , bench <span class="st">&quot;case&quot;</span> (nf (pow_case <span class="dv">2</span>) <span class="dv">64</span>)<br />&gt;  , bench <span class="st">&quot;patmatch&quot;</span> (nf (pow_patmatch <span class="dv">2</span>) <span class="dv">64</span>)<br />&gt;  ]</code></pre>
+<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> main ::</span> <span class="dt">IO</span> ()
+<span class="fu">&gt;</span> main <span class="fu">=</span> defaultMain
+<span class="fu">&gt;</span>  [ bench <span class="st">&quot;guard&quot;</span> (nf (pow_guard <span class="dv">2</span>) <span class="dv">64</span>)
+<span class="fu">&gt;</span>  , bench <span class="st">&quot;case&quot;</span> (nf (pow_case <span class="dv">2</span>) <span class="dv">64</span>)
+<span class="fu">&gt;</span>  , bench <span class="st">&quot;patmatch&quot;</span> (nf (pow_patmatch <span class="dv">2</span>) <span class="dv">64</span>)
+<span class="fu">&gt;</span>  ]</code></pre>
 <p>Compile and run:</p>
 <pre><code>$ ghc --numeric-version
 7.4.1
-$ ghc -fllvm -optl-O3 -O3 -o a.out -main-is GuardCasePatmatch gcp.lhs
-</code></pre>
+$ ghc -fllvm -optl-O3 -O3 -o a.out -main-is GuardCasePatmatch gcp.lhs</code></pre>
 <p>Result:</p>
 <pre><code>benchmarking guard
 mean: 386.1059 ns, lb 385.6170 ns, ub 386.6460 ns, ci 0.950
@@ -65,8 +86,7 @@ std dev: 2.030602 ns, lb 1.667205 ns, ub 2.567343 ns, ci 0.950
 
 benchmarking patmatch
 mean: 385.1643 ns, lb 384.6979 ns, ub 385.7441 ns, ci 0.950
-std dev: 2.657997 ns, lb 2.163594 ns, ub 3.363755 ns, ci 0.950
-</code></pre>
+std dev: 2.657997 ns, lb 2.163594 ns, ub 3.363755 ns, ci 0.950</code></pre>
 <p>Almost same. How about dumped core?</p>
 <p>Exerpt of dumped core of <code>power_guard</code> looks like this:</p>
 <pre><code>Rec {
@@ -96,8 +116,7 @@ GuardCasePatmatch.pow_guard =
     GHC.Int.I64# ww2_s2qy
     }
     }
-    }
-</code></pre>
+    }</code></pre>
 <p>Dumped core of <code>power_case</code>:</p>
 <pre><code>Rec {
 GuardCasePatmatch.$wpow_case [Occ=LoopBreaker]
@@ -126,8 +145,7 @@ GuardCasePatmatch.pow_case =
     GHC.Int.I64# ww2_s2qk
     }
     }
-    }
-</code></pre>
+    }</code></pre>
 <p>And dumped core of <code>pow_patmatch</code>:</p>
 <pre><code>Rec {
 GuardCasePatmatch.$wpow_patmatch [Occ=LoopBreaker]
@@ -157,8 +175,7 @@ GuardCasePatmatch.pow_patmatch =
     GHC.Int.I64# ww2_s2qM
     }
     }
-    }
-</code></pre>
+    }</code></pre>
 <p>No difference other than bounded names.</p>
 </div>
 

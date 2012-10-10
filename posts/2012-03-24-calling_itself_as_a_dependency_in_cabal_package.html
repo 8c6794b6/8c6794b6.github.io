@@ -35,7 +35,34 @@
 <p>For self reminder. When we’re creating cabal package, sometime we want to call itself as a depdency, for instance when making a package with library and bundled executable, using cabal’s test-suite feature.</p>
 <p>For quite a while I didn’t realise that we can call itself as dependency and suppress compiling the whole library modules used in exectuables and tests. The trick was, <em>separating the directory containing library source and executable source</em> in single package.</p>
 <p>Sample cabal config:</p>
-<pre class="sourceCode"><code class="sourceCode haskell">&gt; name<span class="fu">:</span>          selfdep<br />&gt; build<span class="fu">-</span><span class="kw">type</span><span class="fu">:</span>    <span class="dt">Simple</span><br />&gt; cabal<span class="fu">-</span>version<span class="fu">:</span> <span class="fu">&gt;=</span><span class="dv">1</span><span class="fu">.</span><span class="dv">8</span><br />&gt; <br />&gt; library<br />&gt;   exposed<span class="fu">-</span>modules<span class="fu">:</span><br />&gt;     <span class="dt">Self.Dep</span><br />&gt;     <span class="dt">Self.Dep.Foo</span><br />&gt;     <span class="dt">Self.Dep.Bar</span><br />&gt;   build<span class="fu">-</span>depends<span class="fu">:</span><br />&gt;     base       <span class="fu">&gt;=</span> <span class="dv">4</span><span class="fu">.</span><span class="dv">4</span> <span class="fu">&amp;&amp;</span> <span class="fu">&lt;</span> <span class="dv">5</span>,<br />&gt;     containers <span class="fu">&gt;=</span> <span class="dv">0</span><span class="fu">.</span><span class="dv">4</span> <span class="fu">&amp;&amp;</span> <span class="fu">&lt;</span> <span class="dv">1</span><span class="fu">.</span><span class="dv">0</span><br />&gt; <br />&gt; test<span class="fu">-</span>suite tests<br />&gt;   <span class="kw">type</span><span class="fu">:</span> exitcode<span class="fu">-</span>stdio<span class="fu">-</span><span class="dv">1</span><span class="fu">.</span><span class="dv">0</span><br />&gt;   hs<span class="fu">-</span>source<span class="fu">-</span>dirs<span class="fu">:</span> tests<br />&gt;   main<span class="fu">-</span>is<span class="fu">:</span> test<span class="fu">.</span>hs<br />&gt;   build<span class="fu">-</span>depends<span class="fu">:</span><br />&gt;     base       <span class="fu">&gt;=</span> <span class="dv">4</span><span class="fu">.</span><span class="dv">4</span> <span class="fu">&amp;&amp;</span> <span class="fu">&lt;</span> <span class="dv">5</span>,<br />&gt;     <span class="dt">QuickCheck</span> <span class="fu">&gt;=</span> <span class="dv">2</span><span class="fu">.</span><span class="dv">4</span> <span class="fu">&amp;&amp;</span> <span class="fu">&lt;</span> <span class="dv">3</span>,<br />&gt;     selfdep <span class="fu">-</span><span class="fu">any</span><br />&gt; <br />&gt; executable foo<br />&gt;   hs<span class="fu">-</span>source<span class="fu">-</span>dirs<span class="fu">:</span> run<br />&gt;   main<span class="fu">-</span>is<span class="fu">:</span> foo<span class="fu">.</span>hs<br />&gt;   build<span class="fu">-</span>depends<span class="fu">:</span><br />&gt;     base    <span class="fu">&gt;=</span> <span class="dv">4</span><span class="fu">.</span><span class="dv">4</span> <span class="fu">&amp;&amp;</span> <span class="fu">&lt;</span> <span class="dv">5</span>,<br />&gt;     selfdep <span class="fu">-</span><span class="fu">any</span></code></pre>
+<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span> name<span class="fu">:</span>          selfdep
+<span class="fu">&gt;</span> build<span class="fu">-</span><span class="kw">type</span><span class="fu">:</span>    <span class="dt">Simple</span>
+<span class="fu">&gt;</span> cabal<span class="fu">-</span>version<span class="fu">:</span> <span class="fu">&gt;=</span><span class="fl">1.8</span>
+<span class="fu">&gt;</span> 
+<span class="fu">&gt;</span> library
+<span class="fu">&gt;</span>   exposed<span class="fu">-</span>modules<span class="fu">:</span>
+<span class="fu">&gt;</span>     <span class="dt">Self.Dep</span>
+<span class="fu">&gt;</span>     <span class="dt">Self.Dep.Foo</span>
+<span class="fu">&gt;</span>     <span class="dt">Self.Dep.Bar</span>
+<span class="fu">&gt;</span>   build<span class="fu">-</span>depends<span class="fu">:</span>
+<span class="fu">&gt;</span>     base       <span class="fu">&gt;=</span> <span class="fl">4.4</span> <span class="fu">&amp;&amp;</span> <span class="fu">&lt;</span> <span class="dv">5</span>,
+<span class="fu">&gt;</span>     containers <span class="fu">&gt;=</span> <span class="fl">0.4</span> <span class="fu">&amp;&amp;</span> <span class="fu">&lt;</span> <span class="fl">1.0</span>
+<span class="fu">&gt;</span> 
+<span class="fu">&gt;</span> test<span class="fu">-</span>suite tests
+<span class="fu">&gt;</span>   <span class="kw">type</span><span class="fu">:</span> exitcode<span class="fu">-</span>stdio<span class="dv">-1</span><span class="fu">.</span><span class="dv">0</span>
+<span class="fu">&gt;</span>   hs<span class="fu">-</span>source<span class="fu">-</span>dirs<span class="fu">:</span> tests
+<span class="fu">&gt;</span>   main<span class="fu">-</span>is<span class="fu">:</span> test<span class="fu">.</span>hs
+<span class="fu">&gt;</span>   build<span class="fu">-</span>depends<span class="fu">:</span>
+<span class="fu">&gt;</span>     base       <span class="fu">&gt;=</span> <span class="fl">4.4</span> <span class="fu">&amp;&amp;</span> <span class="fu">&lt;</span> <span class="dv">5</span>,
+<span class="fu">&gt;</span>     <span class="dt">QuickCheck</span> <span class="fu">&gt;=</span> <span class="fl">2.4</span> <span class="fu">&amp;&amp;</span> <span class="fu">&lt;</span> <span class="dv">3</span>,
+<span class="fu">&gt;</span>     selfdep <span class="fu">-any</span>
+<span class="fu">&gt;</span> 
+<span class="fu">&gt;</span> executable foo
+<span class="fu">&gt;</span>   hs<span class="fu">-</span>source<span class="fu">-</span>dirs<span class="fu">:</span> run
+<span class="fu">&gt;</span>   main<span class="fu">-</span>is<span class="fu">:</span> foo<span class="fu">.</span>hs
+<span class="fu">&gt;</span>   build<span class="fu">-</span>depends<span class="fu">:</span>
+<span class="fu">&gt;</span>     base    <span class="fu">&gt;=</span> <span class="fl">4.4</span> <span class="fu">&amp;&amp;</span> <span class="fu">&lt;</span> <span class="dv">5</span>,
+<span class="fu">&gt;</span>     selfdep <span class="fu">-any</span></code></pre>
 <p>In file <code>foo.hs</code>, module <code>Self.Dep.Foo</code> is imported:</p>
 <pre><code>$ cat run/foo.hs
 module Main where
@@ -43,8 +70,7 @@ module Main where
 import qualified Self.Dep.Foo
 
 main :: IO ()
-main = print Self.Dep.Foo.foo
-</code></pre>
+main = print Self.Dep.Foo.foo</code></pre>
 <p>Building the package:</p>
 <pre><code>$ cabal configure &amp;&amp; cabal build
 Resolving dependencies...
@@ -57,8 +83,7 @@ Preprocessing library selfdep-0.1.0.0...
 Registering selfdep-0.1.0.0...
 Preprocessing executable 'foo' for selfdep-0.1.0.0...
 [1 of 1] Compiling Main             ( run/foo.hs, dist/build/foo/foo-tmp/Main.o )
-Linking dist/build/foo/foo ...
-</code></pre>
+Linking dist/build/foo/foo ...</code></pre>
 <p>During the compilation of executable <code>foo</code>, modules under <code>Self.*</code> were not recompiled. This separation of the directory works also for tests.</p>
 </div>
 

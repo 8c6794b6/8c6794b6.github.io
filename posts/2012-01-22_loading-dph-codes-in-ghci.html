@@ -33,13 +33,57 @@
 
 <div id="post_body">
 <p>In haddock of dph-par package, we see functions like below:</p>
-<pre class="sourceCode"><code class="sourceCode haskell">&gt; <span class="ot">zipP </span><span class="ot">::</span> [<span class="fu">:</span>a<span class="fu">:</span>] <span class="ot">-&gt;</span> [<span class="fu">:</span>b<span class="fu">:</span>] <span class="ot">-&gt;</span> [<span class="fu">:</span>(a, b)<span class="fu">:</span>]<br />&gt; <span class="ot">{-# NOINLINE zipP #-}</span><br />&gt; zipP <span class="fu">!</span>_ <span class="fu">!</span>_ <span class="fu">=</span> [<span class="ot">::</span>]<br />&gt; <span class="ot">{-# VECTORISE zipP = zipPA #-}</span></code></pre>
-<p>Above difinition is from <a href="http://hackage.haskell.org/packages/archive/dph-par/0.5.1.1/doc/html/src/Data-Array-Parallel.html#zipP">dph-par–0.5.1.1</a>. From what its written, <code>zipP</code> looks like a function that returning an empty array. Though after compiling the code with appropriate options, <code>zipP</code> indeed work as parallel variant of <code>zip</code> for standard list.</p>
-<p>As of GHC–7.2.2 and dph-par–0.5.1.1, we cannot directly load codes with parallel array in ghci. One way to load them in ghci is, prepare a wrapper with fixing the type of array element, and compile to object code.</p>
+<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> zipP ::</span> [<span class="fu">:</span>a<span class="fu">:</span>] <span class="ot">-&gt;</span> [<span class="fu">:</span>b<span class="fu">:</span>] <span class="ot">-&gt;</span> [<span class="fu">:</span>(a, b)<span class="fu">:</span>]
+<span class="fu">&gt;</span> <span class="ot">{-# NOINLINE zipP #-}</span>
+<span class="fu">&gt;</span> zipP <span class="fu">!</span>_ <span class="fu">!</span>_ <span class="fu">=</span> [<span class="ot">::</span>]
+<span class="fu">&gt;</span> <span class="ot">{-# VECTORISE zipP = zipPA #-}</span></code></pre>
+<p>Above difinition is from <a href="http://hackage.haskell.org/packages/archive/dph-par/0.5.1.1/doc/html/src/Data-Array-Parallel.html#zipP">dph-par-0.5.1.1</a>. From what its written, <code>zipP</code> looks like a function that returning an empty array. Though after compiling the code with appropriate options, <code>zipP</code> indeed work as parallel variant of <code>zip</code> for standard list.</p>
+<p>As of GHC-7.2.2 and dph-par-0.5.1.1, we cannot directly load codes with parallel array in ghci. One way to load them in ghci is, prepare a wrapper with fixing the type of array element, and compile to object code.</p>
 <p>Suppose that we have a module containing parallel array functions:</p>
-<pre class="sourceCode"><code class="sourceCode haskell">&gt; <span class="ot">{-# LANGUAGE ParallelArrays #-}</span><br />&gt; <span class="ot">{-# OPTIONS_GHC -fvectorise #-}</span><br />&gt; <span class="co">-- VectroseMe.hs</span><br />&gt; <span class="kw">module</span> <span class="dt">VectoriseMe</span> <span class="kw">where</span><br />&gt; <br />&gt; <span class="kw">import</span> <span class="dt">Data.Array.Parallel</span><br />&gt; <span class="kw">import</span> <span class="dt">Data.Array.Parallel.PArray</span><br />&gt; <br />&gt; <span class="ot">myZipP </span><span class="ot">::</span> [<span class="fu">:</span>a<span class="fu">:</span>] <span class="ot">-&gt;</span> [<span class="fu">:</span>b<span class="fu">:</span>] <span class="ot">-&gt;</span> [<span class="fu">:</span>(a, b)<span class="fu">:</span>]<br />&gt; myZipP <span class="kw">as</span> bs <span class="fu">=</span> zipP <span class="kw">as</span> bs<br />&gt; <br />&gt; <span class="ot">myZipPA </span><span class="ot">::</span> <span class="dt">PArray</span> a <span class="ot">-&gt;</span> <span class="dt">PArray</span> b <span class="ot">-&gt;</span> <span class="dt">PArray</span> (a, b)<br />&gt; myZipPA <span class="kw">as</span> bs <span class="fu">=</span> toPArrayP (myZipP (fromPArrayP <span class="kw">as</span>) (fromPArrayP bs))<br />&gt; <span class="ot">{-# NOINLINE myZipPA #-}</span><br />&gt; <br />&gt; <span class="ot">myZipIntP </span><span class="ot">::</span> [<span class="fu">:</span><span class="dt">Int</span><span class="fu">:</span>] <span class="ot">-&gt;</span> [<span class="fu">:</span><span class="dt">Int</span><span class="fu">:</span>] <span class="ot">-&gt;</span> [<span class="fu">:</span>(<span class="dt">Int</span>, <span class="dt">Int</span>)<span class="fu">:</span>]<br />&gt; myZipIntP <span class="kw">as</span> bs <span class="fu">=</span> zipP <span class="kw">as</span> bs<br />&gt; <br />&gt; <span class="ot">myZipIntPA </span><span class="ot">::</span> <span class="dt">PArray</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">PArray</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">PArray</span> (<span class="dt">Int</span>, <span class="dt">Int</span>)<br />&gt; myZipIntPA <span class="kw">as</span> bs <span class="fu">=</span> toPArrayP (myZipIntP (fromPArrayP <span class="kw">as</span>) (fromPArrayP bs))<br />&gt; <span class="ot">{-# NOINLINE myZipIntPA #-}</span></code></pre>
+<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span> <span class="ot">{-# LANGUAGE ParallelArrays #-}</span>
+<span class="fu">&gt;</span> <span class="ot">{-# OPTIONS_GHC -fvectorise #-}</span>
+<span class="fu">&gt;</span> <span class="co">-- VectroseMe.hs</span>
+<span class="fu">&gt;</span> <span class="kw">module</span> <span class="dt">VectoriseMe</span> <span class="kw">where</span>
+<span class="fu">&gt;</span> 
+<span class="fu">&gt;</span> <span class="kw">import</span> <span class="dt">Data.Array.Parallel</span>
+<span class="fu">&gt;</span> <span class="kw">import</span> <span class="dt">Data.Array.Parallel.PArray</span>
+<span class="fu">&gt;</span> 
+<span class="fu">&gt;</span><span class="ot"> myZipP ::</span> [<span class="fu">:</span>a<span class="fu">:</span>] <span class="ot">-&gt;</span> [<span class="fu">:</span>b<span class="fu">:</span>] <span class="ot">-&gt;</span> [<span class="fu">:</span>(a, b)<span class="fu">:</span>]
+<span class="fu">&gt;</span> myZipP <span class="kw">as</span> bs <span class="fu">=</span> zipP <span class="kw">as</span> bs
+<span class="fu">&gt;</span> 
+<span class="fu">&gt;</span><span class="ot"> myZipPA ::</span> <span class="dt">PArray</span> a <span class="ot">-&gt;</span> <span class="dt">PArray</span> b <span class="ot">-&gt;</span> <span class="dt">PArray</span> (a, b)
+<span class="fu">&gt;</span> myZipPA <span class="kw">as</span> bs <span class="fu">=</span> toPArrayP (myZipP (fromPArrayP <span class="kw">as</span>) (fromPArrayP bs))
+<span class="fu">&gt;</span> <span class="ot">{-# NOINLINE myZipPA #-}</span>
+<span class="fu">&gt;</span> 
+<span class="fu">&gt;</span><span class="ot"> myZipIntP ::</span> [<span class="fu">:</span><span class="dt">Int</span><span class="fu">:</span>] <span class="ot">-&gt;</span> [<span class="fu">:</span><span class="dt">Int</span><span class="fu">:</span>] <span class="ot">-&gt;</span> [<span class="fu">:</span>(<span class="dt">Int</span>, <span class="dt">Int</span>)<span class="fu">:</span>]
+<span class="fu">&gt;</span> myZipIntP <span class="kw">as</span> bs <span class="fu">=</span> zipP <span class="kw">as</span> bs
+<span class="fu">&gt;</span> 
+<span class="fu">&gt;</span><span class="ot"> myZipIntPA ::</span> <span class="dt">PArray</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">PArray</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">PArray</span> (<span class="dt">Int</span>, <span class="dt">Int</span>)
+<span class="fu">&gt;</span> myZipIntPA <span class="kw">as</span> bs <span class="fu">=</span> toPArrayP (myZipIntP (fromPArrayP <span class="kw">as</span>) (fromPArrayP bs))
+<span class="fu">&gt;</span> <span class="ot">{-# NOINLINE myZipIntPA #-}</span></code></pre>
 <p>And a wrapper which imports above module:</p>
-<pre class="sourceCode"><code class="sourceCode haskell">&gt; <span class="co">-- Wrapper.hs</span><br />&gt; <span class="kw">module</span> <span class="dt">Wrapper</span> <span class="kw">where</span><br />&gt; <br />&gt; <span class="kw">import</span> <span class="dt">Data.Array.Parallel</span><br />&gt; <span class="kw">import</span> <span class="dt">Data.Array.Parallel.PArray</span> (fromList)<br />&gt; <br />&gt; <span class="kw">import</span> <span class="dt">VectoriseMe</span><br />&gt; <br />&gt; <span class="ot">main </span><span class="ot">::</span> <span class="dt">IO</span> ()<br />&gt; main <span class="fu">=</span> <span class="kw">do</span><br />&gt;   <span class="fu">putStrLn</span> <span class="fu">$</span> <span class="fu">concat</span> [<span class="st">&quot;myZip_test:&quot;</span>, <span class="st">&quot;\n  &quot;</span>, <span class="fu">show</span> myZip_test]<br />&gt;   <span class="fu">putStrLn</span> <span class="fu">$</span> <span class="fu">concat</span> [<span class="st">&quot;myZipInt_test:&quot;</span>, <span class="st">&quot;\n  &quot;</span>, <span class="fu">show</span> myZipInt_test]<br />&gt; <br />&gt; pa1,<span class="ot"> pa2 </span><span class="ot">::</span> <span class="dt">PArray</span> <span class="dt">Int</span><br />&gt; pa1 <span class="fu">=</span> fromList [<span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">3</span>]<br />&gt; pa2 <span class="fu">=</span> fromList [<span class="dv">4</span>,<span class="dv">5</span>,<span class="dv">6</span>]<br />&gt; <br />&gt; <span class="ot">myZip_test </span><span class="ot">::</span> <span class="dt">PArray</span> (<span class="dt">Int</span>, <span class="dt">Int</span>)<br />&gt; myZip_test <span class="fu">=</span> myZipPA pa1 pa2<br />&gt; <br />&gt; <span class="ot">myZipInt_test </span><span class="ot">::</span> <span class="dt">PArray</span> (<span class="dt">Int</span>, <span class="dt">Int</span>)<br />&gt; myZipInt_test <span class="fu">=</span> myZipIntPA pa1 pa2</code></pre>
+<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span> <span class="co">-- Wrapper.hs</span>
+<span class="fu">&gt;</span> <span class="kw">module</span> <span class="dt">Wrapper</span> <span class="kw">where</span>
+<span class="fu">&gt;</span> 
+<span class="fu">&gt;</span> <span class="kw">import</span> <span class="dt">Data.Array.Parallel</span>
+<span class="fu">&gt;</span> <span class="kw">import</span> <span class="dt">Data.Array.Parallel.PArray</span> (fromList)
+<span class="fu">&gt;</span> 
+<span class="fu">&gt;</span> <span class="kw">import</span> <span class="dt">VectoriseMe</span>
+<span class="fu">&gt;</span> 
+<span class="fu">&gt;</span><span class="ot"> main ::</span> <span class="dt">IO</span> ()
+<span class="fu">&gt;</span> main <span class="fu">=</span> <span class="kw">do</span>
+<span class="fu">&gt;</span>   <span class="fu">putStrLn</span> <span class="fu">$</span> <span class="fu">concat</span> [<span class="st">&quot;myZip_test:&quot;</span>, <span class="st">&quot;\n  &quot;</span>, <span class="fu">show</span> myZip_test]
+<span class="fu">&gt;</span>   <span class="fu">putStrLn</span> <span class="fu">$</span> <span class="fu">concat</span> [<span class="st">&quot;myZipInt_test:&quot;</span>, <span class="st">&quot;\n  &quot;</span>, <span class="fu">show</span> myZipInt_test]
+<span class="fu">&gt;</span> 
+<span class="fu">&gt;</span> pa1,<span class="ot"> pa2 ::</span> <span class="dt">PArray</span> <span class="dt">Int</span>
+<span class="fu">&gt;</span> pa1 <span class="fu">=</span> fromList [<span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">3</span>]
+<span class="fu">&gt;</span> pa2 <span class="fu">=</span> fromList [<span class="dv">4</span>,<span class="dv">5</span>,<span class="dv">6</span>]
+<span class="fu">&gt;</span> 
+<span class="fu">&gt;</span><span class="ot"> myZip_test ::</span> <span class="dt">PArray</span> (<span class="dt">Int</span>, <span class="dt">Int</span>)
+<span class="fu">&gt;</span> myZip_test <span class="fu">=</span> myZipPA pa1 pa2
+<span class="fu">&gt;</span> 
+<span class="fu">&gt;</span><span class="ot"> myZipInt_test ::</span> <span class="dt">PArray</span> (<span class="dt">Int</span>, <span class="dt">Int</span>)
+<span class="fu">&gt;</span> myZipInt_test <span class="fu">=</span> myZipIntPA pa1 pa2</code></pre>
 <p>Loading Wrapper.hs in ghci and invoking the main function:</p>
 <pre><code>| $ ghci -fdph-par -fobject-code -fforce-recomp Wrapper.hs
 | GHCi, version 7.2.2: http://www.haskell.org/ghc/  :? for help
@@ -80,8 +124,7 @@
 | myZip_test:
 |   fromList&lt;PArray&gt; []
 | myZipInt_test:
-|   fromList&lt;PArray&gt; [(1,4),(2,5),(3,6)]
-</code></pre>
+|   fromList&lt;PArray&gt; [(1,4),(2,5),(3,6)]</code></pre>
 <p>We see that <code>myZip_test</code> is showing empty list, and <code>myZipInt_test</code> is showing the zipped contents.</p>
 </div>
 

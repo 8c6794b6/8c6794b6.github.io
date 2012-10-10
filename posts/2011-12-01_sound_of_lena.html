@@ -41,8 +41,7 @@
 <p>There is <a href="http://devrand.org/view/imageSpectrogram">a nice article</a> which describing about making spectrogram of image with perl, it inspired me to do it with haskell. The code used to convert above image was implemented in haskell, with <a href="http://repa.ouroborus.net/">repa</a>, <a href="http://www.fftw.org/">fftw</a>, and <a href="http://www.mega-nerd.com/libsndfile/">libsndfile</a>.</p>
 <p>Source code of executable, named <em>spectrofy</em>, could be found <a href="http://github.com/8c6794b6/spectrofy">here</a>. Couple packages that I packed as repa interface are also available. The BMP image of lena was converted to wav audio, and then spectrogram was created with sox:</p>
 <pre><code>$ spectrofy fft -f512 lena.bmp lena.wav
-$ sox lena.wav -n spectrogram -x 256 -y 257 -Z -48 -z 45
-</code></pre>
+$ sox lena.wav -n spectrogram -x 256 -y 257 -Z -48 -z 45</code></pre>
 <p>The spectrogram shown above was created with above commands. Not with <a href="http://www.gimp.org">photoshop</a>.</p>
 </div>
 

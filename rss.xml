@@ -133,6 +133,13 @@
     <pubDate>Mon, 28 May 2012 00:00:00 UT</pubDate>
     <guid>http://8c6794b6.github.com/posts/2012-05-28-mapping-show-with-th.html</guid>
 </item>
+<item>
+    <title>Tip using 'asTypeOf'</title>
+    <link>http://8c6794b6.github.com/posts/2012-10-11-asTypeOf-tip.html</link>
+    <description><![CDATA[A tip using 'asTypeOf' to fix types]]></description>
+    <pubDate>Thu, 11 Oct 2012 00:00:00 UT</pubDate>
+    <guid>http://8c6794b6.github.com/posts/2012-10-11-asTypeOf-tip.html</guid>
+</item>
 
     </channel> 
 </rss>

@@ -34,26 +34,23 @@
 <div id="post_body">
 <p>I sometime forget how to manage this site.</p>
 <p>This site is managed with <a href="http://jaspervdj.be/hakyll/">hakyll</a>, a package to manage static html contents written in haskell. The contents of html is in a git repository hosted in <a href="http://github.com">github</a>, served as html with <a href="http://pages.github.com">github pages</a>.</p>
-<p>The contents of hakyll codes, css, template used to generate the site resides in <a href="https://github.com/8c6794b6/gh-pages-8c6794b6">gh-pages–8c6794b6</a>, and the git repository for generated contents is in <a href="https://github.com/8c6794b6/8c6794b6.github.com">8c6794b6.github.com</a> repository.</p>
+<p>The contents of hakyll codes, css, template used to generate the site resides in <a href="https://github.com/8c6794b6/gh-pages-8c6794b6">gh-pages-8c6794b6</a>, and the git repository for generated contents is in <a href="https://github.com/8c6794b6/8c6794b6.github.com">8c6794b6.github.com</a> repository.</p>
 <p>When writing a new post, I start writing a new file under <code>posts/</code> directory in <code>gh-pages-8c6794b6</code> repository, and generate the html:</p>
 <pre><code>[~/repos/gh-pages-8c6794b6] $ emacs posts/new_post.mkd
 ... edit the post
-[~/repos/gh-pages-8c6794b6] $ ./hakyll build
-</code></pre>
+[~/repos/gh-pages-8c6794b6] $ ./hakyll build</code></pre>
 <p>The generated output will be created under <code>_site</code> directory. The <code>_site</code> directory is a <a href="http://book.git-scm.com/5_submodules.html">git submodule</a> of <code>gh-pages-8c6794b6</code> repository. When finished generating the html files, commit the contents of <code>_site</code>:</p>
 <pre><code>[~/repos/gh-pages-8c6794b6] $ cd _site
 [~/repos/gh-pages-8c6794b6/_site] $ git add -i
 ... add new post, new tags, update archives, rss, tags, etc ...
 [~/repos/gh-pages-8c6794b6/_site] $ git commit -m &quot;Add new post&quot;
-[~/repos/gh-pages-8c6794b6/_site] $ git push origin master
-</code></pre>
+[~/repos/gh-pages-8c6794b6/_site] $ git push origin master</code></pre>
 <p>Now add the updated submodule to <code>gh-pages-8c6794b6</code> repository:</p>
 <pre><code>[~/repos/gh-pages-8c6794b6/_site] $ cd ../
 [~/repos/gh-pages-8c6794b6] $ git add -i
 ... add submodule, new post, etc ...
 [~/repos/gh-pages-8c6794b6] $ git commit -m &quot;Add new post&quot;
-[~/repos/gh-pages-8c6794b6] $ git push origin master
-</code></pre>
+[~/repos/gh-pages-8c6794b6] $ git push origin master</code></pre>
 <p>And the new post is published.</p>
 </div>
 
