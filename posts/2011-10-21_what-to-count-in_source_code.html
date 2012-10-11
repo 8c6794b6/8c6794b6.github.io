@@ -51,9 +51,6 @@
 <p>This code could be run from command line. Parses the contents and count the number of codesize in all given file paths.</p>
 <pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> main ::</span> <span class="dt">IO</span> ()
 <span class="fu">&gt;</span> main <span class="fu">=</span>  getArgs <span class="fu">&gt;&gt;=</span> <span class="fu">mapM_</span> (<span class="fu">readFile</span> <span class="fu">&gt;=&gt;</span> count namesAndLits)</code></pre>
-<p>This code could be run from command line. Parses the contents and count the number of codesize in all given file paths.</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> main ::</span> <span class="dt">IO</span> ()
-<span class="fu">&gt;</span> main <span class="fu">=</span>  getArgs <span class="fu">&gt;&gt;=</span> <span class="fu">mapM_</span> (<span class="fu">readFile</span> <span class="fu">&gt;=&gt;</span> count namesAndLits)</code></pre>
 <p>Below is arc expression written with Tree data type. Last node <q>submit</q> has a child element with empty string, since it was parenthesized explicitly.</p>
 <pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> arc ::</span> <span class="dt">Tree</span> <span class="dt">String</span>
 <span class="fu">&gt;</span> arc <span class="fu">=</span>
