@@ -28,30 +28,33 @@
 
         <h1>Tip using 'asTypeOf'</h1>
 <div id="post_date">
-  <strong>Oct 11, 2012</strong>
+  <strong>October 11, 2012</strong>
 </div>
 
 <div id="post_body">
 <p>I found myself an idiot for such a long time I was not aware of this use of <code>asTypeOf</code> function.</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span> <span class="kw">module</span> <span class="dt">AsTypeOf</span> <span class="kw">where</span></code></pre>
+<pre class="sourceCode"><code class="sourceCode haskell">&gt; <span class="kw">module</span> <span class="dt">AsTypeOf</span> <span class="kw">where</span></code></pre>
 <p>When we have a type with multiple varialbles, e.g. <code>Either</code>:</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span> rightChar <span class="fu">=</span> <span class="kw">Right</span> <span class="ch">'a'</span></code></pre>
+<pre class="sourceCode"><code class="sourceCode haskell">&gt; rightChar <span class="fu">=</span> <span class="kw">Right</span> <span class="ch">'a'</span></code></pre>
 <p>In ghci:</p>
 <pre><code>ghci&gt; :t rightChar
-rightChar :: Either a Char</code></pre>
+rightChar :: Either a Char
+</code></pre>
 <p>We are yet not sure for remaining type variables. In above case, we still do not have a clue to fix the type of <code>Left</code> constructor.</p>
 <p>One way to fix the type used for <code>Left</code> is wrapping multiple values in single list:</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span> rightCharInList <span class="fu">=</span> [rightChar, <span class="kw">Left</span> <span class="kw">True</span>]</code></pre>
+<pre class="sourceCode"><code class="sourceCode haskell">&gt; rightCharInList <span class="fu">=</span> [rightChar, <span class="kw">Left</span> <span class="kw">True</span>]</code></pre>
 <p>Showing the type:</p>
 <pre><code>ghci&gt; :t rightCharInList
-rightCharInList :: [Either Bool Char]</code></pre>
+rightCharInList :: [Either Bool Char]
+</code></pre>
 <p>Or another, using <code>asTypeOf</code> instead of list:</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span> rightChar' <span class="fu">=</span> rightChar <span class="ot">`asTypeOf`</span> <span class="kw">Left</span> <span class="kw">True</span></code></pre>
+<pre class="sourceCode"><code class="sourceCode haskell">&gt; rightChar' <span class="fu">=</span> rightChar <span class="ot">`asTypeOf`</span> <span class="kw">Left</span> <span class="kw">True</span></code></pre>
 <p>Now the type for <code>Left</code> constructor is fixed, value is identical to <code>rightChar</code>:</p>
 <pre><code>ghci&gt; rightChar'
 Right 'a'
 ghci&gt; :t rightChar'
-rightChar' :: Either Bool Char</code></pre>
+rightChar' :: Either Bool Char
+</code></pre>
 </div>
 
 <div class="post_tags">
