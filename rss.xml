@@ -6,146 +6,1038 @@
         <description><![CDATA[Warm and fuzzy]]></description>
         <atom:link href="http://8c6794b6.github.com/rss.xml" rel="self"
                    type="application/rss+xml" />
-        <lastBuildDate>No date found.</lastBuildDate>
+        <lastBuildDate>Mon, 17 Dec 2012 00:00:00 UT</lastBuildDate>
         <item>
-    <title>What to count in source code</title>
-    <link>http://8c6794b6.github.com/posts/2011-10-21_what-to-count-in_source_code.html</link>
-    <description><![CDATA[Counting expressions in haskell source code]]></description>
-    <pubDate>No date found.</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2011-10-21_what-to-count-in_source_code.html</guid>
-</item>
-<item>
-    <title>Another instance deriving example with template haskell</title>
-    <link>http://8c6794b6.github.com/posts/2011-10-22-another-instance-deriving-example-with-template-haskell.html</link>
-    <description><![CDATA[Deriving instance with passing member functions]]></description>
-    <pubDate>Sat, 22 Oct 2011 00:00:00 UT</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2011-10-22-another-instance-deriving-example-with-template-haskell.html</guid>
-</item>
-<item>
-    <title>Adhoc update of ugen parameters</title>
-    <link>http://8c6794b6.github.com/posts/2011-10-25_adhoc-update-of-ugen-parameters.html</link>
-    <description><![CDATA[Updating ugen parameters with generics]]></description>
-    <pubDate>No date found.</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2011-10-25_adhoc-update-of-ugen-parameters.html</guid>
-</item>
-<item>
-    <title>Bytestring and unicode chars from U+0080 to U+00FF</title>
-    <link>http://8c6794b6.github.com/posts/2011-11-02_bytestring_and_unicode_chars_from_U+0080_to_U+00FF.html</link>
-    <description><![CDATA[Using bytestring data between U+0080 and U+00FF]]></description>
-    <pubDate>No date found.</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2011-11-02_bytestring_and_unicode_chars_from_U+0080_to_U+00FF.html</guid>
-</item>
-<item>
-    <title>A situation when type families does not work, but functional dependencies does</title>
-    <link>http://8c6794b6.github.com/posts/2011-11-07_typefam_and_fundep.html</link>
-    <description><![CDATA[A comparison for TF and FD.]]></description>
-    <pubDate>No date found.</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2011-11-07_typefam_and_fundep.html</guid>
-</item>
-<item>
-    <title>Making sound with side effects</title>
-    <link>http://8c6794b6.github.com/posts/2011-11-13_making_sound_with_side_effects.html</link>
-    <description><![CDATA[Making sound with side effects of fibonacci sequence]]></description>
-    <pubDate>No date found.</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2011-11-13_making_sound_with_side_effects.html</guid>
-</item>
-<item>
-    <title>Benchmarking arrow syntax</title>
-    <link>http://8c6794b6.github.com/posts/2011-11-16_benchmarking_arrow_syntax.html</link>
-    <description><![CDATA[Performance comparison of arrow syntax]]></description>
-    <pubDate>No date found.</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2011-11-16_benchmarking_arrow_syntax.html</guid>
-</item>
-<item>
-    <title>Running happstack app with heroku</title>
-    <link>http://8c6794b6.github.com/posts/2011-11-20-running-happstack-app-with-heroku.html</link>
-    <description><![CDATA[A demo of simple full text search running with heroku]]></description>
-    <pubDate>Sun, 20 Nov 2011 00:00:00 UT</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2011-11-20-running-happstack-app-with-heroku.html</guid>
-</item>
-<item>
-    <title>Sound of lena</title>
-    <link>http://8c6794b6.github.com/posts/2011-12-01_sound_of_lena.html</link>
-    <description><![CDATA[Converting image with repa and sndfile]]></description>
-    <pubDate>No date found.</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2011-12-01_sound_of_lena.html</guid>
-</item>
-<item>
-    <title>Extracting argument names</title>
-    <link>http://8c6794b6.github.com/posts/2011-12-10_funargs.html</link>
-    <description><![CDATA[Getting bounded argument names of function]]></description>
-    <pubDate>No date found.</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2011-12-10_funargs.html</guid>
-</item>
-<item>
-    <title>Loading dph codes in ghci</title>
-    <link>http://8c6794b6.github.com/posts/2012-01-22_loading-dph-codes-in-ghci.html</link>
-    <description><![CDATA[How to load dph codes within ghci]]></description>
-    <pubDate>No date found.</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2012-01-22_loading-dph-codes-in-ghci.html</guid>
-</item>
-<item>
-    <title>Serialization in a hurry</title>
-    <link>http://8c6794b6.github.com/posts/2012-02-18_serialization_in_a_hurry.html</link>
-    <description><![CDATA[Serializing user defined data in a hurry]]></description>
-    <pubDate>No date found.</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2012-02-18_serialization_in_a_hurry.html</guid>
-</item>
-<item>
-    <title>Minimalistic pdf and ps viewers for linux - Winter/Spring 2012</title>
-    <link>http://8c6794b6.github.com/posts/2012-02-25_pdf_ps_viewers.html</link>
-    <description><![CDATA[Looking for a pdf/ps viewer in linux, Feb 2012.]]></description>
-    <pubDate>No date found.</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2012-02-25_pdf_ps_viewers.html</guid>
-</item>
-<item>
-    <title>Calling itself as a dependency in cabal package</title>
-    <link>http://8c6794b6.github.com/posts/2012-03-24-calling_itself_as_a_dependency_in_cabal_package.html</link>
-    <description><![CDATA[Calling itself as a dependency in cabal package]]></description>
-    <pubDate>Sat, 24 Mar 2012 00:00:00 UT</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2012-03-24-calling_itself_as_a_dependency_in_cabal_package.html</guid>
-</item>
-<item>
-    <title>How to manage this site</title>
-    <link>http://8c6794b6.github.com/posts/2012-04-21_howto_manage_this_site.html</link>
-    <description><![CDATA[Reminder to myself for how to manage this site]]></description>
-    <pubDate>No date found.</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2012-04-21_howto_manage_this_site.html</guid>
-</item>
-<item>
-    <title>Cause of 3 nano seconds difference</title>
-    <link>http://8c6794b6.github.com/posts/2012-04-22_cause_of_3_nano_seconds.html</link>
-    <description><![CDATA[Seeking for faster way than looping with unboxed vector.]]></description>
-    <pubDate>No date found.</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2012-04-22_cause_of_3_nano_seconds.html</guid>
-</item>
-<item>
-    <title>Guard, case, and pattern match</title>
-    <link>http://8c6794b6.github.com/posts/2012-05-27-guard_case_patmatch.html</link>
-    <description><![CDATA[Comparision of performance difference in guard, case, and pattern match]]></description>
-    <pubDate>Sun, 27 May 2012 00:00:00 UT</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2012-05-27-guard_case_patmatch.html</guid>
-</item>
-<item>
-    <title>Mapping 'show' to tuples with TH</title>
-    <link>http://8c6794b6.github.com/posts/2012-05-28-mapping-show-with-th.html</link>
-    <description><![CDATA[Mapping 'show' to list containing variable sized tuples with TH]]></description>
-    <pubDate>Mon, 28 May 2012 00:00:00 UT</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2012-05-28-mapping-show-with-th.html</guid>
+    <title>Benchmarking insert and member with AVL tree</title>
+    <link>http://8c6794b6.github.com/posts/2012-12-17-benchmarking-insertion-with-avl-tree.html</link>
+    <description><![CDATA[<h1>Benchmarking insert and member with AVL tree</h1>
+<div id="post_date">
+  <strong>December 17, 2012</strong>
+</div>
+
+<div id="post_body">
+<p>While I was reading <a href="https://en.wikipedia.org/wiki/AVL_tree">AVL Tree</a> page on wikipedia, it motivated me enough to write the implementation in Haskell.</p>
+<p>There are couple AVL Tree implementations already exist: <a href="http://hackage.haskell.org/package/AvlTree">a package uploaded to hackage</a>, <a href="https://gist.github.com/109729">gist snippet</a>, and <a href="http://www.okmij.org/ftp/Haskell/types.html#stanamic-AVL">polymorphic stanamically balanced AVL tree</a>. As for classic data structure and algorithm exercise, decided to write a simple implementation.</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE BangPatterns #-}</span>
+<span class="ot">&gt;</span> <span class="kw">module</span> <span class="dt">AVL</span> <span class="kw">where</span></code></pre>
+<p>For taking benchmarks and comparison with <code>Data.Map</code> from container package. None of these modules are used in code implementing AVL.</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">import</span> Control.DeepSeq (NFData(..), deepseq)
+<span class="ot">&gt;</span> <span class="kw">import</span> Criterion.Main
+<span class="ot">&gt;</span> <span class="kw">import</span> System.Random
+<span class="ot">&gt;</span> <span class="kw">import</span> <span class="kw">qualified</span> Data.Map <span class="kw">as</span> M</code></pre>
+<p>Like other binary trees, AVL tree has leaf constructor and node constructor with right and left branch, with a field to hold height of the node:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">data</span> <span class="dt">AVL</span> a
+<span class="ot">&gt;</span>   <span class="fu">=</span> <span class="dt">Node</span> <span class="ot">{-# UNPACK #-}</span> <span class="fu">!</span><span class="dt">Int</span> <span class="fu">!</span>(<span class="dt">AVL</span> a) <span class="fu">!</span>a <span class="fu">!</span>(<span class="dt">AVL</span> a)
+<span class="ot">&gt;</span>   <span class="fu">|</span> <span class="dt">Leaf</span>
+<span class="ot">&gt;</span>   <span class="kw">deriving</span> (<span class="dt">Eq</span>, <span class="dt">Show</span>)</code></pre>
+<p>There was a note about order of constructors written in comments of <a href="http://www.haskell.org/ghc/docs/latest/html/libraries/containers/src/Data-Map-Base.html">Data.Map.Base</a>:</p>
+<pre><code>When type has 2 constructors, a forward conditional jump is made
+when successfully matching second constructor, in GHC 7.0.</code></pre>
+<p>This was still true in GHC 7.6.1, the version used at the time of writing. This is the reason why <code>Node</code> constructor came before the <code>Leaf</code> constructor.</p>
+<p>An alias for leaf node:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; empty ::</span> <span class="dt">AVL</span> a
+<span class="ot">&gt;</span> empty <span class="fu">=</span> <span class="dt">Leaf</span>
+<span class="ot">&gt;</span> <span class="ot">{-# INLINEABLE empty #-}</span></code></pre>
+<p>Height of tree. Defining height of <code>Leaf</code> node as ‘0’.</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; height ::</span> <span class="dt">AVL</span> a <span class="ot">-&gt;</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span> height t <span class="fu">=</span> <span class="kw">case</span> t <span class="kw">of</span>
+<span class="ot">&gt;</span>   <span class="dt">Leaf</span>          <span class="ot">-&gt;</span> <span class="dv">0</span>
+<span class="ot">&gt;</span>   <span class="dt">Node</span> <span class="fu">!</span>n _ _ _ <span class="ot">-&gt;</span> n
+<span class="ot">&gt;</span> <span class="ot">{-# INLINE height #-}</span></code></pre>
+<p>Insert element to AVL tree. This function calls <code>rebalance</code> after inserting new element. Also, new element is strictly evaluated inside the local function <code>go</code>.</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; insert ::</span> <span class="dt">Ord</span> a <span class="ot">=&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">AVL</span> a <span class="ot">-&gt;</span> <span class="dt">AVL</span> a
+<span class="ot">&gt;</span> insert <span class="fu">=</span> go <span class="kw">where</span>
+<span class="ot">&gt;   go ::</span> <span class="dt">Ord</span> a <span class="ot">=&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">AVL</span> a <span class="ot">-&gt;</span> <span class="dt">AVL</span> a
+<span class="ot">&gt;</span>   go <span class="fu">!</span>n <span class="dt">Leaf</span>             <span class="fu">=</span> <span class="dt">Node</span> <span class="dv">1</span> <span class="dt">Leaf</span> n <span class="dt">Leaf</span>
+<span class="ot">&gt;</span>   go <span class="fu">!</span>n (<span class="dt">Node</span> h l <span class="fu">!</span>n&#39; r) <span class="fu">=</span> <span class="kw">case</span> compare n&#39; n <span class="kw">of</span>
+<span class="ot">&gt;</span>     <span class="dt">LT</span> <span class="ot">-&gt;</span> rebalance <span class="fu">$</span> <span class="dt">Node</span> h l n&#39; (insert n r)
+<span class="ot">&gt;</span>     _  <span class="ot">-&gt;</span> rebalance <span class="fu">$</span> <span class="dt">Node</span> h (insert n l) n&#39; r
+<span class="ot">&gt;</span> <span class="ot">{-# INLINEABLE insert #-}</span></code></pre>
+<p>A function to check whether given element is a member of tree or not. Given element and element of pattern matched node are, again strictly evaluated.</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; member ::</span> (<span class="dt">Ord</span> a, <span class="dt">Eq</span> a) <span class="ot">=&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">AVL</span> a <span class="ot">-&gt;</span> <span class="dt">Bool</span>
+<span class="ot">&gt;</span> member _  <span class="dt">Leaf</span>           <span class="fu">=</span> <span class="dt">False</span>
+<span class="ot">&gt;</span> member <span class="fu">!</span>x (<span class="dt">Node</span> _ l <span class="fu">!</span>y r) <span class="fu">=</span> <span class="kw">case</span> compare x y <span class="kw">of</span>
+<span class="ot">&gt;</span>   <span class="dt">LT</span> <span class="ot">-&gt;</span> member x l
+<span class="ot">&gt;</span>   <span class="dt">GT</span> <span class="ot">-&gt;</span> member x r
+<span class="ot">&gt;</span>   <span class="dt">EQ</span> <span class="ot">-&gt;</span> <span class="dt">True</span>
+<span class="ot">&gt;</span> <span class="ot">{-# INLINEABLE member #-}</span></code></pre>
+<p>There could be more functions, delete, merge, etc. But I’m little bit lazy to write them in this post.</p>
+<p>Here comes the balancing function. It rebalances tree, four cases are considered: <em>right-right</em>, <em>right-left</em>, <em>left-left</em>, and <em>left-right</em>.</p>
+<p>Firstly, comparing with <code>Leaf</code> node, which is not needed to rebalance any more. Then the height from left node and right node are compared, leading to next case.</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; rebalance ::</span> <span class="dt">AVL</span> a <span class="ot">-&gt;</span> <span class="dt">AVL</span> a
+<span class="ot">&gt;</span> rebalance <span class="dt">Leaf</span>                 <span class="fu">=</span> <span class="dt">Leaf</span>
+<span class="ot">&gt;</span> rebalance n1<span class="fu">@</span>(<span class="dt">Node</span> _ l1 x1 r1) <span class="fu">=</span> <span class="kw">case</span> compare hL1 hR1 <span class="kw">of</span>
+<span class="ot">&gt;</span>   <span class="dt">LT</span> <span class="ot">-&gt;</span> rightIsHeavy
+<span class="ot">&gt;</span>   <span class="dt">GT</span> <span class="ot">-&gt;</span> leftIsHeavy
+<span class="ot">&gt;</span>   <span class="dt">EQ</span> <span class="ot">-&gt;</span> updateHeight n1
+<span class="ot">&gt;</span>   <span class="kw">where</span>
+<span class="ot">&gt;</span>     hL1 <span class="fu">=</span> height l1
+<span class="ot">&gt;</span>     hR1 <span class="fu">=</span> height r1</code></pre>
+<p>When right node is heavy, we compare the left node and right node again, and perform the rotations.</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span>     rightIsHeavy <span class="fu">=</span> <span class="kw">case</span> r1 <span class="kw">of</span>
+<span class="ot">&gt;</span>       <span class="dt">Leaf</span>            <span class="ot">-&gt;</span> n1
+<span class="ot">&gt;</span>       <span class="dt">Node</span> _ l2 x2 r2 <span class="ot">-&gt;</span>
+<span class="ot">&gt;</span>         <span class="kw">case</span> compare (height l2) (height r2) <span class="kw">of</span></code></pre>
+<p>The right-right case, single rotation swapping the node in the middle to top and top node to left:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span>           <span class="dt">LT</span> <span class="ot">-&gt;</span> <span class="dt">Node</span> (hL1<span class="fu">+</span><span class="dv">2</span>) (<span class="dt">Node</span> (hL1<span class="fu">+</span><span class="dv">1</span>) l1 x1 l2) x2 r2</code></pre>
+<p>The right-left case, bringing the bottom element to top, top element to left, and middle element to right, with reordering each hanging nodes appropriately.</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span>           <span class="dt">GT</span> <span class="ot">-&gt;</span> <span class="kw">case</span> l2 <span class="kw">of</span>
+<span class="ot">&gt;</span>             <span class="dt">Leaf</span>             <span class="ot">-&gt;</span> n1
+<span class="ot">&gt;</span>             <span class="dt">Node</span> h3 l3 x3 r3 <span class="ot">-&gt;</span>
+<span class="ot">&gt;</span>               <span class="dt">Node</span> (h3<span class="fu">+</span><span class="dv">1</span>) (<span class="dt">Node</span> h3 l1 x1 l3) x3 (<span class="dt">Node</span> h3 r3 x2 r2)</code></pre>
+<p>Nothing left to do when nodes already has same height, merely returning the given node itself.</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span>           <span class="dt">EQ</span> <span class="ot">-&gt;</span> n1</code></pre>
+<p>Left-left case and left-right cases are symmetrical to above:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span>     leftIsHeavy <span class="fu">=</span> <span class="kw">case</span> l1 <span class="kw">of</span>
+<span class="ot">&gt;</span>       <span class="dt">Leaf</span>            <span class="ot">-&gt;</span> n1
+<span class="ot">&gt;</span>       <span class="dt">Node</span> _ l2 x2 r2 <span class="ot">-&gt;</span>
+<span class="ot">&gt;</span>         <span class="kw">case</span> compare (height l2) (height r2) <span class="kw">of</span>
+<span class="ot">&gt;</span>           <span class="dt">LT</span> <span class="ot">-&gt;</span> <span class="kw">case</span> r2 <span class="kw">of</span>
+<span class="ot">&gt;</span>             <span class="dt">Leaf</span>             <span class="ot">-&gt;</span> n1
+<span class="ot">&gt;</span>             <span class="dt">Node</span> h3 l3 x3 r3 <span class="ot">-&gt;</span>
+<span class="ot">&gt;</span>               <span class="dt">Node</span> (h3<span class="fu">+</span><span class="dv">1</span>) (<span class="dt">Node</span> h3 l2 x2 l3) x3 (<span class="dt">Node</span> h3 r3 x1 r1)
+<span class="ot">&gt;</span>           <span class="dt">GT</span> <span class="ot">-&gt;</span> <span class="dt">Node</span> (hR1<span class="fu">+</span><span class="dv">2</span>) l2 x2 (<span class="dt">Node</span> (hR1<span class="fu">+</span><span class="dv">1</span>) r2 x1 r1)
+<span class="ot">&gt;</span>           <span class="dt">EQ</span> <span class="ot">-&gt;</span> n1
+<span class="ot">&gt;</span> <span class="ot">{-# INLINE rebalance #-}</span></code></pre>
+<p>Non-recursive height updating function, used in <code>EQ</code> case of <code>rebalance</code>:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; updateHeight ::</span> <span class="dt">AVL</span> a <span class="ot">-&gt;</span> <span class="dt">AVL</span> a
+<span class="ot">&gt;</span> updateHeight t <span class="fu">=</span> <span class="kw">case</span> t <span class="kw">of</span>
+<span class="ot">&gt;</span>   <span class="dt">Leaf</span>                                         <span class="ot">-&gt;</span> <span class="dt">Leaf</span>
+<span class="ot">&gt;</span>   <span class="dt">Node</span> _ <span class="dt">Leaf</span> n <span class="dt">Leaf</span>                           <span class="ot">-&gt;</span> <span class="dt">Node</span> <span class="dv">1</span> <span class="dt">Leaf</span> n <span class="dt">Leaf</span>
+<span class="ot">&gt;</span>   <span class="dt">Node</span> _ l<span class="fu">@</span>(<span class="dt">Node</span> h _ _ _)  n  <span class="dt">Leaf</span>             <span class="ot">-&gt;</span> <span class="dt">Node</span> (h<span class="fu">+</span><span class="dv">1</span>) l n <span class="dt">Leaf</span>
+<span class="ot">&gt;</span>   <span class="dt">Node</span> _ <span class="dt">Leaf</span>              n r<span class="fu">@</span>(<span class="dt">Node</span> h _ _ _)  <span class="ot">-&gt;</span> <span class="dt">Node</span> (h<span class="fu">+</span><span class="dv">1</span>) <span class="dt">Leaf</span> n r
+<span class="ot">&gt;</span>   <span class="dt">Node</span> _ l<span class="fu">@</span>(<span class="dt">Node</span> hl _ _ _) n r<span class="fu">@</span>(<span class="dt">Node</span> hr _ _ _) <span class="ot">-&gt;</span> <span class="dt">Node</span> h&#39; l n r <span class="kw">where</span>
+<span class="ot">&gt;</span>     h&#39; <span class="fu">|</span> hl <span class="fu">&lt;</span> hr   <span class="fu">=</span> hr <span class="fu">+</span> <span class="dv">1</span>
+<span class="ot">&gt;</span>        <span class="fu">|</span> otherwise <span class="fu">=</span> hl <span class="fu">+</span> <span class="dv">1</span>
+<span class="ot">&gt;</span> <span class="ot">{-# INLINE updateHeight #-}</span></code></pre>
+<p>That’s all for AVL tree to have <code>insert</code> and <code>member</code> function. For testing, a function to check the balance:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; isBalanced ::</span> <span class="dt">AVL</span> a <span class="ot">-&gt;</span> <span class="dt">Bool</span>
+<span class="ot">&gt;</span> isBalanced t <span class="fu">=</span> <span class="kw">case</span> t <span class="kw">of</span>
+<span class="ot">&gt;</span>   <span class="dt">Leaf</span>         <span class="ot">-&gt;</span> <span class="dt">True</span>
+<span class="ot">&gt;</span>   <span class="dt">Node</span> h l _ r <span class="ot">-&gt;</span>
+<span class="ot">&gt;</span>     abs (h <span class="fu">-</span> height l) <span class="fu">&lt;=</span> <span class="dv">1</span> <span class="fu">&amp;&amp;</span> abs (h <span class="fu">-</span> height r) <span class="fu">&lt;=</span> <span class="dv">1</span> <span class="fu">&amp;&amp;</span>
+<span class="ot">&gt;</span>     isBalanced l <span class="fu">&amp;&amp;</span> isBalanced r
+<span class="ot">&gt;</span> <span class="ot">{-# INLINE isBalanced #-}</span></code></pre>
+<p>Simple check:</p>
+<pre><code>ghci&gt; isBalanced $ foldr insert empty [1..1024]
+True
+ghci&gt; isBalanced $ foldr insert empty [1024,1023..1]
+True</code></pre>
+<p>Benchmarks:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">instance</span> <span class="dt">NFData</span> a <span class="ot">=&gt;</span> <span class="dt">NFData</span> (<span class="dt">AVL</span> a) <span class="kw">where</span>
+<span class="ot">&gt;</span>   rnf <span class="dt">Leaf</span> <span class="fu">=</span> ()
+<span class="ot">&gt;</span>   rnf (<span class="dt">Node</span> h l x r) <span class="fu">=</span> rnf h <span class="ot">`seq`</span> rnf l <span class="ot">`seq`</span> rnf x <span class="ot">`seq`</span> rnf r
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; avlBenches ::</span> [<span class="dt">Benchmark</span>]
+<span class="ot">&gt;</span> avlBenches <span class="fu">=</span>
+<span class="ot">&gt;</span>   <span class="kw">let</span> tn n <span class="fu">=</span> foldr insert empty [<span class="dv">0</span><span class="fu">..</span>n<span class="fu">-</span><span class="dv">1</span><span class="ot">::</span><span class="dt">Int</span>]
+<span class="ot">&gt;</span>       insertAVL <span class="fu">!</span>k <span class="fu">=</span>
+<span class="ot">&gt;</span>         <span class="kw">let</span> <span class="fu">!</span>x <span class="fu">=</span> <span class="kw">let</span> x&#39; <span class="fu">=</span> tn k <span class="kw">in</span> x&#39; <span class="ot">`deepseq`</span> x&#39;
+<span class="ot">&gt;</span>         <span class="kw">in</span>  bench (<span class="st">&quot;n=&quot;</span> <span class="fu">++</span> show k) (whnfIO <span class="fu">$</span> insertRand x (<span class="dv">0</span>,k<span class="fu">-</span><span class="dv">1</span>))
+<span class="ot">&gt;</span>       insertRand t (a,b) <span class="fu">=</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>         x <span class="ot">&lt;-</span> getStdRandom (randomR (a,b))
+<span class="ot">&gt;</span>         <span class="kw">let</span> y <span class="fu">=</span> insert x t
+<span class="ot">&gt;</span>         return <span class="fu">$!</span> y
+<span class="ot">&gt;</span>       memberAVL k <span class="fu">=</span>
+<span class="ot">&gt;</span>         <span class="kw">let</span> x <span class="fu">=</span> tn k
+<span class="ot">&gt;</span>         <span class="kw">in</span>  x <span class="ot">`deepseq`</span> bench (<span class="st">&quot;n=&quot;</span> <span class="fu">++</span> show k) (whnfIO <span class="fu">$</span> memberRand x (<span class="dv">0</span>,k<span class="fu">-</span><span class="dv">1</span>))
+<span class="ot">&gt;</span>       memberRand t (a,b) <span class="fu">=</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>         x <span class="ot">&lt;-</span> getStdRandom (randomR (a,b))
+<span class="ot">&gt;</span>         <span class="kw">let</span> y <span class="fu">=</span> member x t
+<span class="ot">&gt;</span>         return <span class="fu">$!</span> y
+<span class="ot">&gt;</span>       mn n <span class="fu">=</span> <span class="kw">let</span> xs <span class="fu">=</span> [<span class="dv">0</span><span class="fu">..</span>n<span class="fu">-</span><span class="dv">1</span><span class="ot">::</span><span class="dt">Int</span>] <span class="kw">in</span> M.fromList <span class="fu">$</span> zip xs (repeat ())
+<span class="ot">&gt;</span>       insertMap <span class="fu">!</span>k <span class="fu">=</span>
+<span class="ot">&gt;</span>         <span class="kw">let</span> <span class="fu">!</span>x <span class="fu">=</span> <span class="kw">let</span> x&#39; <span class="fu">=</span> mn k <span class="kw">in</span> x&#39; <span class="ot">`deepseq`</span> x&#39;
+<span class="ot">&gt;</span>         <span class="kw">in</span>  bench (<span class="st">&quot;n=&quot;</span> <span class="fu">++</span> show k) (whnfIO <span class="fu">$</span> insertRandM x (<span class="dv">0</span>,k<span class="fu">-</span><span class="dv">1</span>))
+<span class="ot">&gt;</span>       insertRandM m (a,b) <span class="fu">=</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>         x <span class="ot">&lt;-</span> getStdRandom (randomR (a,b))
+<span class="ot">&gt;</span>         <span class="kw">let</span> y <span class="fu">=</span> M.insert x () m
+<span class="ot">&gt;</span>         return <span class="fu">$!</span> y
+<span class="ot">&gt;</span>       memberMap k <span class="fu">=</span>
+<span class="ot">&gt;</span>         <span class="kw">let</span> <span class="fu">!</span>x <span class="fu">=</span> <span class="kw">let</span> x&#39; <span class="fu">=</span> mn k <span class="kw">in</span> x&#39; <span class="ot">`deepseq`</span> x&#39;
+<span class="ot">&gt;</span>         <span class="kw">in</span>  bench (<span class="st">&quot;n=&quot;</span> <span class="fu">++</span> show k) (whnfIO <span class="fu">$</span> memberRandM x (<span class="dv">0</span>,k<span class="fu">-</span><span class="dv">1</span>))
+<span class="ot">&gt;</span>       memberRandM m (a,b) <span class="fu">=</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>         x <span class="ot">&lt;-</span> getStdRandom (randomR (a,b))
+<span class="ot">&gt;</span>         <span class="kw">let</span> y <span class="fu">=</span> M.member x m
+<span class="ot">&gt;</span>         return <span class="fu">$!</span> y
+<span class="ot">&gt;</span>       benchmarks <span class="fu">=</span>
+<span class="ot">&gt;</span>         [ bgroup <span class="st">&quot;AVL&quot;</span>
+<span class="ot">&gt;</span>           [ bgroup <span class="st">&quot;insert&quot;</span> [insertAVL (<span class="dv">2</span><span class="fu">^</span>k) <span class="fu">|</span> k <span class="ot">&lt;-</span> [<span class="dv">10</span><span class="fu">..</span><span class="dv">14</span><span class="ot">::</span><span class="dt">Int</span>]]
+<span class="ot">&gt;</span>           , bgroup <span class="st">&quot;member&quot;</span> [memberAVL (<span class="dv">2</span><span class="fu">^</span>k) <span class="fu">|</span> k <span class="ot">&lt;-</span> [<span class="dv">10</span><span class="fu">..</span><span class="dv">14</span><span class="ot">::</span><span class="dt">Int</span>]]
+<span class="ot">&gt;</span>           ]
+<span class="ot">&gt;</span>         , bgroup <span class="st">&quot;Data.Map&quot;</span>
+<span class="ot">&gt;</span>           [ bgroup <span class="st">&quot;insert&quot;</span> [insertMap (<span class="dv">2</span><span class="fu">^</span>k) <span class="fu">|</span> k <span class="ot">&lt;-</span> [<span class="dv">10</span><span class="fu">..</span><span class="dv">14</span><span class="ot">::</span><span class="dt">Int</span>]]
+<span class="ot">&gt;</span>           , bgroup <span class="st">&quot;member&quot;</span> [memberMap (<span class="dv">2</span><span class="fu">^</span>k) <span class="fu">|</span> k <span class="ot">&lt;-</span> [<span class="dv">10</span><span class="fu">..</span><span class="dv">14</span><span class="ot">::</span><span class="dt">Int</span>]]
+<span class="ot">&gt;</span>           ]
+<span class="ot">&gt;</span>         ]
+<span class="ot">&gt;</span>   <span class="kw">in</span>  benchmarks</code></pre>
+<p>Using above benchmark as main:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; main ::</span> <span class="dt">IO</span> ()
+<span class="ot">&gt;</span> main <span class="fu">=</span> defaultMain avlBenches</code></pre>
+<p>Compile, run the benchmark, and see the result in html report:</p>
+<pre><code>$ ghc -O2 -fllvm AVL.lhs -main-is AVL -o AVL
+$ ./AVL -o bench.html</code></pre>
+<p>Report is <a href="../static/bench-avl-insert-member.html">here</a>.</p>
+<p>Lessons learned: from above simple implementation, a data structure with performance close to those provided by standard package could be implemented. Benchmark show that AVL tree insertion was slightly slower than insertion in Data.Map, performance of member lookup was almost identical. Though when there is no need for making own implemntation, just use the implementation from proven package, in most case those provided data structures has more features, Data.Map.Map has useful functions like <code>insetWith</code>, <code>unionWith</code>, etc.</p>
+<p>By the way, during the benchmark I was using <code>nfIO</code> instead of <code>whnfIO</code> for a while, resulting to linearly increasing insertion time for while.</p>
+</div>
+
+<div class="post_tags">
+  <strong>Tags: </strong><a href="/tags/haskell.html">haskell</a>, <a href="/tags/tree.html">tree</a>, <a href="/tags/datastructure.html">datastructure</a>, <a href="/tags/algorithm.html">algorithm</a>
+</div>
+]]></description>
+    <pubDate>Mon, 17 Dec 2012 00:00:00 UT</pubDate>
+    <guid>http://8c6794b6.github.com/posts/2012-12-17-benchmarking-insertion-with-avl-tree.html</guid>
 </item>
 <item>
     <title>Tip using 'asTypeOf'</title>
     <link>http://8c6794b6.github.com/posts/2012-10-11-asTypeOf-tip.html</link>
-    <description><![CDATA[A tip using 'asTypeOf' to fix types]]></description>
+    <description><![CDATA[<h1>Tip using 'asTypeOf'</h1>
+<div id="post_date">
+  <strong>October 11, 2012</strong>
+</div>
+
+<div id="post_body">
+<p>I found myself an idiot for such a long time I was not aware of this use of <code>asTypeOf</code> function.</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">module</span> <span class="dt">AsTypeOf</span> <span class="kw">where</span></code></pre>
+<p>When we have a type with multiple varialbles, e.g. <code>Either</code>:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> rightChar <span class="fu">=</span> <span class="dt">Right</span> <span class="ch">&#39;a&#39;</span></code></pre>
+<p>In ghci:</p>
+<pre><code>ghci&gt; :t rightChar
+rightChar :: Either a Char</code></pre>
+<p>We are yet not sure for remaining type variables. In above case, we still do not have a clue to fix the type of <code>Left</code> constructor.</p>
+<p>One way to fix the type used for <code>Left</code> is wrapping multiple values in single list:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> rightCharInList <span class="fu">=</span> [rightChar, <span class="dt">Left</span> <span class="dt">True</span>]</code></pre>
+<p>Showing the type:</p>
+<pre><code>ghci&gt; :t rightCharInList
+rightCharInList :: [Either Bool Char]</code></pre>
+<p>Or another, using <code>asTypeOf</code> instead of list:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> rightChar&#39; <span class="fu">=</span> rightChar <span class="ot">`asTypeOf`</span> <span class="dt">Left</span> <span class="dt">True</span></code></pre>
+<p>Now the type for <code>Left</code> constructor is fixed, value is identical to <code>rightChar</code>:</p>
+<pre><code>ghci&gt; rightChar&#39;
+Right &#39;a&#39;
+ghci&gt; :t rightChar&#39;
+rightChar&#39; :: Either Bool Char</code></pre>
+</div>
+
+<div class="post_tags">
+  <strong>Tags: </strong><a href="/tags/haskell.html">haskell</a>, <a href="/tags/tips.html">tips</a>
+</div>
+]]></description>
     <pubDate>Thu, 11 Oct 2012 00:00:00 UT</pubDate>
     <guid>http://8c6794b6.github.com/posts/2012-10-11-asTypeOf-tip.html</guid>
 </item>
 <item>
-    <title>Benchmarking insert and member with AVL tree</title>
-    <link>http://8c6794b6.github.com/posts/2012-12-17-benchmarking-insertion-with-avl-tree.html</link>
-    <description><![CDATA[Use whnf when benchmarking insertion for trees.]]></description>
-    <pubDate>Mon, 17 Dec 2012 00:00:00 UT</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2012-12-17-benchmarking-insertion-with-avl-tree.html</guid>
+    <title>Mapping 'show' to tuples with TH</title>
+    <link>http://8c6794b6.github.com/posts/2012-05-28-mapping-show-with-th.html</link>
+    <description><![CDATA[<h1>Mapping 'show' to tuples with TH</h1>
+<div id="post_date">
+  <strong>May 28, 2012</strong>
+</div>
+
+<div id="post_body">
+<p>Consider:</p>
+<pre><code>&gt; mapM_ putStrLn [show 1, show (1,2), show (1,2,3), show (1,2,3,4) ...]</code></pre>
+<p>The contents of list is String, but before applying ‘show’, type of elements differ. Goal of this post is to express above with using template haskell, like:</p>
+<pre><code>&gt; mapM_ putStrLn $(tups 3)</code></pre>
+<p>Which expands to:</p>
+<pre><code>&gt; mapM_ putStrLn [show 1, show (1,2), show (1,2,3))]</code></pre>
+<p>in caller module.</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE TemplateHaskell #-}</span>
+<span class="ot">&gt;</span> 
+<span class="ot">&gt;</span> <span class="kw">module</span> <span class="dt">MappingShow</span> <span class="kw">where</span>
+<span class="ot">&gt;</span> 
+<span class="ot">&gt;</span> <span class="kw">import</span> Control.Applicative
+<span class="ot">&gt;</span> <span class="kw">import</span> Control.Monad
+<span class="ot">&gt;</span> <span class="kw">import</span> Language.Haskell.TH</code></pre>
+<p>A pretty printer for template haskell Q monad:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; printQ ::</span> <span class="dt">Ppr</span> a <span class="ot">=&gt;</span> <span class="dt">Q</span> a <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
+<span class="ot">&gt;</span> printQ q <span class="fu">=</span> print <span class="fu">.</span> ppr <span class="fu">=&lt;&lt;</span> runQ q</code></pre>
+<p>Warming up, manually writing the tuple lists, and applying show to them:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; bTup ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">ExpQ</span>
+<span class="ot">&gt;</span> bTup n <span class="fu">=</span> tupE [litE (integerL j) <span class="fu">|</span> j <span class="ot">&lt;-</span> [<span class="dv">1</span><span class="fu">..</span>fromIntegral n]]
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; take01 ::</span> <span class="dt">ExpQ</span>
+<span class="ot">&gt;</span> take01 <span class="fu">=</span>
+<span class="ot">&gt;</span>   [e<span class="fu">|</span>
+<span class="ot">&gt;</span>    mapM_ putStrLn [show <span class="fu">$</span>(bTup <span class="dv">1</span>), show <span class="fu">$</span>(bTup <span class="dv">2</span>), show <span class="fu">$</span>(bTup <span class="dv">3</span>)]
+<span class="ot">&gt;</span>     <span class="fu">|</span>]</code></pre>
+<p>Result:</p>
+<pre><code>ghci&gt; printQ take01
+Control.Monad.mapM_ System.IO.putStrLn [GHC.Show.show (1),
+                                        GHC.Show.show (1, 2),
+                                        GHC.Show.show (1, 2, 3)]</code></pre>
+<p>We cannot write:</p>
+<pre><code>&gt; take02 = [e| map putStrLn [show $(bTup i) | i &lt;- [1..10]] |]</code></pre>
+<p>staging error occurs:</p>
+<pre><code>Stage error: `i&#39; is bound at stage 2 but used at stage 1
+In the first argument of `bTup&#39;, namely `i&#39;
+In the expression: bTup i
+In the first argument of `show&#39;, namely `$(bTup i)&#39;</code></pre>
+<p>So we cannot directly build a list of tuple with passing argument, <code>i</code> in above case. Though, since ‘Q’ is a Monad, we can run it, and then rebind it:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; tups ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">ExpQ</span>
+<span class="ot">&gt;</span> tups n <span class="fu">=</span> runQ <span class="fu">$</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>   ts <span class="ot">&lt;-</span> foldM (\acc i <span class="ot">-&gt;</span> (<span class="fu">:</span>acc) <span class="fu">&lt;$&gt;</span> bTup i) [] [<span class="dv">1</span><span class="fu">..</span>n]
+<span class="ot">&gt;</span>   return <span class="fu">$</span> <span class="dt">ListE</span> <span class="fu">$</span> map (<span class="dt">AppE</span> (<span class="dt">VarE</span> <span class="ch">&#39;show)) (reverse ts)</span></code></pre>
+<p>Results:</p>
+<pre><code>ghci&gt; printQ $ tups 10
+[GHC.Show.show (1),
+ GHC.Show.show (1, 2),
+ GHC.Show.show (1, 2, 3),
+ GHC.Show.show (1, 2, 3, 4),
+ GHC.Show.show (1, 2, 3, 4, 5),
+ GHC.Show.show (1, 2, 3, 4, 5, 6),
+ GHC.Show.show (1, 2, 3, 4, 5, 6, 7),
+ GHC.Show.show (1, 2, 3, 4, 5, 6, 7, 8),
+ GHC.Show.show (1, 2, 3, 4, 5, 6, 7, 8, 9),
+ GHC.Show.show (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)]</code></pre>
+<p>We can build a list of String elements in caller module, or prepare a template haskell expression which does the ‘mapM_ putStrLn’:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; mapShowTuples ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">ExpQ</span>
+<span class="ot">&gt;</span> mapShowTuples n <span class="fu">=</span> (varE <span class="ch">&#39;mapM_ `appE` varE &#39;</span>putStrLn) <span class="ot">`appE`</span> tups n</code></pre>
+<p>Results:</p>
+<pre><code>ghci&gt; printQ $ mapShowTuples 8
+Control.Monad.mapM_ System.IO.putStrLn [GHC.Show.show (1),
+                                        GHC.Show.show (1, 2),
+                                        GHC.Show.show (1, 2, 3),
+                                        GHC.Show.show (1, 2, 3, 4),
+                                        GHC.Show.show (1, 2, 3, 4, 5),
+                                        GHC.Show.show (1, 2, 3, 4, 5, 6),
+                                        GHC.Show.show (1, 2, 3, 4, 5, 6, 7),
+                                        GHC.Show.show (1, 2, 3, 4, 5, 6, 7, 8)]</code></pre>
+<p>Sample caller module may look like below:</p>
+<pre><code>{-# LANGUAGE TemplateHaskell #-}
+import MappingShow
+
+t8s :: [String]
+t8s = $(tups 8)
+
+t8s_view :: IO ()
+t8s_view = mapM_ putStrLn t8s
+
+t8s_view_th :: IO ()
+t8s_view_th = $(mapShowTuples 8)
+
+main :: IO ()
+main = t8s_view &gt;&gt; t8s_view_th</code></pre>
+<p>Result of running ‘main’:</p>
+<pre><code>ghci&gt; main
+1
+(1,2)
+(1,2,3)
+(1,2,3,4)
+(1,2,3,4,5)
+(1,2,3,4,5,6)
+(1,2,3,4,5,6,7)
+(1,2,3,4,5,6,7,8)
+1
+(1,2)
+(1,2,3)
+(1,2,3,4)
+(1,2,3,4,5)
+(1,2,3,4,5,6)
+(1,2,3,4,5,6,7)
+(1,2,3,4,5,6,7,8)</code></pre>
+</div>
+
+<div class="post_tags">
+  <strong>Tags: </strong><a href="/tags/haskell.html">haskell</a>, <a href="/tags/templatehaskell.html">templatehaskell</a>
+</div>
+]]></description>
+    <pubDate>Mon, 28 May 2012 00:00:00 UT</pubDate>
+    <guid>http://8c6794b6.github.com/posts/2012-05-28-mapping-show-with-th.html</guid>
+</item>
+<item>
+    <title>Guard, case, and pattern match</title>
+    <link>http://8c6794b6.github.com/posts/2012-05-27-guard_case_patmatch.html</link>
+    <description><![CDATA[<h1>Guard, case, and pattern match</h1>
+<div id="post_date">
+  <strong>May 27, 2012</strong>
+</div>
+
+<div id="post_body">
+<p>I tend to use case with tuples when a function takes more than one arguments. Alternate to tupling, we can write with guards or, with direct pattern match in function arguments.</p>
+<p>What differences we can find in compiled result?</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE BangPatterns #-}</span>
+<span class="ot">&gt;</span> <span class="kw">module</span> <span class="dt">GuardCasePatmatch</span> <span class="kw">where</span>
+<span class="ot">&gt;</span> 
+<span class="ot">&gt;</span> <span class="kw">import</span> Criterion.Main
+<span class="ot">&gt;</span> <span class="kw">import</span> Data.Int</code></pre>
+<p>Target function is, naive power function. First, with guard:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; pow_guard ::</span> <span class="dt">Int64</span> <span class="ot">-&gt;</span> <span class="dt">Int64</span> <span class="ot">-&gt;</span> <span class="dt">Int64</span>
+<span class="ot">&gt;</span> pow_guard <span class="fu">!</span>a <span class="fu">!</span>b
+<span class="ot">&gt;</span>   <span class="fu">|</span> b <span class="fu">==</span> <span class="dv">0</span>    <span class="fu">=</span> <span class="dv">1</span>
+<span class="ot">&gt;</span>   <span class="fu">|</span> otherwise <span class="fu">=</span> a <span class="fu">*</span> pow_guard a (b<span class="fu">-</span><span class="dv">1</span>)</code></pre>
+<p>Next, tupled case:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; pow_case ::</span> <span class="dt">Int64</span> <span class="ot">-&gt;</span> <span class="dt">Int64</span> <span class="ot">-&gt;</span> <span class="dt">Int64</span>
+<span class="ot">&gt;</span> pow_case <span class="fu">!</span>a <span class="fu">!</span>b <span class="fu">=</span> <span class="kw">case</span> (a,b) <span class="kw">of</span>
+<span class="ot">&gt;</span>   (_,<span class="dv">0</span>) <span class="ot">-&gt;</span> <span class="dv">1</span>
+<span class="ot">&gt;</span>   _     <span class="ot">-&gt;</span> a <span class="fu">*</span> pow_case a (b<span class="fu">-</span><span class="dv">1</span>)</code></pre>
+<p>Last, pattern match</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; pow_patmatch ::</span> <span class="dt">Int64</span> <span class="ot">-&gt;</span> <span class="dt">Int64</span> <span class="ot">-&gt;</span> <span class="dt">Int64</span>
+<span class="ot">&gt;</span> pow_patmatch <span class="fu">!</span>a <span class="dv">0</span> <span class="fu">=</span> <span class="dv">1</span>
+<span class="ot">&gt;</span> pow_patmatch <span class="fu">!</span>a <span class="fu">!</span>b <span class="fu">=</span> a <span class="fu">*</span> pow_patmatch a (b<span class="fu">-</span><span class="dv">1</span>)</code></pre>
+<p>Testing that all three give same result:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; test ::</span> <span class="dt">Bool</span>
+<span class="ot">&gt;</span> test <span class="fu">=</span> all id [f x y <span class="fu">|</span> x <span class="ot">&lt;-</span> [<span class="dv">1</span><span class="fu">..</span><span class="dv">32</span>], y <span class="ot">&lt;-</span> [<span class="dv">1</span><span class="fu">..</span><span class="dv">32</span>]] <span class="kw">where</span>
+<span class="ot">&gt;</span>   f a b <span class="fu">=</span>
+<span class="ot">&gt;</span>     <span class="kw">let</span> pc <span class="fu">=</span> pow_case a b
+<span class="ot">&gt;</span>         pg <span class="fu">=</span> pow_guard a b
+<span class="ot">&gt;</span>         pp <span class="fu">=</span> pow_patmatch a b
+<span class="ot">&gt;</span>     <span class="kw">in</span>  pc <span class="fu">==</span> pg <span class="fu">&amp;&amp;</span> pg <span class="fu">==</span> pp</code></pre>
+<p>Result:</p>
+<pre><code>ghci&gt; test
+True</code></pre>
+<p>Seems fine. Now benchmarking:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; main ::</span> <span class="dt">IO</span> ()
+<span class="ot">&gt;</span> main <span class="fu">=</span> defaultMain
+<span class="ot">&gt;</span>  [ bench <span class="st">&quot;guard&quot;</span> (nf (pow_guard <span class="dv">2</span>) <span class="dv">64</span>)
+<span class="ot">&gt;</span>  , bench <span class="st">&quot;case&quot;</span> (nf (pow_case <span class="dv">2</span>) <span class="dv">64</span>)
+<span class="ot">&gt;</span>  , bench <span class="st">&quot;patmatch&quot;</span> (nf (pow_patmatch <span class="dv">2</span>) <span class="dv">64</span>)
+<span class="ot">&gt;</span>  ]</code></pre>
+<p>Compile and run:</p>
+<pre><code>$ ghc --numeric-version
+7.4.1
+$ ghc -fllvm -optl-O3 -O3 -o a.out -main-is GuardCasePatmatch gcp.lhs</code></pre>
+<p>Result:</p>
+<pre><code>benchmarking guard
+mean: 386.1059 ns, lb 385.6170 ns, ub 386.6460 ns, ci 0.950
+std dev: 2.640960 ns, lb 2.261563 ns, ub 3.111325 ns, ci 0.950
+
+benchmarking case
+mean: 382.4345 ns, lb 382.0820 ns, ub 382.8864 ns, ci 0.950
+std dev: 2.030602 ns, lb 1.667205 ns, ub 2.567343 ns, ci 0.950
+
+benchmarking patmatch
+mean: 385.1643 ns, lb 384.6979 ns, ub 385.7441 ns, ci 0.950
+std dev: 2.657997 ns, lb 2.163594 ns, ub 3.363755 ns, ci 0.950</code></pre>
+<p>Almost same. How about dumped core?</p>
+<p>Exerpt of dumped core of <code>power_guard</code> looks like this:</p>
+<pre><code>Rec {
+GuardCasePatmatch.$wpow_guard [Occ=LoopBreaker]
+  :: GHC.Prim.Int# -&gt; GHC.Prim.Int# -&gt; GHC.Prim.Int#
+[GblId, Arity=2, Caf=NoCafRefs, Str=DmdType LL]
+GuardCasePatmatch.$wpow_guard =
+  \ (ww_s2qq :: GHC.Prim.Int#) (ww1_s2qu :: GHC.Prim.Int#) -&gt;
+    case ww1_s2qu of wild_X1r {
+      __DEFAULT -&gt;
+        case GuardCasePatmatch.$wpow_guard ww_s2qq (GHC.Prim.-# wild_X1r 1)
+        of ww2_s2qy { __DEFAULT -&gt;
+        GHC.Prim.*# ww_s2qq ww2_s2qy
+        };
+      0 -&gt; 1
+    }
+end Rec }
+
+...
+
+GuardCasePatmatch.pow_guard =
+  \ (w_s2qo :: GHC.Int.Int64) (w1_s2qs :: GHC.Int.Int64) -&gt;
+    case w_s2qo of _ { GHC.Int.I64# ww_s2qq -&gt;
+    case w1_s2qs of _ { GHC.Int.I64# ww1_s2qu -&gt;
+    case GuardCasePatmatch.$wpow_guard ww_s2qq ww1_s2qu
+    of ww2_s2qy { __DEFAULT -&gt;
+    GHC.Int.I64# ww2_s2qy
+    }
+    }
+    }</code></pre>
+<p>Dumped core of <code>power_case</code>:</p>
+<pre><code>Rec {
+GuardCasePatmatch.$wpow_case [Occ=LoopBreaker]
+  :: GHC.Prim.Int# -&gt; GHC.Prim.Int# -&gt; GHC.Prim.Int#
+[GblId, Arity=2, Caf=NoCafRefs, Str=DmdType LL]
+GuardCasePatmatch.$wpow_case =
+  \ (ww_s2qc :: GHC.Prim.Int#) (ww1_s2qg :: GHC.Prim.Int#) -&gt;
+    case ww1_s2qg of wild_X1n {
+      __DEFAULT -&gt;
+        case GuardCasePatmatch.$wpow_case ww_s2qc (GHC.Prim.-# wild_X1n 1)
+        of ww2_s2qk { __DEFAULT -&gt;
+        GHC.Prim.*# ww_s2qc ww2_s2qk
+        };
+      0 -&gt; 1
+    }
+end Rec }
+
+...
+
+GuardCasePatmatch.pow_case =
+  \ (w_s2qa :: GHC.Int.Int64) (w1_s2qe :: GHC.Int.Int64) -&gt;
+    case w_s2qa of _ { GHC.Int.I64# ww_s2qc -&gt;
+    case w1_s2qe of _ { GHC.Int.I64# ww1_s2qg -&gt;
+    case GuardCasePatmatch.$wpow_case ww_s2qc ww1_s2qg
+    of ww2_s2qk { __DEFAULT -&gt;
+    GHC.Int.I64# ww2_s2qk
+    }
+    }
+    }</code></pre>
+<p>And dumped core of <code>pow_patmatch</code>:</p>
+<pre><code>Rec {
+GuardCasePatmatch.$wpow_patmatch [Occ=LoopBreaker]
+  :: GHC.Prim.Int# -&gt; GHC.Prim.Int# -&gt; GHC.Prim.Int#
+[GblId, Arity=2, Caf=NoCafRefs, Str=DmdType LL]
+GuardCasePatmatch.$wpow_patmatch =
+  \ (ww_s2qE :: GHC.Prim.Int#) (ww1_s2qI :: GHC.Prim.Int#) -&gt;
+    case ww1_s2qI of wild_X1t {
+      __DEFAULT -&gt;
+        case GuardCasePatmatch.$wpow_patmatch
+               ww_s2qE (GHC.Prim.-# wild_X1t 1)
+        of ww2_s2qM { __DEFAULT -&gt;
+        GHC.Prim.*# ww_s2qE ww2_s2qM
+        };
+      0 -&gt; 1
+    }
+end Rec }
+
+...
+
+GuardCasePatmatch.pow_patmatch =
+  \ (w_s2qC :: GHC.Int.Int64) (w1_s2qG :: GHC.Int.Int64) -&gt;
+    case w_s2qC of _ { GHC.Int.I64# ww_s2qE -&gt;
+    case w1_s2qG of _ { GHC.Int.I64# ww1_s2qI -&gt;
+    case GuardCasePatmatch.$wpow_patmatch ww_s2qE ww1_s2qI
+    of ww2_s2qM { __DEFAULT -&gt;
+    GHC.Int.I64# ww2_s2qM
+    }
+    }
+    }</code></pre>
+<p>No difference other than bounded names.</p>
+</div>
+
+<div class="post_tags">
+  <strong>Tags: </strong><a href="/tags/haskell.html">haskell</a>, <a href="/tags/performance.html">performance</a>, <a href="/tags/ghc.html">ghc</a>
+</div>
+]]></description>
+    <pubDate>Sun, 27 May 2012 00:00:00 UT</pubDate>
+    <guid>http://8c6794b6.github.com/posts/2012-05-27-guard_case_patmatch.html</guid>
+</item>
+<item>
+    <title>Cause of 3 nano seconds difference</title>
+    <link>http://8c6794b6.github.com/posts/2012-04-22_cause_of_3_nano_seconds.html</link>
+    <description><![CDATA[<h1>Cause of 3 nano seconds difference</h1>
+<div id="post_date">
+  <strong>April 22, 2012</strong>
+</div>
+
+<div id="post_body">
+<p><code>Unboxed Vector</code>, in <a href="http://hackage.haskell.org/package/vector">vector</a> package is efficient data structure. Iterating over unboxed value is pretty fast.</p>
+<p>Is there any faster way to iterate than unboxed vector?</p>
+<p>Interest of comparision here is <em>efficiency of iteration</em>. Not the body contents of work in each iteration, but overhead we get from the loop.</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE BangPatterns #-}</span>
+<span class="ot">&gt;</span> <span class="kw">module</span> <span class="dt">Main</span> <span class="kw">where</span>
+<span class="ot">&gt;</span> 
+<span class="ot">&gt;</span> <span class="kw">import</span> Criterion.Main (bench, defaultMain, nf)
+<span class="ot">&gt;</span> <span class="kw">import</span> <span class="kw">qualified</span> Data.Vector.Unboxed <span class="kw">as</span> U</code></pre>
+<p>Couple type synonyms, and body function to apply inside the loop.</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">type</span> <span class="dt">Updater</span> a <span class="fu">=</span> a <span class="ot">-&gt;</span> a
+<span class="ot">&gt;</span> <span class="kw">type</span> <span class="dt">Work</span> a <span class="fu">=</span> <span class="dt">Updater</span> a <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> a
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; add1 ::</span> <span class="dt">Updater</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span> add1 <span class="fu">=</span> (<span class="fu">+</span><span class="dv">1</span>)</code></pre>
+<p>Using unboxed vector to loop for given time. Using <code>foldl'</code> and <code>replicate</code>.</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; work01 ::</span> <span class="dt">Work</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span> work01 f n m <span class="fu">=</span> U.foldl&#39; (\x _ <span class="ot">-&gt;</span> f x) n (U.replicate m ())</code></pre>
+<p>Invoking <code>work01</code> with <code>add1</code>. Below will apply <code>add1</code> to 0 for 100 times.</p>
+<pre><code>ghci&gt; work01 add1 0 100
+100</code></pre>
+<p>Manual recursive loop function with wrapper strict data type.</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">data</span> <span class="dt">P</span> <span class="fu">=</span> <span class="dt">P</span> <span class="ot">{-# UNPACK #-} !Int {-# UNPACK #-}</span> <span class="fu">!</span><span class="dt">Int</span>
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; work02 ::</span> <span class="dt">Work</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span> work02 f n0 m <span class="fu">=</span> go (<span class="dt">P</span> <span class="dv">0</span> n0) <span class="kw">where</span>
+<span class="ot">&gt;</span>   <span class="ot">{-# INLINE go #-}</span>
+<span class="ot">&gt;</span>   go <span class="fu">!</span>(<span class="dt">P</span> i n) <span class="fu">|</span> i <span class="fu">==</span> m    <span class="fu">=</span> n
+<span class="ot">&gt;</span>               <span class="fu">|</span> otherwise <span class="fu">=</span> go (<span class="dt">P</span> (i<span class="fu">+</span><span class="dv">1</span>) (f n))</code></pre>
+<p>Again, applying <code>add1</code> to 0 for 100 times.</p>
+<pre><code>ghci&gt; work02 add1 0 100
+100</code></pre>
+<p>Main for taking benchmark looks like below.</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; main_one ::</span> <span class="dt">IO</span> ()
+<span class="ot">&gt;</span> main_one <span class="fu">=</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>   <span class="kw">let</span> k <span class="fu">=</span> <span class="dv">2</span> <span class="fu">^</span> <span class="dv">10</span>
+<span class="ot">&gt;</span>   defaultMain
+<span class="ot">&gt;</span>     [ bench <span class="st">&quot;unboxed vector&quot;</span> (nf (work01 add1 <span class="dv">0</span>) k)
+<span class="ot">&gt;</span>     , bench <span class="st">&quot;hand written recursion&quot;</span> (nf (work02 add1 <span class="dv">0</span>) k)
+<span class="ot">&gt;</span>     ]</code></pre>
+<p>Compiling with couple optimization options:</p>
+<pre><code>$ ghc -O3 -fllvm -optl-O3 -main-is main_one -o a.out loop.lhs</code></pre>
+<p>The benchmark result:</p>
+<pre><code>benchmarking unboxed vector
+mean: 52.56010 ns, lb 52.49446 ns, ub 52.64269 ns, ci 0.950
+std dev: 376.4229 ps, lb 310.1393 ps, ub 458.0804 ps, ci 0.950
+
+benchmarking hand written recursion
+mean: 55.53802 ns, lb 55.51631 ns, ub 55.56074 ns, ci 0.950
+std dev: 113.1906 ps, lb 103.0162 ps, ub 125.4034 ps, ci 0.950</code></pre>
+<p>In this micro benchmark, looping with unboxed vector was about 3 nano seconds faster than manual strict recursion.</p>
+<p>What is the cause of this 3 nano seconds difference? Seems like it’s a goot time to have a look at GHC core. Dumped core of <code>work01</code> looks like below:</p>
+<pre><code>Main.work01 :: Main.Work GHC.Types.Int
+[GblId,
+ Arity=3,
+ Caf=NoCafRefs,
+ Str=DmdType LS(A)U(L)m,
+ Unf=Unf{Src=InlineStable, TopLvl=True, Arity=0, Value=True,
+         ConLike=True, Cheap=True, Expandable=True,
+         Guidance=ALWAYS_IF(unsat_ok=True,boring_ok=True)
+         Tmpl= Main.work1
+               `cast` (&lt;Main.Updater GHC.Types.Int&gt;
+                       -&gt; &lt;GHC.Types.Int&gt;
+                       -&gt; &lt;GHC.Types.Int&gt;
+                       -&gt; Data.Vector.Fusion.Util.NTCo:Id &lt;GHC.Types.Int&gt;
+                       :: (Main.Updater GHC.Types.Int
+                           -&gt; GHC.Types.Int
+                           -&gt; GHC.Types.Int
+                           -&gt; Data.Vector.Fusion.Util.Id GHC.Types.Int)
+                            ~#
+                          (Main.Updater GHC.Types.Int
+                           -&gt; GHC.Types.Int -&gt; GHC.Types.Int -&gt; GHC.Types.Int))}]
+Main.work01 =
+  Main.work1
+  `cast` (&lt;Main.Updater GHC.Types.Int&gt;
+          -&gt; &lt;GHC.Types.Int&gt;
+          -&gt; &lt;GHC.Types.Int&gt;
+          -&gt; Data.Vector.Fusion.Util.NTCo:Id &lt;GHC.Types.Int&gt;
+          :: (Main.Updater GHC.Types.Int
+              -&gt; GHC.Types.Int
+              -&gt; GHC.Types.Int
+              -&gt; Data.Vector.Fusion.Util.Id GHC.Types.Int)
+               ~#
+             (Main.Updater GHC.Types.Int
+              -&gt; GHC.Types.Int -&gt; GHC.Types.Int -&gt; GHC.Types.Int))</code></pre>
+<p>We don’t find the actual work in <code>Main.work01</code> from dumped result. It’s function body shows that <code>work01</code> is calling <code>cast</code> with <code>Main.work1</code>, which should doing the actual work.</p>
+<p>The dumped core of <code>work02</code> looks like this</p>
+<pre><code>Main.work02 [InlPrag=INLINE[0]] :: Main.Work GHC.Types.Int
+[GblId,
+ Arity=3,
+ Caf=NoCafRefs,
+ Str=DmdType LU(L)U(L)m,
+ Unf=Unf{Src=Worker=Main.$wwork02, TopLvl=True, Arity=3, Value=True,
+         ConLike=True, Cheap=True, Expandable=True,
+         Guidance=ALWAYS_IF(unsat_ok=True,boring_ok=False)
+         Tmpl= \ (w_s2Uw [Occ=Once] :: Main.Updater GHC.Types.Int)
+                 (w1_s2Ux [Occ=Once!] :: GHC.Types.Int)
+                 (w2_s2UB [Occ=Once!] :: GHC.Types.Int) -&gt;
+                 case w1_s2Ux of _ { GHC.Types.I# ww_s2Uz [Occ=Once] -&gt;
+                 case w2_s2UB of _ { GHC.Types.I# ww1_s2UD [Occ=Once] -&gt;
+                 case Main.$wwork02 w_s2Uw ww_s2Uz ww1_s2UD
+                 of ww2_s2UH { __DEFAULT -&gt;
+                 GHC.Types.I# ww2_s2UH
+                 }
+                 }
+                 }}]
+Main.work02 =
+  \ (w_s2Uw :: Main.Updater GHC.Types.Int)
+    (w1_s2Ux :: GHC.Types.Int)
+    (w2_s2UB :: GHC.Types.Int) -&gt;
+    case w1_s2Ux of _ { GHC.Types.I# ww_s2Uz -&gt;
+    case w2_s2UB of _ { GHC.Types.I# ww1_s2UD -&gt;
+    case Main.$wwork02 w_s2Uw ww_s2Uz ww1_s2UD
+    of ww2_s2UH { __DEFAULT -&gt;
+    GHC.Types.I# ww2_s2UH
+    }
+    }
+    }
+
+Main.$wwork02
+  :: Main.Updater GHC.Types.Int
+     -&gt; GHC.Prim.Int# -&gt; GHC.Prim.Int# -&gt; GHC.Prim.Int#
+[GblId,
+ Arity=3,
+ Caf=NoCafRefs,
+ Str=DmdType LLL,
+ Unf=Unf{Src=&lt;vanilla&gt;, TopLvl=True, Arity=3, Value=True,
+         ConLike=True, Cheap=True, Expandable=True,
+         Guidance=IF_ARGS [60 0 0] 152 0}]
+Main.$wwork02 =
+  \ (w_s2VX :: Main.Updater GHC.Types.Int)
+    (ww_s2W0 :: GHC.Prim.Int#)
+    (ww1_s2W4 :: GHC.Prim.Int#) -&gt;
+    letrec {
+      $wgo1_s2Xg [Occ=LoopBreaker]
+        :: GHC.Prim.Int# -&gt; GHC.Prim.Int# -&gt; GHC.Prim.Int#
+      [LclId, Arity=2, Str=DmdType LL]
+      $wgo1_s2Xg =
+        \ (ww2_s2VN :: GHC.Prim.Int#) (ww3_s2VO :: GHC.Prim.Int#) -&gt;
+          case GHC.Prim.==# ww2_s2VN ww1_s2W4 of _ {
+            GHC.Types.False -&gt;
+              case w_s2VX (GHC.Types.I# ww3_s2VO) of _ { GHC.Types.I# tpl1_B6 -&gt;
+              $wgo1_s2Xg (GHC.Prim.+# ww2_s2VN 1) tpl1_B6
+              };
+            GHC.Types.True -&gt; ww3_s2VO
+          }; } in
+    $wgo1_s2Xg 0 ww_s2W0</code></pre>
+<p>After taking a closer look, I realised that <code>i == m</code> in guard of <code>work02</code> is carrying <code>m</code>, which is passed through the inner functions found in the core. This lead <code>$wwork02</code> to compare <code>ww2_s2VN</code> and <code>ww1_s2w4</code>, which both of them passed from argument in <code>work02</code>.</p>
+<p>Rewriting the guard to compare with constant <code>0</code> instead of <code>m</code>:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; work03 ::</span> <span class="dt">Work</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span> work03 f n0 m <span class="fu">=</span> go (<span class="dt">P</span> m n0) <span class="kw">where</span>
+<span class="ot">&gt;</span>   <span class="ot">{-# INLINE go #-}</span>
+<span class="ot">&gt;</span>   go <span class="fu">!</span>(<span class="dt">P</span> i n) <span class="fu">|</span> i <span class="fu">==</span> <span class="dv">0</span>    <span class="fu">=</span> n
+<span class="ot">&gt;</span>               <span class="fu">|</span> otherwise <span class="fu">=</span> go (<span class="dt">P</span> (i<span class="fu">-</span><span class="dv">1</span>) (f n))</code></pre>
+<p>New main for taking benchmark:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; main_two ::</span> <span class="dt">IO</span> ()
+<span class="ot">&gt;</span> main_two <span class="fu">=</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>   <span class="kw">let</span> k <span class="fu">=</span> <span class="dv">2</span> <span class="fu">^</span> <span class="dv">10</span>
+<span class="ot">&gt;</span>   defaultMain
+<span class="ot">&gt;</span>     [ bench <span class="st">&quot;unboxed vector&quot;</span> (nf (work01 add1 <span class="dv">0</span>) k)
+<span class="ot">&gt;</span>     , bench <span class="st">&quot;hand written recursion, take 2&quot;</span> (nf (work03 add1 <span class="dv">0</span>) k)
+<span class="ot">&gt;</span>     ]</code></pre>
+<p>Compiling:</p>
+<pre><code>$ ghc -O3 -fllvm -optl-O3 -main-is main_two -o b.out loop.lhs</code></pre>
+<p>And running the benchmark:</p>
+<pre><code>benchmarking unboxed vector
+mean: 49.86483 ns, lb 49.84522 ns, ub 49.88565 ns, ci 0.950
+std dev: 103.5967 ps, lb 91.78539 ps, ub 117.8307 ps, ci 0.950
+
+benchmarking hand written recursion, take 2
+mean: 48.45895 ns, lb 48.37886 ns, ub 48.61787 ns, ci 0.950
+std dev: 554.6886 ps, lb 337.5092 ps, ub 946.0307 ps, ci 0.950</code></pre>
+<p>Now the hand written recursion performs about 1.4 nano second faster than unboxed vector. Whenever possible, compare with constant in guards. And, if few nano seconds does not matter, just use unboxed vector.</p>
+</div>
+
+<div class="post_tags">
+  <strong>Tags: </strong><a href="/tags/haskell.html">haskell</a>, <a href="/tags/performance.html">performance</a>
+</div>
+]]></description>
+    <pubDate>Sun, 22 Apr 2012 00:00:00 UT</pubDate>
+    <guid>http://8c6794b6.github.com/posts/2012-04-22_cause_of_3_nano_seconds.html</guid>
+</item>
+<item>
+    <title>How to manage this site</title>
+    <link>http://8c6794b6.github.com/posts/2012-04-21_howto_manage_this_site.html</link>
+    <description><![CDATA[<h1>How to manage this site</h1>
+<div id="post_date">
+  <strong>April 21, 2012</strong>
+</div>
+
+<div id="post_body">
+<p>I sometime forget how to manage this site.</p>
+<p>This site is managed with <a href="http://jaspervdj.be/hakyll/">hakyll</a>, a package to manage static html contents written in haskell. The contents of html is in a git repository hosted in <a href="http://github.com">github</a>, served as html with <a href="http://pages.github.com">github pages</a>.</p>
+<p>The contents of hakyll codes, css, template used to generate the site resides in <a href="https://github.com/8c6794b6/gh-pages-8c6794b6">gh-pages-8c6794b6</a>, and the git repository for generated contents is in <a href="https://github.com/8c6794b6/8c6794b6.github.com">8c6794b6.github.com</a> repository.</p>
+<p>When writing a new post, I start writing a new file under <code>posts/</code> directory in <code>gh-pages-8c6794b6</code> repository, and generate the html:</p>
+<pre><code>[~/repos/gh-pages-8c6794b6] $ emacs posts/new_post.mkd
+... edit the post
+[~/repos/gh-pages-8c6794b6] $ ./hakyll build</code></pre>
+<p>The generated output will be created under <code>_site</code> directory. The <code>_site</code> directory is a <a href="http://book.git-scm.com/5_submodules.html">git submodule</a> of <code>gh-pages-8c6794b6</code> repository. When finished generating the html files, commit the contents of <code>_site</code>:</p>
+<pre><code>[~/repos/gh-pages-8c6794b6] $ cd _site
+[~/repos/gh-pages-8c6794b6/_site] $ git add -i
+... add new post, new tags, update archives, rss, tags, etc ...
+[~/repos/gh-pages-8c6794b6/_site] $ git commit -m &quot;Add new post&quot;
+[~/repos/gh-pages-8c6794b6/_site] $ git push origin master</code></pre>
+<p>Now add the updated submodule to <code>gh-pages-8c6794b6</code> repository:</p>
+<pre><code>[~/repos/gh-pages-8c6794b6/_site] $ cd ../
+[~/repos/gh-pages-8c6794b6] $ git add -i
+... add submodule, new post, etc ...
+[~/repos/gh-pages-8c6794b6] $ git commit -m &quot;Add new post&quot;
+[~/repos/gh-pages-8c6794b6] $ git push origin master</code></pre>
+<p>And the new post is published.</p>
+</div>
+
+<div class="post_tags">
+  <strong>Tags: </strong><a href="/tags/git.html">git</a>, <a href="/tags/hakyll.html">hakyll</a>, <a href="/tags/haskell.html">haskell</a>, <a href="/tags/web.html">web</a>
+</div>
+]]></description>
+    <pubDate>Sat, 21 Apr 2012 00:00:00 UT</pubDate>
+    <guid>http://8c6794b6.github.com/posts/2012-04-21_howto_manage_this_site.html</guid>
+</item>
+<item>
+    <title>Calling itself as a dependency in cabal package</title>
+    <link>http://8c6794b6.github.com/posts/2012-03-24-calling_itself_as_a_dependency_in_cabal_package.html</link>
+    <description><![CDATA[<h1>Calling itself as a dependency in cabal package</h1>
+<div id="post_date">
+  <strong>March 24, 2012</strong>
+</div>
+
+<div id="post_body">
+<p>For self reminder. When we’re creating cabal package, sometime we want to call itself as a depdency, for instance when making a package with library and bundled executable, using cabal’s test-suite feature.</p>
+<p>For quite a while I didn’t realise that we can call itself as dependency and suppress compiling the whole library modules used in exectuables and tests. The trick was, <em>separating the directory containing library source and executable source</em> in single package.</p>
+<p>Sample cabal config:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> name<span class="fu">:</span>          selfdep
+<span class="ot">&gt;</span> build<span class="fu">-</span><span class="kw">type</span><span class="fu">:</span>    <span class="dt">Simple</span>
+<span class="ot">&gt;</span> cabal<span class="fu">-</span>version<span class="fu">:</span> <span class="fu">&gt;=</span><span class="dv">1</span><span class="fu">.</span><span class="dv">8</span>
+<span class="ot">&gt;</span> 
+<span class="ot">&gt;</span> library
+<span class="ot">&gt;</span>   exposed<span class="fu">-</span>modules<span class="fu">:</span>
+<span class="ot">&gt;</span>     <span class="dt">Self.Dep</span>
+<span class="ot">&gt;</span>     <span class="dt">Self.Dep.Foo</span>
+<span class="ot">&gt;</span>     <span class="dt">Self.Dep.Bar</span>
+<span class="ot">&gt;</span>   build<span class="fu">-</span>depends<span class="fu">:</span>
+<span class="ot">&gt;</span>     base       <span class="fu">&gt;=</span> <span class="dv">4</span><span class="fu">.</span><span class="dv">4</span> <span class="fu">&amp;&amp;</span> <span class="fu">&lt;</span> <span class="dv">5</span>,
+<span class="ot">&gt;</span>     containers <span class="fu">&gt;=</span> <span class="dv">0</span><span class="fu">.</span><span class="dv">4</span> <span class="fu">&amp;&amp;</span> <span class="fu">&lt;</span> <span class="dv">1</span><span class="fu">.</span><span class="dv">0</span>
+<span class="ot">&gt;</span> 
+<span class="ot">&gt;</span> test<span class="fu">-</span>suite tests
+<span class="ot">&gt;</span>   <span class="kw">type</span><span class="fu">:</span> exitcode<span class="fu">-</span>stdio<span class="fu">-</span><span class="dv">1</span><span class="fu">.</span><span class="dv">0</span>
+<span class="ot">&gt;</span>   hs<span class="fu">-</span>source<span class="fu">-</span>dirs<span class="fu">:</span> tests
+<span class="ot">&gt;</span>   main<span class="fu">-</span>is<span class="fu">:</span> test<span class="fu">.</span>hs
+<span class="ot">&gt;</span>   build<span class="fu">-</span>depends<span class="fu">:</span>
+<span class="ot">&gt;</span>     base       <span class="fu">&gt;=</span> <span class="dv">4</span><span class="fu">.</span><span class="dv">4</span> <span class="fu">&amp;&amp;</span> <span class="fu">&lt;</span> <span class="dv">5</span>,
+<span class="ot">&gt;</span>     <span class="dt">QuickCheck</span> <span class="fu">&gt;=</span> <span class="dv">2</span><span class="fu">.</span><span class="dv">4</span> <span class="fu">&amp;&amp;</span> <span class="fu">&lt;</span> <span class="dv">3</span>,
+<span class="ot">&gt;</span>     selfdep <span class="fu">-</span>any
+<span class="ot">&gt;</span> 
+<span class="ot">&gt;</span> executable foo
+<span class="ot">&gt;</span>   hs<span class="fu">-</span>source<span class="fu">-</span>dirs<span class="fu">:</span> run
+<span class="ot">&gt;</span>   main<span class="fu">-</span>is<span class="fu">:</span> foo<span class="fu">.</span>hs
+<span class="ot">&gt;</span>   build<span class="fu">-</span>depends<span class="fu">:</span>
+<span class="ot">&gt;</span>     base    <span class="fu">&gt;=</span> <span class="dv">4</span><span class="fu">.</span><span class="dv">4</span> <span class="fu">&amp;&amp;</span> <span class="fu">&lt;</span> <span class="dv">5</span>,
+<span class="ot">&gt;</span>     selfdep <span class="fu">-</span>any</code></pre>
+<p>In file <code>foo.hs</code>, module <code>Self.Dep.Foo</code> is imported:</p>
+<pre><code>$ cat run/foo.hs
+module Main where
+
+import qualified Self.Dep.Foo
+
+main :: IO ()
+main = print Self.Dep.Foo.foo</code></pre>
+<p>Building the package:</p>
+<pre><code>$ cabal configure &amp;&amp; cabal build
+Resolving dependencies...
+Configuring selfdep-0.1.0.0...
+Building selfdep-0.1.0.0...
+Preprocessing library selfdep-0.1.0.0...
+[1 of 3] Compiling Self.Dep.Bar     ( Self/Dep/Bar.hs, dist/build/Self/Dep/Bar.o )
+[2 of 3] Compiling Self.Dep.Foo     ( Self/Dep/Foo.hs, dist/build/Self/Dep/Foo.o )
+[3 of 3] Compiling Self.Dep         ( Self/Dep.hs, dist/build/Self/Dep.o )
+Registering selfdep-0.1.0.0...
+Preprocessing executable &#39;foo&#39; for selfdep-0.1.0.0...
+[1 of 1] Compiling Main             ( run/foo.hs, dist/build/foo/foo-tmp/Main.o )
+Linking dist/build/foo/foo ...</code></pre>
+<p>During the compilation of executable <code>foo</code>, modules under <code>Self.*</code> were not recompiled. This separation of the directory works also for tests.</p>
+</div>
+
+<div class="post_tags">
+  <strong>Tags: </strong><a href="/tags/haskell.html">haskell</a>, <a href="/tags/cabal.html">cabal</a>, <a href="/tags/package.html">package</a>
+</div>
+]]></description>
+    <pubDate>Sat, 24 Mar 2012 00:00:00 UT</pubDate>
+    <guid>http://8c6794b6.github.com/posts/2012-03-24-calling_itself_as_a_dependency_in_cabal_package.html</guid>
+</item>
+<item>
+    <title>Minimalistic pdf and ps viewers for linux - Winter/Spring 2012</title>
+    <link>http://8c6794b6.github.com/posts/2012-02-25_pdf_ps_viewers.html</link>
+    <description><![CDATA[<h1>Minimalistic pdf and ps viewers for linux - Winter/Spring 2012</h1>
+<div id="post_date">
+  <strong>February 25, 2012</strong>
+</div>
+
+<div id="post_body">
+<p>I’m reading bunch of pdf and ps files recently. After a system upgrade in arch linux, <a href="https://bugs.archlinux.org/task/28516">segfault in gv</a> happened. For couple years, I was using <a href="http://wino.physik.uni-mainz.de/~plass/gv/">gv</a> for viewing pdf and postscript files. This segfault made me to dig in to current trends in linux pdf viewer.</p>
+<p>My preferences are:</p>
+<ul>
+<li>Supports pdf and postscript files</li>
+<li>Supports mouse-less control</li>
+<li>Has minimalistic user interface</li>
+<li>Starts quickly</li>
+<li>Use less memory</li>
+</ul>
+<p>I took a try to these viewers:</p>
+<ul>
+<li><a href="http://naihe2010.github.com/apvlv/">apvlv</a>: Nice vi-style scroll keybindings, light. But does not support postscript …</li>
+<li><a href="http://trac.emma-soft.com/epdfview/">epdfviewer</a>: No support for postscript …</li>
+<li><a href="http://projects.gnome.org/evince/">evince</a>: Supports postscript and pdf. Keybind support for scrolling.</li>
+<li><a href="http://www.mupdf.com/">mupdf</a>: Light, simple interface (shows nothing other than document contents), keybind support for scrolling. But no support for postscript ….</li>
+<li><a href="http://pwmt.org/projects/zathura/">zathura</a>: Minimalistic interface, keybinding support. Scrolling worked smoothly than mupdf. Customizable config. Has supports for viewing potscript files with <a href="http://pwmt.org/projects/zathura/plugins/">additional plugin</a>.</li>
+</ul>
+<p>Those fullfilled my requirement were <code>evince</code> and <code>zathura</code>. Choosing between these two, <code>zathura</code> met my taste more. Another alternative is <code>mupdf</code>, which uses less memory than <code>zathura</code>, but has no supports for postscript files. If memory usage of zathura become a problem, I’ll try <a href="http://pwmt.org/projects/zathura/plugins/">mupdf plugin</a>, or seek for alternative again. Until that happen, using <code>zathura</code>.</p>
+<p>Lessons I learned: sometime it’s not a bad thing to get segmentation fault with package update, if it give opportunity to look for progress in opensource softwares with same purpose, and find a good alternative.</p>
+</div>
+
+<div class="post_tags">
+  <strong>Tags: </strong><a href="/tags/linux.html">linux</a>, <a href="/tags/pdf.html">pdf</a>, <a href="/tags/ps.html">ps</a>
+</div>
+]]></description>
+    <pubDate>Sat, 25 Feb 2012 00:00:00 UT</pubDate>
+    <guid>http://8c6794b6.github.com/posts/2012-02-25_pdf_ps_viewers.html</guid>
+</item>
+<item>
+    <title>Serialization in a hurry</title>
+    <link>http://8c6794b6.github.com/posts/2012-02-18_serialization_in_a_hurry.html</link>
+    <description><![CDATA[<h1>Serialization in a hurry</h1>
+<div id="post_date">
+  <strong>February 18, 2012</strong>
+</div>
+
+<div id="post_body">
+<p>I need to serialize below data in 5 minutes:</p>
+<pre><code>| data Foo = Foo
+|  { one   :: Int
+|  , two   :: (Maybe Double, String)
+|  , three :: Vector Double
+|  }</code></pre>
+<p>Requires ghc-7.2.2 or above, and <a href="http://hackage.haskell.org/package/cereal">cereal</a> package.</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE DeriveGeneric #-}</span>
+<span class="ot">&gt;</span> <span class="kw">module</span> <span class="dt">SerializationInAHurry</span> <span class="kw">where</span></code></pre>
+<p>We are using <code>DeriveGeneric</code> language pragma.</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">import</span> GHC.Generics
+<span class="ot">&gt;</span> <span class="kw">import</span> Data.Serialize
+<span class="ot">&gt;</span> <span class="kw">import</span> Data.Vector (Vector(..))
+<span class="ot">&gt;</span> <span class="kw">import</span> <span class="kw">qualified</span> Data.ByteString <span class="kw">as</span> B
+<span class="ot">&gt;</span> <span class="kw">import</span> <span class="kw">qualified</span> Data.Vector <span class="kw">as</span> V</code></pre>
+<p>The target data type to serialize.</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">data</span> <span class="dt">Foo</span> <span class="fu">=</span> <span class="dt">Foo</span>
+<span class="ot">&gt;</span>  {<span class="ot"> one   ::</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span>  ,<span class="ot"> two   ::</span> (<span class="dt">Maybe</span> <span class="dt">Double</span>, <span class="dt">String</span>)
+<span class="ot">&gt;</span>  ,<span class="ot"> three ::</span> <span class="dt">Vector</span> <span class="dt">Double</span>
+<span class="ot">&gt;</span>  } <span class="kw">deriving</span> (<span class="dt">Generic</span>, <span class="dt">Show</span>, <span class="dt">Eq</span>)</code></pre>
+<p>And sample data with target data type.</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; foo1 ::</span> <span class="dt">Foo</span>
+<span class="ot">&gt;</span> foo1 <span class="fu">=</span> <span class="dt">Foo</span>
+<span class="ot">&gt;</span>   { one   <span class="fu">=</span> <span class="dv">100</span>
+<span class="ot">&gt;</span>   , two   <span class="fu">=</span> (<span class="dt">Just</span> <span class="dv">8</span><span class="fu">.</span><span class="dv">5</span>, <span class="st">&quot;eight point five&quot;</span>)
+<span class="ot">&gt;</span>   , three <span class="fu">=</span> V.fromList [<span class="dv">11</span>,<span class="dv">13</span><span class="fu">..</span><span class="dv">21</span>]
+<span class="ot">&gt;</span>   }</code></pre>
+<p>As haddock document in cereal package notes, when the target data type has <code>Generic</code> instance, <code>Serialize</code> class will use it. What we need is to make instance of <code>Serialize</code> with empty body.</p>
+<p><code>Data.Generics.Generic</code> class has couple instances already defined.</p>
+<pre><code>| instance Generic [a] -- Defined in `GHC.Generics&#39;
+| instance Generic Ordering -- Defined in `GHC.Generics&#39;
+| instance Generic Int -- Defined in `GHC.Generics&#39;
+| instance Generic Float -- Defined in `GHC.Generics&#39;
+| instance Generic Double -- Defined in `GHC.Generics&#39;
+| instance Generic Char -- Defined in `GHC.Generics&#39;
+| instance Generic Bool -- Defined in `GHC.Generics&#39;
+| instance Generic (Maybe a) -- Defined in `Data.Maybe&#39;
+| instance Generic (Either a b) -- Defined in `Data.Either&#39;
+| instance Generic (a, b, c, d, e, f, g) -- Defined in `GHC.Tuple&#39;
+| instance Generic (a, b, c, d, e, f) -- Defined in `GHC.Tuple&#39;
+| instance Generic (a, b, c, d, e) -- Defined in `GHC.Tuple&#39;
+| instance Generic (a, b, c, d) -- Defined in `GHC.Tuple&#39;
+| instance Generic (a, b, c) -- Defined in `GHC.Tuple&#39;
+| instance Generic (a, b) -- Defined in `GHC.Tuple&#39;
+| instance Generic () -- Defined in `GHC.Tuple&#39;</code></pre>
+<p>The only missing definition we need is:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">instance</span> <span class="dt">Serialize</span> a <span class="ot">=&gt;</span> <span class="dt">Serialize</span> (<span class="dt">Vector</span> a) <span class="kw">where</span>
+<span class="ot">&gt;</span>   put <span class="fu">=</span> put <span class="ot">`fmap`</span> V.toList
+<span class="ot">&gt;</span>   get <span class="fu">=</span> V.fromList <span class="ot">`fmap`</span> get</code></pre>
+<p>There should be other way which shows better performance for serializing <code>Vector</code>, but recall the title of this post. Now we are ready to serialize.</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">instance</span> <span class="dt">Serialize</span> <span class="dt">Foo</span></code></pre>
+<p>Testing it with writing to file, reading from the file and comparing with original:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; main ::</span> <span class="dt">IO</span> ()
+<span class="ot">&gt;</span> main <span class="fu">=</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>   <span class="kw">let</span> file <span class="fu">=</span> <span class="st">&quot;foo1.data&quot;</span>
+<span class="ot">&gt;</span>   B.writeFile file (encode foo1)
+<span class="ot">&gt;</span>   res <span class="ot">&lt;-</span> decode <span class="ot">`fmap`</span> B.readFile<span class="ot"> file ::</span> <span class="dt">IO</span> (<span class="dt">Either</span> <span class="dt">String</span> <span class="dt">Foo</span>)
+<span class="ot">&gt;</span>   <span class="kw">case</span> res <span class="kw">of</span>
+<span class="ot">&gt;</span>      <span class="dt">Right</span> foo1&#39; <span class="ot">-&gt;</span> print <span class="fu">$</span> foo1 <span class="fu">==</span> foo1&#39;
+<span class="ot">&gt;</span>      <span class="dt">Left</span>  err   <span class="ot">-&gt;</span> error err</code></pre>
+<p>Result:</p>
+<pre><code>| ghci&gt; main
+| True</code></pre>
+</div>
+
+<div class="post_tags">
+  <strong>Tags: </strong><a href="/tags/haskell.html">haskell</a>, <a href="/tags/generic.html">generic</a>, <a href="/tags/ghc.html">ghc</a>
+</div>
+]]></description>
+    <pubDate>Sat, 18 Feb 2012 00:00:00 UT</pubDate>
+    <guid>http://8c6794b6.github.com/posts/2012-02-18_serialization_in_a_hurry.html</guid>
+</item>
+<item>
+    <title>Loading dph codes in ghci</title>
+    <link>http://8c6794b6.github.com/posts/2012-01-22_loading-dph-codes-in-ghci.html</link>
+    <description><![CDATA[<h1>Loading dph codes in ghci</h1>
+<div id="post_date">
+  <strong>January 22, 2012</strong>
+</div>
+
+<div id="post_body">
+<p>In haddock of dph-par package, we see functions like below:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; zipP ::</span> [<span class="fu">:</span>a<span class="fu">:</span>] <span class="ot">-&gt;</span> [<span class="fu">:</span>b<span class="fu">:</span>] <span class="ot">-&gt;</span> [<span class="fu">:</span>(a, b)<span class="fu">:</span>]
+<span class="ot">&gt;</span> <span class="ot">{-# NOINLINE zipP #-}</span>
+<span class="ot">&gt;</span> zipP <span class="fu">!</span>_ <span class="fu">!</span>_ <span class="fu">=</span> [<span class="ot">::</span>]
+<span class="ot">&gt;</span> <span class="ot">{-# VECTORISE zipP = zipPA #-}</span></code></pre>
+<p>Above difinition is from <a href="http://hackage.haskell.org/packages/archive/dph-par/0.5.1.1/doc/html/src/Data-Array-Parallel.html#zipP">dph-par-0.5.1.1</a>. From what its written, <code>zipP</code> looks like a function that returning an empty array. Though after compiling the code with appropriate options, <code>zipP</code> indeed work as parallel variant of <code>zip</code> for standard list.</p>
+<p>As of GHC-7.2.2 and dph-par-0.5.1.1, we cannot directly load codes with parallel array in ghci. One way to load them in ghci is, prepare a wrapper with fixing the type of array element, and compile to object code.</p>
+<p>Suppose that we have a module containing parallel array functions:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE ParallelArrays #-}</span>
+<span class="ot">&gt;</span> <span class="ot">{-# OPTIONS_GHC -fvectorise #-}</span>
+<span class="ot">&gt;</span> <span class="co">-- VectroseMe.hs</span>
+<span class="ot">&gt;</span> <span class="kw">module</span> <span class="dt">VectoriseMe</span> <span class="kw">where</span>
+<span class="ot">&gt;</span> 
+<span class="ot">&gt;</span> <span class="kw">import</span> Data.Array.Parallel
+<span class="ot">&gt;</span> <span class="kw">import</span> Data.Array.Parallel.PArray
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; myZipP ::</span> [<span class="fu">:</span>a<span class="fu">:</span>] <span class="ot">-&gt;</span> [<span class="fu">:</span>b<span class="fu">:</span>] <span class="ot">-&gt;</span> [<span class="fu">:</span>(a, b)<span class="fu">:</span>]
+<span class="ot">&gt;</span> myZipP as bs <span class="fu">=</span> zipP as bs
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; myZipPA ::</span> <span class="dt">PArray</span> a <span class="ot">-&gt;</span> <span class="dt">PArray</span> b <span class="ot">-&gt;</span> <span class="dt">PArray</span> (a, b)
+<span class="ot">&gt;</span> myZipPA as bs <span class="fu">=</span> toPArrayP (myZipP (fromPArrayP as) (fromPArrayP bs))
+<span class="ot">&gt;</span> <span class="ot">{-# NOINLINE myZipPA #-}</span>
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; myZipIntP ::</span> [<span class="fu">:</span><span class="dt">Int</span><span class="fu">:</span>] <span class="ot">-&gt;</span> [<span class="fu">:</span><span class="dt">Int</span><span class="fu">:</span>] <span class="ot">-&gt;</span> [<span class="fu">:</span>(<span class="dt">Int</span>, <span class="dt">Int</span>)<span class="fu">:</span>]
+<span class="ot">&gt;</span> myZipIntP as bs <span class="fu">=</span> zipP as bs
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; myZipIntPA ::</span> <span class="dt">PArray</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">PArray</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">PArray</span> (<span class="dt">Int</span>, <span class="dt">Int</span>)
+<span class="ot">&gt;</span> myZipIntPA as bs <span class="fu">=</span> toPArrayP (myZipIntP (fromPArrayP as) (fromPArrayP bs))
+<span class="ot">&gt;</span> <span class="ot">{-# NOINLINE myZipIntPA #-}</span></code></pre>
+<p>And a wrapper which imports above module:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="co">-- Wrapper.hs</span>
+<span class="ot">&gt;</span> <span class="kw">module</span> <span class="dt">Wrapper</span> <span class="kw">where</span>
+<span class="ot">&gt;</span> 
+<span class="ot">&gt;</span> <span class="kw">import</span> Data.Array.Parallel
+<span class="ot">&gt;</span> <span class="kw">import</span> Data.Array.Parallel.PArray (fromList)
+<span class="ot">&gt;</span> 
+<span class="ot">&gt;</span> <span class="kw">import</span> VectoriseMe
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; main ::</span> <span class="dt">IO</span> ()
+<span class="ot">&gt;</span> main <span class="fu">=</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>   putStrLn <span class="fu">$</span> concat [<span class="st">&quot;myZip_test:&quot;</span>, <span class="st">&quot;\n  &quot;</span>, show myZip_test]
+<span class="ot">&gt;</span>   putStrLn <span class="fu">$</span> concat [<span class="st">&quot;myZipInt_test:&quot;</span>, <span class="st">&quot;\n  &quot;</span>, show myZipInt_test]
+<span class="ot">&gt;</span> 
+<span class="ot">&gt;</span> pa1,<span class="ot"> pa2 ::</span> <span class="dt">PArray</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span> pa1 <span class="fu">=</span> fromList [<span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">3</span>]
+<span class="ot">&gt;</span> pa2 <span class="fu">=</span> fromList [<span class="dv">4</span>,<span class="dv">5</span>,<span class="dv">6</span>]
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; myZip_test ::</span> <span class="dt">PArray</span> (<span class="dt">Int</span>, <span class="dt">Int</span>)
+<span class="ot">&gt;</span> myZip_test <span class="fu">=</span> myZipPA pa1 pa2
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; myZipInt_test ::</span> <span class="dt">PArray</span> (<span class="dt">Int</span>, <span class="dt">Int</span>)
+<span class="ot">&gt;</span> myZipInt_test <span class="fu">=</span> myZipIntPA pa1 pa2</code></pre>
+<p>Loading Wrapper.hs in ghci and invoking the main function:</p>
+<pre><code>| $ ghci -fdph-par -fobject-code -fforce-recomp Wrapper.hs
+| GHCi, version 7.2.2: http://www.haskell.org/ghc/  :? for help
+| Loading package ghc-prim ... linking ... done.
+| Loading package integer-gmp ... linking ... done.
+| Loading package base ... linking ... done.
+| Loading package array-0.3.0.3 ... linking ... done.
+| Loading package old-locale-1.0.0.3 ... linking ... done.
+| Loading package time-1.2.0.5 ... linking ... done.
+| Loading package random-1.0.1.1 ... linking ... done.
+| Loading package primitive-0.3.1 ... linking ... done.
+| Loading package vector-0.7.1 ... linking ... done.
+| Loading package dph-base-0.5.1.1 ... linking ... done.
+| Loading package dph-prim-interface-0.5.1.1 ... linking ... done.
+| Loading package dph-prim-seq-0.5.1.1 ... linking ... done.
+| Loading package old-time-1.0.0.7 ... linking ... done.
+| Loading package dph-prim-par-0.5.1.1 ... linking ... done.
+| Loading package containers-0.4.1.0 ... linking ... done.
+| Loading package filepath-1.2.0.1 ... linking ... done.
+| Loading package unix-2.5.0.0 ... linking ... done.
+| Loading package directory-1.1.0.1 ... linking ... done.
+| Loading package pretty-1.1.0.0 ... linking ... done.
+| Loading package process-1.1.0.0 ... linking ... done.
+| Loading package Cabal-1.12.0 ... linking ... done.
+| Loading package bytestring-0.9.2.0 ... linking ... done.
+| Loading package binary-0.5.0.2 ... linking ... done.
+| Loading package bin-package-db-0.0.0.0 ... linking ... done.
+| Loading package hoopl-3.8.7.1 ... linking ... done.
+| Loading package hpc-0.5.1.0 ... linking ... done.
+| Loading package template-haskell ... linking ... done.
+| Loading package ghc-7.2.2 ... linking ... done.
+| Loading package dph-par ... linking ... done.
+| Loading package ffi-1.0 ... linking ... done.
+| [1 of 2] Compiling VectoriseMe      ( VectoriseMe.hs, VectoriseMe.o )
+| [2 of 2] Compiling Wrapper          ( Wrapper.hs, Wrapper.o )
+| Ok, modules loaded: Wrapper, VectoriseMe.
+| ghci&gt; main
+| myZip_test:
+|   fromList&lt;PArray&gt; []
+| myZipInt_test:
+|   fromList&lt;PArray&gt; [(1,4),(2,5),(3,6)]</code></pre>
+<p>We see that <code>myZip_test</code> is showing empty list, and <code>myZipInt_test</code> is showing the zipped contents.</p>
+</div>
+
+<div class="post_tags">
+  <strong>Tags: </strong><a href="/tags/haskell.html">haskell</a>, <a href="/tags/dph.html">dph</a>, <a href="/tags/ghci.html">ghci</a>
+</div>
+]]></description>
+    <pubDate>Sun, 22 Jan 2012 00:00:00 UT</pubDate>
+    <guid>http://8c6794b6.github.com/posts/2012-01-22_loading-dph-codes-in-ghci.html</guid>
 </item>
 
     </channel> 

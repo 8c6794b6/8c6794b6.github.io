@@ -39,134 +39,134 @@ src="/images/spacer.gif?content_part=ssttFvpystbbpkAsneda" alt=""
 width="100" height="100" /></p>
 -->
 
-<audio controls="controls" <source src="../audio/fib.mp3" type="audio/mp3"></audio> <source src="../audio/fib.ogg" type="audio/ogg"></source> </audio>
+<p><audio controls="controls" <source src="../audio/fib.mp3" type="audio/mp3"></audio> <source src="../audio/fib.ogg" type="audio/ogg"></source> </audio></p>
 <p>During debug, we print out intermediate data, as side effects. Like this, can we make sounds from those intermediate data, as side effects?</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span> <span class="ot">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span>
-<span class="fu">&gt;</span> <span class="kw">module</span> <span class="dt">SideEffectSound</span> <span class="kw">where</span></code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span>
+<span class="ot">&gt;</span> <span class="kw">module</span> <span class="dt">SideEffectSound</span> <span class="kw">where</span></code></pre>
 <p>We will use <code>scsynth</code> as sound synthesis engine.</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span> <span class="kw">import</span> <span class="dt">Control.Concurrent</span>
-<span class="fu">&gt;</span> <span class="kw">import</span> <span class="dt">Control.Monad</span>
-<span class="fu">&gt;</span> <span class="kw">import</span> <span class="dt">Control.Monad.Reader</span>
-<span class="fu">&gt;</span> <span class="kw">import</span> <span class="dt">Control.Monad.State</span>
-<span class="fu">&gt;</span> <span class="kw">import</span> <span class="dt">Control.Monad.Writer</span>
-<span class="fu">&gt;</span> <span class="kw">import</span> <span class="dt">Data.Word</span>
-<span class="fu">&gt;</span> <span class="kw">import</span> <span class="dt">Sound.OpenSoundControl</span>
-<span class="fu">&gt;</span> <span class="kw">import</span> <span class="dt">Sound.SC3</span>
-<span class="fu">&gt;</span> <span class="kw">import</span> <span class="dt">Sound.SC3.ID</span></code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">import</span> Control.Concurrent
+<span class="ot">&gt;</span> <span class="kw">import</span> Control.Monad
+<span class="ot">&gt;</span> <span class="kw">import</span> Control.Monad.Reader
+<span class="ot">&gt;</span> <span class="kw">import</span> Control.Monad.State
+<span class="ot">&gt;</span> <span class="kw">import</span> Control.Monad.Writer
+<span class="ot">&gt;</span> <span class="kw">import</span> Data.Word
+<span class="ot">&gt;</span> <span class="kw">import</span> Sound.OpenSoundControl
+<span class="ot">&gt;</span> <span class="kw">import</span> Sound.SC3
+<span class="ot">&gt;</span> <span class="kw">import</span> Sound.SC3.ID</code></pre>
 <p>As an action to get side effect, using fibonacci sequence here. We will not use memoizatoin nor any other method to achive efficiency, since our concern resides in those side effects.</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> fib_visible ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">IO</span> <span class="dt">Int</span>
-<span class="fu">&gt;</span> fib_visible n
-<span class="fu">&gt;</span>   <span class="fu">|</span> n <span class="fu">==</span> <span class="dv">0</span>    <span class="fu">=</span> <span class="fu">putStr</span> <span class="st">&quot;0&quot;</span> <span class="fu">&gt;&gt;</span> <span class="fu">return</span> <span class="dv">1</span>
-<span class="fu">&gt;</span>   <span class="fu">|</span> n <span class="fu">==</span> <span class="dv">1</span>    <span class="fu">=</span> <span class="fu">putStr</span> <span class="st">&quot;1&quot;</span> <span class="fu">&gt;&gt;</span> <span class="fu">return</span> <span class="dv">1</span>
-<span class="fu">&gt;</span>   <span class="fu">|</span> <span class="fu">otherwise</span> <span class="fu">=</span> <span class="kw">do</span>
-<span class="fu">&gt;</span>       <span class="fu">putStr</span> (<span class="fu">show</span> n)
-<span class="fu">&gt;</span>       a <span class="ot">&lt;-</span> fib_visible (n<span class="dv">-1</span>)
-<span class="fu">&gt;</span>       b <span class="ot">&lt;-</span> fib_visible (n<span class="dv">-2</span>)
-<span class="fu">&gt;</span>       <span class="fu">return</span> <span class="fu">$</span> a <span class="fu">+</span> b</code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; fib_visible ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">IO</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span> fib_visible n
+<span class="ot">&gt;</span>   <span class="fu">|</span> n <span class="fu">==</span> <span class="dv">0</span>    <span class="fu">=</span> putStr <span class="st">&quot;0&quot;</span> <span class="fu">&gt;&gt;</span> return <span class="dv">1</span>
+<span class="ot">&gt;</span>   <span class="fu">|</span> n <span class="fu">==</span> <span class="dv">1</span>    <span class="fu">=</span> putStr <span class="st">&quot;1&quot;</span> <span class="fu">&gt;&gt;</span> return <span class="dv">1</span>
+<span class="ot">&gt;</span>   <span class="fu">|</span> otherwise <span class="fu">=</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>       putStr (show n)
+<span class="ot">&gt;</span>       a <span class="ot">&lt;-</span> fib_visible (n<span class="fu">-</span><span class="dv">1</span>)
+<span class="ot">&gt;</span>       b <span class="ot">&lt;-</span> fib_visible (n<span class="fu">-</span><span class="dv">2</span>)
+<span class="ot">&gt;</span>       return <span class="fu">$</span> a <span class="fu">+</span> b</code></pre>
 <p>Sample output:</p>
 <pre><code>| ghci&gt; fib_visible 5
 | 5432101210321018</code></pre>
 <p>Like above, we will make sound from side effect with fibonacci sequence. Using a newtype wrapper for sending OSC message to default scsynth, running in UDP port 57110 of localhost (assuming that scsynth is running with this default settings).</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span> <span class="kw">newtype</span> <span class="dt">Sound</span> a <span class="fu">=</span> <span class="dt">Sound</span> {<span class="ot">unSound ::</span> <span class="dt">ReaderT</span> <span class="dt">UDP</span> <span class="dt">IO</span> a}
-<span class="fu">&gt;</span>   <span class="kw">deriving</span> (<span class="kw">Functor</span>, <span class="kw">Monad</span>, <span class="dt">MonadReader</span> <span class="dt">UDP</span>, <span class="dt">MonadIO</span>)
-<span class="fu">&gt;</span> 
-<span class="fu">&gt;</span><span class="ot"> runSound ::</span> <span class="dt">Sound</span> a <span class="ot">-&gt;</span> <span class="dt">IO</span> a
-<span class="fu">&gt;</span> runSound <span class="fu">=</span> withSC3 <span class="fu">.</span> runReaderT <span class="fu">.</span> unSound</code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">newtype</span> <span class="dt">Sound</span> a <span class="fu">=</span> <span class="dt">Sound</span> {<span class="ot">unSound ::</span> <span class="dt">ReaderT</span> <span class="dt">UDP</span> <span class="dt">IO</span> a}
+<span class="ot">&gt;</span>   <span class="kw">deriving</span> (<span class="dt">Functor</span>, <span class="dt">Monad</span>, <span class="dt">MonadReader</span> <span class="dt">UDP</span>, <span class="dt">MonadIO</span>)
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; runSound ::</span> <span class="dt">Sound</span> a <span class="ot">-&gt;</span> <span class="dt">IO</span> a
+<span class="ot">&gt;</span> runSound <span class="fu">=</span> withSC3 <span class="fu">.</span> runReaderT <span class="fu">.</span> unSound</code></pre>
 <p>With using <code>Sound</code> wrapper, we can write audible fibonacci sequence with side effect pretty much resembling to its visible variant. The only difference we see in the body of code is use of <code>mkSound</code> instead of <code>putStr</code>.</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> fib_audible ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Sound</span> <span class="dt">Int</span>
-<span class="fu">&gt;</span> fib_audible n
-<span class="fu">&gt;</span>   <span class="fu">|</span> n <span class="fu">==</span> <span class="dv">0</span>    <span class="fu">=</span> mkSound <span class="dv">0</span> <span class="fu">&gt;&gt;</span> <span class="fu">return</span> <span class="dv">1</span>
-<span class="fu">&gt;</span>   <span class="fu">|</span> n <span class="fu">==</span> <span class="dv">1</span>    <span class="fu">=</span> mkSound <span class="dv">1</span> <span class="fu">&gt;&gt;</span> <span class="fu">return</span> <span class="dv">1</span>
-<span class="fu">&gt;</span>   <span class="fu">|</span> <span class="fu">otherwise</span> <span class="fu">=</span> <span class="kw">do</span>
-<span class="fu">&gt;</span>       mkSound n
-<span class="fu">&gt;</span>       a <span class="ot">&lt;-</span> fib_audible (n<span class="dv">-1</span>)
-<span class="fu">&gt;</span>       b <span class="ot">&lt;-</span> fib_audible (n<span class="dv">-2</span>)
-<span class="fu">&gt;</span>       <span class="fu">return</span> <span class="fu">$</span> a <span class="fu">+</span> b</code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; fib_audible ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Sound</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span> fib_audible n
+<span class="ot">&gt;</span>   <span class="fu">|</span> n <span class="fu">==</span> <span class="dv">0</span>    <span class="fu">=</span> mkSound <span class="dv">0</span> <span class="fu">&gt;&gt;</span> return <span class="dv">1</span>
+<span class="ot">&gt;</span>   <span class="fu">|</span> n <span class="fu">==</span> <span class="dv">1</span>    <span class="fu">=</span> mkSound <span class="dv">1</span> <span class="fu">&gt;&gt;</span> return <span class="dv">1</span>
+<span class="ot">&gt;</span>   <span class="fu">|</span> otherwise <span class="fu">=</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>       mkSound n
+<span class="ot">&gt;</span>       a <span class="ot">&lt;-</span> fib_audible (n<span class="fu">-</span><span class="dv">1</span>)
+<span class="ot">&gt;</span>       b <span class="ot">&lt;-</span> fib_audible (n<span class="fu">-</span><span class="dv">2</span>)
+<span class="ot">&gt;</span>       return <span class="fu">$</span> a <span class="fu">+</span> b</code></pre>
 <p>We could write <code>fib_audible</code> and <code>fib_visible</code> with using <code>mkFib</code>.</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> mkFib ::</span> <span class="kw">Monad</span> m <span class="ot">=&gt;</span> (<span class="dt">Int</span> <span class="ot">-&gt;</span> m ()) <span class="ot">-&gt;</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> m <span class="dt">Int</span>
-<span class="fu">&gt;</span> mkFib act n
-<span class="fu">&gt;</span>   <span class="fu">|</span> n <span class="fu">==</span> <span class="dv">0</span>    <span class="fu">=</span> act <span class="dv">0</span> <span class="fu">&gt;&gt;</span> <span class="fu">return</span> <span class="dv">1</span>
-<span class="fu">&gt;</span>   <span class="fu">|</span> n <span class="fu">==</span> <span class="dv">1</span>    <span class="fu">=</span> act <span class="dv">1</span> <span class="fu">&gt;&gt;</span> <span class="fu">return</span> <span class="dv">1</span>
-<span class="fu">&gt;</span>   <span class="fu">|</span> <span class="fu">otherwise</span> <span class="fu">=</span> <span class="kw">do</span>
-<span class="fu">&gt;</span>       act n
-<span class="fu">&gt;</span>       a <span class="ot">&lt;-</span> mkFib act (n<span class="dv">-1</span>)
-<span class="fu">&gt;</span>       b <span class="ot">&lt;-</span> mkFib act (n<span class="dv">-2</span>)
-<span class="fu">&gt;</span>       <span class="fu">return</span> <span class="fu">$</span> a <span class="fu">+</span> b
-<span class="fu">&gt;</span> 
-<span class="fu">&gt;</span> fib_visible' <span class="fu">=</span> mkFib (<span class="fu">putStr</span> <span class="fu">.</span> <span class="fu">show</span>)
-<span class="fu">&gt;</span> fib_audible' <span class="fu">=</span> mkFib mkSound</code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; mkFib ::</span> <span class="dt">Monad</span> m <span class="ot">=&gt;</span> (<span class="dt">Int</span> <span class="ot">-&gt;</span> m ()) <span class="ot">-&gt;</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> m <span class="dt">Int</span>
+<span class="ot">&gt;</span> mkFib act n
+<span class="ot">&gt;</span>   <span class="fu">|</span> n <span class="fu">==</span> <span class="dv">0</span>    <span class="fu">=</span> act <span class="dv">0</span> <span class="fu">&gt;&gt;</span> return <span class="dv">1</span>
+<span class="ot">&gt;</span>   <span class="fu">|</span> n <span class="fu">==</span> <span class="dv">1</span>    <span class="fu">=</span> act <span class="dv">1</span> <span class="fu">&gt;&gt;</span> return <span class="dv">1</span>
+<span class="ot">&gt;</span>   <span class="fu">|</span> otherwise <span class="fu">=</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>       act n
+<span class="ot">&gt;</span>       a <span class="ot">&lt;-</span> mkFib act (n<span class="fu">-</span><span class="dv">1</span>)
+<span class="ot">&gt;</span>       b <span class="ot">&lt;-</span> mkFib act (n<span class="fu">-</span><span class="dv">2</span>)
+<span class="ot">&gt;</span>       return <span class="fu">$</span> a <span class="fu">+</span> b
+<span class="ot">&gt;</span> 
+<span class="ot">&gt;</span> fib_visible' <span class="fu">=</span> mkFib (putStr <span class="fu">.</span> show)
+<span class="ot">&gt;</span> fib_audible' <span class="fu">=</span> mkFib mkSound</code></pre>
 <p>The sound maker. Sends OSC message to scsynth and pause. Will not make sound when n is 0.</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> mkSound ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Sound</span> ()
-<span class="fu">&gt;</span> mkSound n
-<span class="fu">&gt;</span>   <span class="fu">|</span> n <span class="fu">==</span> <span class="dv">0</span>    <span class="fu">=</span> liftIO <span class="fu">$</span> threadDelay timeUnit
-<span class="fu">&gt;</span>   <span class="fu">|</span> <span class="fu">otherwise</span> <span class="fu">=</span> <span class="kw">do</span>
-<span class="fu">&gt;</span>     fd <span class="ot">&lt;-</span> ask
-<span class="fu">&gt;</span>     <span class="kw">let</span> n' <span class="fu">=</span> <span class="fu">fromIntegral</span> n
-<span class="fu">&gt;</span>     liftIO <span class="fu">$</span> <span class="kw">do</span>
-<span class="fu">&gt;</span>       send fd <span class="fu">$</span> s_new <span class="st">&quot;fibdef&quot;</span> (<span class="fu">-</span><span class="dv">1</span>) <span class="dt">AddToHead</span> <span class="dv">1</span>
-<span class="fu">&gt;</span>         [ (<span class="st">&quot;freq&quot;</span>, n' <span class="fu">*</span> <span class="dv">220</span>)
-<span class="fu">&gt;</span>         , (<span class="st">&quot;amp&quot;</span>, <span class="fl">0.05</span> <span class="fu">+</span> (<span class="fl">0.01</span> <span class="fu">*</span> n'))
-<span class="fu">&gt;</span>         , (<span class="st">&quot;pan&quot;</span>, (<span class="fu">-</span><span class="dv">1</span>) <span class="fu">+</span> (<span class="dv">2</span><span class="fu">/</span><span class="dv">3</span>) <span class="fu">*</span> <span class="fu">fromIntegral</span> (n <span class="ot">`mod`</span> <span class="dv">4</span>))
-<span class="fu">&gt;</span>         , (<span class="st">&quot;decay&quot;</span>, <span class="fl">0.1</span> <span class="fu">+</span> (n' <span class="fu">*</span> <span class="fl">0.175</span>)) ]
-<span class="fu">&gt;</span>       threadDelay timeUnit</code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; mkSound ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Sound</span> ()
+<span class="ot">&gt;</span> mkSound n
+<span class="ot">&gt;</span>   <span class="fu">|</span> n <span class="fu">==</span> <span class="dv">0</span>    <span class="fu">=</span> liftIO <span class="fu">$</span> threadDelay timeUnit
+<span class="ot">&gt;</span>   <span class="fu">|</span> otherwise <span class="fu">=</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>     fd <span class="ot">&lt;-</span> ask
+<span class="ot">&gt;</span>     <span class="kw">let</span> n' <span class="fu">=</span> fromIntegral n
+<span class="ot">&gt;</span>     liftIO <span class="fu">$</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>       send fd <span class="fu">$</span> s_new <span class="st">&quot;fibdef&quot;</span> (<span class="fu">-</span><span class="dv">1</span>) <span class="dt">AddToHead</span> <span class="dv">1</span>
+<span class="ot">&gt;</span>         [ (<span class="st">&quot;freq&quot;</span>, n' <span class="fu">*</span> <span class="dv">220</span>)
+<span class="ot">&gt;</span>         , (<span class="st">&quot;amp&quot;</span>, <span class="dv">0</span><span class="fu">.</span><span class="dv">05</span> <span class="fu">+</span> (<span class="dv">0</span><span class="fu">.</span><span class="dv">01</span> <span class="fu">*</span> n'))
+<span class="ot">&gt;</span>         , (<span class="st">&quot;pan&quot;</span>, (<span class="fu">-</span><span class="dv">1</span>) <span class="fu">+</span> (<span class="dv">2</span><span class="fu">/</span><span class="dv">3</span>) <span class="fu">*</span> fromIntegral (n <span class="ot">`mod`</span> <span class="dv">4</span>))
+<span class="ot">&gt;</span>         , (<span class="st">&quot;decay&quot;</span>, <span class="dv">0</span><span class="fu">.</span><span class="dv">1</span> <span class="fu">+</span> (n' <span class="fu">*</span> <span class="dv">0</span><span class="fu">.</span><span class="dv">175</span>)) ]
+<span class="ot">&gt;</span>       threadDelay timeUnit</code></pre>
 <p>Time interval used for pausing.</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> timeUnit ::</span> <span class="dt">Int</span>
-<span class="fu">&gt;</span> timeUnit <span class="fu">=</span> <span class="dv">12800</span></code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; timeUnit ::</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span> timeUnit <span class="fu">=</span> <span class="dv">12800</span></code></pre>
 <p>Synthdefs used in this piece. Simple synthdef taking <code>freq</code>, <code>pan</code> and <code>amp</code> parameter.</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> fibdef ::</span> <span class="dt">UGen</span>
-<span class="fu">&gt;</span> fibdef <span class="fu">=</span>
-<span class="fu">&gt;</span>   <span class="kw">let</span> sig <span class="fu">=</span> sinOsc <span class="dt">AR</span> frq <span class="dv">0</span> <span class="fu">*</span> e <span class="fu">*</span> amp
-<span class="fu">&gt;</span>       frq <span class="fu">=</span> control <span class="dt">KR</span> <span class="st">&quot;freq&quot;</span> <span class="dv">440</span>
-<span class="fu">&gt;</span>       amp <span class="fu">=</span> control <span class="dt">KR</span> <span class="st">&quot;amp&quot;</span> <span class="fl">0.1</span>
-<span class="fu">&gt;</span>       e   <span class="fu">=</span> envGen <span class="dt">KR</span> <span class="dv">1</span> <span class="dv">1</span> <span class="dv">0</span> <span class="dv">1</span> <span class="dt">RemoveSynth</span> shp
-<span class="fu">&gt;</span>       shp <span class="fu">=</span> envPerc 1e<span class="dv">-4</span> dcy
-<span class="fu">&gt;</span>       pan <span class="fu">=</span> control <span class="dt">KR</span> <span class="st">&quot;pan&quot;</span> <span class="dv">0</span>
-<span class="fu">&gt;</span>       dcy <span class="fu">=</span> control <span class="dt">KR</span> <span class="st">&quot;decay&quot;</span> <span class="fl">0.5</span>
-<span class="fu">&gt;</span>   <span class="kw">in</span>  out <span class="dv">0</span> (pan2 sig pan <span class="dv">1</span>)</code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; fibdef ::</span> <span class="dt">UGen</span>
+<span class="ot">&gt;</span> fibdef <span class="fu">=</span>
+<span class="ot">&gt;</span>   <span class="kw">let</span> sig <span class="fu">=</span> sinOsc <span class="dt">AR</span> frq <span class="dv">0</span> <span class="fu">*</span> e <span class="fu">*</span> amp
+<span class="ot">&gt;</span>       frq <span class="fu">=</span> control <span class="dt">KR</span> <span class="st">&quot;freq&quot;</span> <span class="dv">440</span>
+<span class="ot">&gt;</span>       amp <span class="fu">=</span> control <span class="dt">KR</span> <span class="st">&quot;amp&quot;</span> <span class="dv">0</span><span class="fu">.</span><span class="dv">1</span>
+<span class="ot">&gt;</span>       e   <span class="fu">=</span> envGen <span class="dt">KR</span> <span class="dv">1</span> <span class="dv">1</span> <span class="dv">0</span> <span class="dv">1</span> <span class="dt">RemoveSynth</span> shp
+<span class="ot">&gt;</span>       shp <span class="fu">=</span> envPerc 1e<span class="fu">-</span><span class="dv">4</span> dcy
+<span class="ot">&gt;</span>       pan <span class="fu">=</span> control <span class="dt">KR</span> <span class="st">&quot;pan&quot;</span> <span class="dv">0</span>
+<span class="ot">&gt;</span>       dcy <span class="fu">=</span> control <span class="dt">KR</span> <span class="st">&quot;decay&quot;</span> <span class="dv">0</span><span class="fu">.</span><span class="dv">5</span>
+<span class="ot">&gt;</span>   <span class="kw">in</span>  out <span class="dv">0</span> (pan2 sig pan <span class="dv">1</span>)</code></pre>
 <p>Send the synthdef to scsynth.</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> setup_fib ::</span> <span class="dt">Transport</span> t <span class="ot">=&gt;</span> t <span class="ot">-&gt;</span> <span class="dt">IO</span> <span class="dt">OSC</span>
-<span class="fu">&gt;</span> setup_fib fd <span class="fu">=</span> <span class="kw">do</span>
-<span class="fu">&gt;</span>   async fd <span class="fu">$</span> bundle immediately
-<span class="fu">&gt;</span>     [ d_recv <span class="fu">$</span> synthdef <span class="st">&quot;fibdef&quot;</span> fibdef ]</code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; setup_fib ::</span> <span class="dt">Transport</span> t <span class="ot">=&gt;</span> t <span class="ot">-&gt;</span> <span class="dt">IO</span> <span class="dt">OSC</span>
+<span class="ot">&gt;</span> setup_fib fd <span class="fu">=</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>   async fd <span class="fu">$</span> bundle immediately
+<span class="ot">&gt;</span>     [ d_recv <span class="fu">$</span> synthdef <span class="st">&quot;fibdef&quot;</span> fibdef ]</code></pre>
 <p>Now its ready to hear the sound.</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> play_fib_sound ::</span> <span class="dt">IO</span> <span class="dt">Int</span>
-<span class="fu">&gt;</span> play_fib_sound <span class="fu">=</span> <span class="kw">do</span>
-<span class="fu">&gt;</span>   withSC3 <span class="fu">$</span> \fd <span class="ot">-&gt;</span> reset fd <span class="fu">&gt;&gt;</span> setup_fib fd
-<span class="fu">&gt;</span>   runSound <span class="fu">$</span> fib_audible <span class="dv">17</span></code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; play_fib_sound ::</span> <span class="dt">IO</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span> play_fib_sound <span class="fu">=</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>   withSC3 <span class="fu">$</span> \fd <span class="ot">-&gt;</span> reset fd <span class="fu">&gt;&gt;</span> setup_fib fd
+<span class="ot">&gt;</span>   runSound <span class="fu">$</span> fib_audible <span class="dv">17</span></code></pre>
 <p>In some case, Instead of listening sound in real time, we might want to write score and render the result in batch command. Below newtype <code>Score</code> will do this job. <code>Score</code> is a combination of Reader, Writer, and State monad, it takes delta time as Reader monad’s environment value, used to increment current time in score file. Writer accumulate the OSC list written to score file, and State monad hold the current time in the score. Alternatively, it could be written with RWS monad, or single State monad. The use of newtype wrapper with <code>GeneralizedNewtypeDeriving</code> here is, I suppose, just a matter of taste.</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span> <span class="kw">newtype</span> <span class="dt">Score</span> a <span class="fu">=</span>
-<span class="fu">&gt;</span>   <span class="dt">Score</span> {<span class="ot">unScore ::</span> <span class="dt">ReaderT</span> <span class="dt">Word64</span> (<span class="dt">WriterT</span> [<span class="dt">OSC</span>] (<span class="dt">State</span> <span class="dt">Word64</span>)) a} <span class="kw">deriving</span>
-<span class="fu">&gt;</span>   (<span class="kw">Functor</span>, <span class="kw">Monad</span>, <span class="dt">MonadState</span> <span class="dt">Word64</span>, <span class="dt">MonadWriter</span> [<span class="dt">OSC</span>], <span class="dt">MonadReader</span> <span class="dt">Word64</span>)
-<span class="fu">&gt;</span> 
-<span class="fu">&gt;</span><span class="ot"> runScore ::</span> <span class="dt">Score</span> a <span class="ot">-&gt;</span> <span class="dt">Word64</span> <span class="ot">-&gt;</span> [<span class="dt">OSC</span>]
-<span class="fu">&gt;</span> runScore m delta <span class="fu">=</span>
-<span class="fu">&gt;</span>   evalState (execWriterT (runReaderT (unScore m) delta)) <span class="dv">0</span></code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">newtype</span> <span class="dt">Score</span> a <span class="fu">=</span>
+<span class="ot">&gt;</span>   <span class="dt">Score</span> {<span class="ot">unScore ::</span> <span class="dt">ReaderT</span> <span class="dt">Word64</span> (<span class="dt">WriterT</span> [<span class="dt">OSC</span>] (<span class="dt">State</span> <span class="dt">Word64</span>)) a} <span class="kw">deriving</span>
+<span class="ot">&gt;</span>   (<span class="dt">Functor</span>, <span class="dt">Monad</span>, <span class="dt">MonadState</span> <span class="dt">Word64</span>, <span class="dt">MonadWriter</span> [<span class="dt">OSC</span>], <span class="dt">MonadReader</span> <span class="dt">Word64</span>)
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; runScore ::</span> <span class="dt">Score</span> a <span class="ot">-&gt;</span> <span class="dt">Word64</span> <span class="ot">-&gt;</span> [<span class="dt">OSC</span>]
+<span class="ot">&gt;</span> runScore m delta <span class="fu">=</span>
+<span class="ot">&gt;</span>   evalState (execWriterT (runReaderT (unScore m) delta)) <span class="dv">0</span></code></pre>
 <p>Action to make score from each data passed in fibonacci, and fibonacci score writer monad. We can use <code>mkFib</code> to make a new action to write score from side effects generated from fibonacci action.</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> mkScore ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Score</span> ()
-<span class="fu">&gt;</span> mkScore n <span class="fu">=</span> <span class="kw">do</span>
-<span class="fu">&gt;</span>   delta <span class="ot">&lt;-</span> ask
-<span class="fu">&gt;</span>   t0 <span class="ot">&lt;-</span> get
-<span class="fu">&gt;</span>   <span class="kw">let</span> n' <span class="fu">=</span> <span class="fu">fromIntegral</span> n
-<span class="fu">&gt;</span>   tell <span class="fu">$</span> [ bundle (<span class="dt">NTPi</span> t0)
-<span class="fu">&gt;</span>     [ s_new <span class="st">&quot;fibdef&quot;</span> (<span class="fu">-</span><span class="dv">1</span>) <span class="dt">AddToTail</span> <span class="dv">1</span>
-<span class="fu">&gt;</span>       [ (<span class="st">&quot;freq&quot;</span>, n' <span class="fu">*</span> <span class="dv">220</span>)
-<span class="fu">&gt;</span>       , (<span class="st">&quot;amp&quot;</span>,  <span class="fl">0.05</span> <span class="fu">+</span> (n' <span class="fu">*</span> <span class="fl">0.02</span>))
-<span class="fu">&gt;</span>       , (<span class="st">&quot;pan&quot;</span>, (<span class="fu">-</span><span class="dv">1</span>) <span class="fu">+</span> (<span class="dv">2</span><span class="fu">/</span><span class="dv">3</span>) <span class="fu">*</span> <span class="fu">fromIntegral</span> (n <span class="ot">`mod`</span> <span class="dv">4</span>))
-<span class="fu">&gt;</span>       , (<span class="st">&quot;decay&quot;</span>, <span class="fl">0.1</span> <span class="fu">+</span> (n' <span class="fu">*</span> <span class="fl">0.25</span>)) ]]]
-<span class="fu">&gt;</span>   put (t0 <span class="fu">+</span> delta)
-<span class="fu">&gt;</span> 
-<span class="fu">&gt;</span><span class="ot"> fib_score ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Score</span> <span class="dt">Int</span>
-<span class="fu">&gt;</span> fib_score <span class="fu">=</span> mkFib mkScore</code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; mkScore ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Score</span> ()
+<span class="ot">&gt;</span> mkScore n <span class="fu">=</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>   delta <span class="ot">&lt;-</span> ask
+<span class="ot">&gt;</span>   t0 <span class="ot">&lt;-</span> get
+<span class="ot">&gt;</span>   <span class="kw">let</span> n' <span class="fu">=</span> fromIntegral n
+<span class="ot">&gt;</span>   tell <span class="fu">$</span> [ bundle (<span class="dt">NTPi</span> t0)
+<span class="ot">&gt;</span>     [ s_new <span class="st">&quot;fibdef&quot;</span> (<span class="fu">-</span><span class="dv">1</span>) <span class="dt">AddToTail</span> <span class="dv">1</span>
+<span class="ot">&gt;</span>       [ (<span class="st">&quot;freq&quot;</span>, n' <span class="fu">*</span> <span class="dv">220</span>)
+<span class="ot">&gt;</span>       , (<span class="st">&quot;amp&quot;</span>,  <span class="dv">0</span><span class="fu">.</span><span class="dv">05</span> <span class="fu">+</span> (n' <span class="fu">*</span> <span class="dv">0</span><span class="fu">.</span><span class="dv">02</span>))
+<span class="ot">&gt;</span>       , (<span class="st">&quot;pan&quot;</span>, (<span class="fu">-</span><span class="dv">1</span>) <span class="fu">+</span> (<span class="dv">2</span><span class="fu">/</span><span class="dv">3</span>) <span class="fu">*</span> fromIntegral (n <span class="ot">`mod`</span> <span class="dv">4</span>))
+<span class="ot">&gt;</span>       , (<span class="st">&quot;decay&quot;</span>, <span class="dv">0</span><span class="fu">.</span><span class="dv">1</span> <span class="fu">+</span> (n' <span class="fu">*</span> <span class="dv">0</span><span class="fu">.</span><span class="dv">25</span>)) ]]]
+<span class="ot">&gt;</span>   put (t0 <span class="fu">+</span> delta)
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; fib_score ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Score</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span> fib_score <span class="fu">=</span> mkFib mkScore</code></pre>
 <p>Function to write score file, with initial OSC message to send synthdef and add default group to scsynth.</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> write_fib_score ::</span> <span class="fu">FilePath</span> <span class="ot">-&gt;</span> <span class="dt">Score</span> a <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
-<span class="fu">&gt;</span> write_fib_score path m <span class="fu">=</span> <span class="kw">do</span>
-<span class="fu">&gt;</span>   <span class="kw">let</span> iosc <span class="fu">=</span> bundle (<span class="dt">NTPi</span> <span class="dv">0</span>)
-<span class="fu">&gt;</span>         [ g_new [(<span class="dv">1</span>,<span class="dt">AddToTail</span>,<span class="dv">0</span>)]
-<span class="fu">&gt;</span>         , d_recv <span class="fu">$</span> synthdef <span class="st">&quot;fibdef&quot;</span> fibdef ]
-<span class="fu">&gt;</span>   writeNRT path (iosc <span class="fu">:</span> runScore m (<span class="fu">fromIntegral</span> timeUnit <span class="fu">*</span> <span class="dv">10000</span>))</code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; write_fib_score ::</span> FilePath <span class="ot">-&gt;</span> <span class="dt">Score</span> a <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
+<span class="ot">&gt;</span> write_fib_score path m <span class="fu">=</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>   <span class="kw">let</span> iosc <span class="fu">=</span> bundle (<span class="dt">NTPi</span> <span class="dv">0</span>)
+<span class="ot">&gt;</span>         [ g_new [(<span class="dv">1</span>,<span class="dt">AddToTail</span>,<span class="dv">0</span>)]
+<span class="ot">&gt;</span>         , d_recv <span class="fu">$</span> synthdef <span class="st">&quot;fibdef&quot;</span> fibdef ]
+<span class="ot">&gt;</span>   writeNRT path (iosc <span class="fu">:</span> runScore m (fromIntegral timeUnit <span class="fu">*</span> <span class="dv">10000</span>))</code></pre>
 <p>Test it.</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> test_fib_score ::</span> <span class="dt">IO</span> ()
-<span class="fu">&gt;</span> test_fib_score <span class="fu">=</span> write_fib_score <span class="st">&quot;/tmp/fib.osc&quot;</span> (fib_score <span class="dv">12</span>)</code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; test_fib_score ::</span> <span class="dt">IO</span> ()
+<span class="ot">&gt;</span> test_fib_score <span class="fu">=</span> write_fib_score <span class="st">&quot;/tmp/fib.osc&quot;</span> (fib_score <span class="dv">12</span>)</code></pre>
 <p>Attached recording in the beginning of this post was created from <code>fib.osc</code>, fed to scsynth in non-realtime mode.</p>
 <pre><code>| $ scsynth -o 2 -N /tmp/fib.osc _ out.wav 48000 WAVE float</code></pre>
 </div>

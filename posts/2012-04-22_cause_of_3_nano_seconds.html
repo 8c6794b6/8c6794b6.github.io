@@ -35,42 +35,42 @@
 <p><code>Unboxed Vector</code>, in <a href="http://hackage.haskell.org/package/vector">vector</a> package is efficient data structure. Iterating over unboxed value is pretty fast.</p>
 <p>Is there any faster way to iterate than unboxed vector?</p>
 <p>Interest of comparision here is <em>efficiency of iteration</em>. Not the body contents of work in each iteration, but overhead we get from the loop.</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span> <span class="ot">{-# LANGUAGE BangPatterns #-}</span>
-<span class="fu">&gt;</span> <span class="kw">module</span> <span class="dt">Main</span> <span class="kw">where</span>
-<span class="fu">&gt;</span> 
-<span class="fu">&gt;</span> <span class="kw">import</span> <span class="dt">Criterion.Main</span> (bench, defaultMain, nf)
-<span class="fu">&gt;</span> <span class="kw">import</span> <span class="kw">qualified</span> <span class="dt">Data.Vector.Unboxed</span> <span class="kw">as</span> <span class="dt">U</span></code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE BangPatterns #-}</span>
+<span class="ot">&gt;</span> <span class="kw">module</span> <span class="dt">Main</span> <span class="kw">where</span>
+<span class="ot">&gt;</span> 
+<span class="ot">&gt;</span> <span class="kw">import</span> Criterion.Main (bench, defaultMain, nf)
+<span class="ot">&gt;</span> <span class="kw">import</span> <span class="kw">qualified</span> Data.Vector.Unboxed <span class="kw">as</span> U</code></pre>
 <p>Couple type synonyms, and body function to apply inside the loop.</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span> <span class="kw">type</span> <span class="dt">Updater</span> a <span class="fu">=</span> a <span class="ot">-&gt;</span> a
-<span class="fu">&gt;</span> <span class="kw">type</span> <span class="dt">Work</span> a <span class="fu">=</span> <span class="dt">Updater</span> a <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> a
-<span class="fu">&gt;</span> 
-<span class="fu">&gt;</span><span class="ot"> add1 ::</span> <span class="dt">Updater</span> <span class="dt">Int</span>
-<span class="fu">&gt;</span> add1 <span class="fu">=</span> (<span class="fu">+</span><span class="dv">1</span>)</code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">type</span> <span class="dt">Updater</span> a <span class="fu">=</span> a <span class="ot">-&gt;</span> a
+<span class="ot">&gt;</span> <span class="kw">type</span> <span class="dt">Work</span> a <span class="fu">=</span> <span class="dt">Updater</span> a <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> a
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; add1 ::</span> <span class="dt">Updater</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span> add1 <span class="fu">=</span> (<span class="fu">+</span><span class="dv">1</span>)</code></pre>
 <p>Using unboxed vector to loop for given time. Using <code>foldl'</code> and <code>replicate</code>.</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> work01 ::</span> <span class="dt">Work</span> <span class="dt">Int</span>
-<span class="fu">&gt;</span> work01 f n m <span class="fu">=</span> U.foldl' (\x _ <span class="ot">-&gt;</span> f x) n (U.replicate m ())</code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; work01 ::</span> <span class="dt">Work</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span> work01 f n m <span class="fu">=</span> U.foldl' (\x _ <span class="ot">-&gt;</span> f x) n (U.replicate m ())</code></pre>
 <p>Invoking <code>work01</code> with <code>add1</code>. Below will apply <code>add1</code> to 0 for 100 times.</p>
 <pre><code>ghci&gt; work01 add1 0 100
 100</code></pre>
 <p>Manual recursive loop function with wrapper strict data type.</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span> <span class="kw">data</span> <span class="dt">P</span> <span class="fu">=</span> <span class="dt">P</span> <span class="ot">{-# UNPACK #-} !Int {-# UNPACK #-}</span> <span class="fu">!</span><span class="dt">Int</span>
-<span class="fu">&gt;</span> 
-<span class="fu">&gt;</span><span class="ot"> work02 ::</span> <span class="dt">Work</span> <span class="dt">Int</span>
-<span class="fu">&gt;</span> work02 f n0 m <span class="fu">=</span> go (<span class="dt">P</span> <span class="dv">0</span> n0) <span class="kw">where</span>
-<span class="fu">&gt;</span>   <span class="ot">{-# INLINE go #-}</span>
-<span class="fu">&gt;</span>   go <span class="fu">!</span>(<span class="dt">P</span> i n) <span class="fu">|</span> i <span class="fu">==</span> m    <span class="fu">=</span> n
-<span class="fu">&gt;</span>               <span class="fu">|</span> <span class="fu">otherwise</span> <span class="fu">=</span> go (<span class="dt">P</span> (i<span class="dv">+1</span>) (f n))</code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">data</span> <span class="dt">P</span> <span class="fu">=</span> <span class="dt">P</span> <span class="ot">{-# UNPACK #-} !Int {-# UNPACK #-}</span> <span class="fu">!</span><span class="dt">Int</span>
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; work02 ::</span> <span class="dt">Work</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span> work02 f n0 m <span class="fu">=</span> go (<span class="dt">P</span> <span class="dv">0</span> n0) <span class="kw">where</span>
+<span class="ot">&gt;</span>   <span class="ot">{-# INLINE go #-}</span>
+<span class="ot">&gt;</span>   go <span class="fu">!</span>(<span class="dt">P</span> i n) <span class="fu">|</span> i <span class="fu">==</span> m    <span class="fu">=</span> n
+<span class="ot">&gt;</span>               <span class="fu">|</span> otherwise <span class="fu">=</span> go (<span class="dt">P</span> (i<span class="fu">+</span><span class="dv">1</span>) (f n))</code></pre>
 <p>Again, applying <code>add1</code> to 0 for 100 times.</p>
 <pre><code>ghci&gt; work02 add1 0 100
 100</code></pre>
 <p>Main for taking benchmark looks like below.</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> main_one ::</span> <span class="dt">IO</span> ()
-<span class="fu">&gt;</span> main_one <span class="fu">=</span> <span class="kw">do</span>
-<span class="fu">&gt;</span>   <span class="kw">let</span> k <span class="fu">=</span> <span class="dv">2</span> <span class="fu">^</span> <span class="dv">10</span>
-<span class="fu">&gt;</span>   defaultMain
-<span class="fu">&gt;</span>     [ bench <span class="st">&quot;unboxed vector&quot;</span> (nf (work01 add1 <span class="dv">0</span>) k)
-<span class="fu">&gt;</span>     , bench <span class="st">&quot;hand written recursion&quot;</span> (nf (work02 add1 <span class="dv">0</span>) k)
-<span class="fu">&gt;</span>     ]</code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; main_one ::</span> <span class="dt">IO</span> ()
+<span class="ot">&gt;</span> main_one <span class="fu">=</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>   <span class="kw">let</span> k <span class="fu">=</span> <span class="dv">2</span> <span class="fu">^</span> <span class="dv">10</span>
+<span class="ot">&gt;</span>   defaultMain
+<span class="ot">&gt;</span>     [ bench <span class="st">&quot;unboxed vector&quot;</span> (nf (work01 add1 <span class="dv">0</span>) k)
+<span class="ot">&gt;</span>     , bench <span class="st">&quot;hand written recursion&quot;</span> (nf (work02 add1 <span class="dv">0</span>) k)
+<span class="ot">&gt;</span>     ]</code></pre>
 <p>Compiling with couple optimization options:</p>
 <pre><code>$ ghc -O3 -fllvm -optl-O3 -main-is main_one -o a.out loop.lhs</code></pre>
 <p>The benchmark result:</p>
@@ -180,19 +180,19 @@ Main.$wwork02 =
     $wgo1_s2Xg 0 ww_s2W0</code></pre>
 <p>After taking a closer look, I realised that <code>i == m</code> in guard of <code>work02</code> is carrying <code>m</code>, which is passed through the inner functions found in the core. This lead <code>$wwork02</code> to compare <code>ww2_s2VN</code> and <code>ww1_s2w4</code>, which both of them passed from argument in <code>work02</code>.</p>
 <p>Rewriting the guard to compare with constant <code>0</code> instead of <code>m</code>:</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> work03 ::</span> <span class="dt">Work</span> <span class="dt">Int</span>
-<span class="fu">&gt;</span> work03 f n0 m <span class="fu">=</span> go (<span class="dt">P</span> m n0) <span class="kw">where</span>
-<span class="fu">&gt;</span>   <span class="ot">{-# INLINE go #-}</span>
-<span class="fu">&gt;</span>   go <span class="fu">!</span>(<span class="dt">P</span> i n) <span class="fu">|</span> i <span class="fu">==</span> <span class="dv">0</span>    <span class="fu">=</span> n
-<span class="fu">&gt;</span>               <span class="fu">|</span> <span class="fu">otherwise</span> <span class="fu">=</span> go (<span class="dt">P</span> (i<span class="dv">-1</span>) (f n))</code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; work03 ::</span> <span class="dt">Work</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span> work03 f n0 m <span class="fu">=</span> go (<span class="dt">P</span> m n0) <span class="kw">where</span>
+<span class="ot">&gt;</span>   <span class="ot">{-# INLINE go #-}</span>
+<span class="ot">&gt;</span>   go <span class="fu">!</span>(<span class="dt">P</span> i n) <span class="fu">|</span> i <span class="fu">==</span> <span class="dv">0</span>    <span class="fu">=</span> n
+<span class="ot">&gt;</span>               <span class="fu">|</span> otherwise <span class="fu">=</span> go (<span class="dt">P</span> (i<span class="fu">-</span><span class="dv">1</span>) (f n))</code></pre>
 <p>New main for taking benchmark:</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> main_two ::</span> <span class="dt">IO</span> ()
-<span class="fu">&gt;</span> main_two <span class="fu">=</span> <span class="kw">do</span>
-<span class="fu">&gt;</span>   <span class="kw">let</span> k <span class="fu">=</span> <span class="dv">2</span> <span class="fu">^</span> <span class="dv">10</span>
-<span class="fu">&gt;</span>   defaultMain
-<span class="fu">&gt;</span>     [ bench <span class="st">&quot;unboxed vector&quot;</span> (nf (work01 add1 <span class="dv">0</span>) k)
-<span class="fu">&gt;</span>     , bench <span class="st">&quot;hand written recursion, take 2&quot;</span> (nf (work03 add1 <span class="dv">0</span>) k)
-<span class="fu">&gt;</span>     ]</code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; main_two ::</span> <span class="dt">IO</span> ()
+<span class="ot">&gt;</span> main_two <span class="fu">=</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>   <span class="kw">let</span> k <span class="fu">=</span> <span class="dv">2</span> <span class="fu">^</span> <span class="dv">10</span>
+<span class="ot">&gt;</span>   defaultMain
+<span class="ot">&gt;</span>     [ bench <span class="st">&quot;unboxed vector&quot;</span> (nf (work01 add1 <span class="dv">0</span>) k)
+<span class="ot">&gt;</span>     , bench <span class="st">&quot;hand written recursion, take 2&quot;</span> (nf (work03 add1 <span class="dv">0</span>) k)
+<span class="ot">&gt;</span>     ]</code></pre>
 <p>Compiling:</p>
 <pre><code>$ ghc -O3 -fllvm -optl-O3 -main-is main_two -o b.out loop.lhs</code></pre>
 <p>And running the benchmark:</p>

@@ -32,16 +32,16 @@
 </div>
 
 <div id="post_body">
-<p>Recently I read a paper about <a href="http://cs.yale.edu/c2/images/uploads/AudioProc-TR.pdf"><q>Audio Processing and Sound Synthesis in Haskell</q></a> which uses <code>Arrow</code> and <code>[Double]</code> for its building block of signal data. While reading the document, it shows that using Arrow syntax will make the code slow, due to its wrapping and unwrapping in desugared tuples.</p>
+<p>Recently I read a paper about <a href="http://cs.yale.edu/c2/images/uploads/AudioProc-TR.pdf">“Audio Processing and Sound Synthesis in Haskell”</a> which uses <code>Arrow</code> and <code>[Double]</code> for its building block of signal data. While reading the document, it shows that using Arrow syntax will make the code slow, due to its wrapping and unwrapping in desugared tuples.</p>
 <p>Does arrow syntax make the code slow?</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span> <span class="ot">{-# LANGUAGE Arrows, BangPatterns, NoImplicitPrelude #-}</span>
-<span class="fu">&gt;</span> <span class="kw">module</span> <span class="dt">BenchArrowSyntax</span> <span class="kw">where</span>
-<span class="fu">&gt;</span> <span class="kw">import</span> <span class="dt">Control.Arrow</span>
-<span class="fu">&gt;</span> <span class="kw">import</span> <span class="dt">Control.Category</span>
-<span class="fu">&gt;</span> <span class="kw">import</span> <span class="dt">Prelude</span> <span class="kw">hiding</span> ((<span class="fu">.</span>), <span class="fu">id</span>)
-<span class="fu">&gt;</span> 
-<span class="fu">&gt;</span> <span class="kw">import</span> <span class="dt">Control.DeepSeq</span>
-<span class="fu">&gt;</span> <span class="kw">import</span> <span class="dt">Criterion.Main</span></code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE Arrows, BangPatterns, NoImplicitPrelude #-}</span>
+<span class="ot">&gt;</span> <span class="kw">module</span> <span class="dt">BenchArrowSyntax</span> <span class="kw">where</span>
+<span class="ot">&gt;</span> <span class="kw">import</span> Control.Arrow
+<span class="ot">&gt;</span> <span class="kw">import</span> Control.Category
+<span class="ot">&gt;</span> <span class="kw">import</span> Prelude <span class="kw">hiding</span> ((.), id)
+<span class="ot">&gt;</span> 
+<span class="ot">&gt;</span> <span class="kw">import</span> Control.DeepSeq
+<span class="ot">&gt;</span> <span class="kw">import</span> Criterion.Main</code></pre>
 <p>Comparing performance of code written in below styles:</p>
 <ol type="1">
 <li>Pure function, no Arrows (<em>plain</em>).</li>
@@ -50,15 +50,15 @@
 <li>Arrows, with syntax sugar, inlined (<em>sweet-inline</em>).</li>
 </ol>
 <p>The GHC version used to benchmark this code was 7.0.3. The main function looks like this:</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> main ::</span> <span class="dt">IO</span> ()
-<span class="fu">&gt;</span> main <span class="fu">=</span>
-<span class="fu">&gt;</span>  <span class="kw">let</span> <span class="fu">!</span>xs <span class="fu">=</span> <span class="kw">let</span> ys <span class="fu">=</span> [<span class="dv">1</span><span class="fu">..</span><span class="dv">10000</span>] <span class="kw">in</span> ys <span class="ot">`deepseq`</span> ys
-<span class="fu">&gt;</span>  <span class="kw">in</span>  defaultMain
-<span class="fu">&gt;</span>        [ bench <span class="st">&quot;plain&quot;</span> (whnf (<span class="fu">map</span> plain) xs)
-<span class="fu">&gt;</span>        , bench <span class="st">&quot;bitter&quot;</span> (whnf (unA bitter) xs)
-<span class="fu">&gt;</span>        , bench <span class="st">&quot;sweet&quot;</span> (whnf (unA sweet) xs)
-<span class="fu">&gt;</span>        , bench <span class="st">&quot;sweet-inline&quot;</span> (whnf (unB sweet_inline) xs)
-<span class="fu">&gt;</span>        ]</code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; main ::</span> <span class="dt">IO</span> ()
+<span class="ot">&gt;</span> main <span class="fu">=</span>
+<span class="ot">&gt;</span>  <span class="kw">let</span> <span class="fu">!</span>xs <span class="fu">=</span> <span class="kw">let</span> ys <span class="fu">=</span> [<span class="dv">1</span><span class="fu">..</span><span class="dv">10000</span>] <span class="kw">in</span> ys <span class="ot">`deepseq`</span> ys
+<span class="ot">&gt;</span>  <span class="kw">in</span>  defaultMain
+<span class="ot">&gt;</span>        [ bench <span class="st">&quot;plain&quot;</span> (whnf (map plain) xs)
+<span class="ot">&gt;</span>        , bench <span class="st">&quot;bitter&quot;</span> (whnf (unA bitter) xs)
+<span class="ot">&gt;</span>        , bench <span class="st">&quot;sweet&quot;</span> (whnf (unA sweet) xs)
+<span class="ot">&gt;</span>        , bench <span class="st">&quot;sweet-inline&quot;</span> (whnf (unB sweet_inline) xs)
+<span class="ot">&gt;</span>        ]</code></pre>
 <p>Showing the result of running the compiled code:</p>
 <pre><code>$ ghc --make -O2 -o a.out -main-is BenchArrowSyntax BenchArrowSyntax.lhs
 [1 of 1] Compiling BenchArrowSyntax ( bench_arrow_syntax.lhs, bench_arrow_syntax.o )
@@ -90,30 +90,30 @@ mean: 135.2866 ns, lb 134.9794 ns, ub 135.5847 ns, ci 0.950
 std dev: 1.552157 ns, lb 1.412139 ns, ub 1.726597 ns, ci 0.950</code></pre>
 <p>It shows that the code written with arrow syntax runs about 9 times slower than the others, and there’s not so much difference between plain function from arrow codes written without syntax sugar. What’s going on with arrow syntax?</p>
 <p>Below 2 functions were used in this benchmark. Simple addition and multiplication for <code>Int</code>.</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> func1 ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span>
-<span class="fu">&gt;</span> func1 <span class="fu">=</span> (<span class="fu">+</span><span class="dv">3</span>)
-<span class="fu">&gt;</span> 
-<span class="fu">&gt;</span><span class="ot"> func2 ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span>
-<span class="fu">&gt;</span> func2 <span class="fu">=</span> (<span class="fu">*</span><span class="dv">7</span>)</code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; func1 ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span> func1 <span class="fu">=</span> (<span class="fu">+</span><span class="dv">3</span>)
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; func2 ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span> func2 <span class="fu">=</span> (<span class="fu">*</span><span class="dv">7</span>)</code></pre>
 <p>The type to implement <code>Arrow</code> instance for <code>bitter</code> and <code>sweet</code>. It is a simple newtype wrapper for mapping function over list.</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span> <span class="kw">newtype</span> <span class="dt">A</span> a b <span class="fu">=</span> <span class="dt">A</span> {<span class="ot">unA ::</span> [a] <span class="ot">-&gt;</span> [b]}
-<span class="fu">&gt;</span> 
-<span class="fu">&gt;</span> <span class="kw">instance</span> <span class="dt">Category</span> <span class="dt">A</span> <span class="kw">where</span>
-<span class="fu">&gt;</span>   <span class="fu">id</span> <span class="fu">=</span> <span class="dt">A</span> <span class="fu">id</span>
-<span class="fu">&gt;</span>   <span class="dt">A</span> f <span class="fu">.</span> <span class="dt">A</span> g <span class="fu">=</span> <span class="dt">A</span> (f <span class="fu">.</span> g)
-<span class="fu">&gt;</span> 
-<span class="fu">&gt;</span> <span class="kw">instance</span> <span class="dt">Arrow</span> <span class="dt">A</span> <span class="kw">where</span>
-<span class="fu">&gt;</span>   arr f <span class="fu">=</span> <span class="dt">A</span> (<span class="fu">map</span> f)
-<span class="fu">&gt;</span>   first (<span class="dt">A</span> f) <span class="fu">=</span> <span class="dt">A</span> <span class="fu">$</span> <span class="fu">uncurry</span> <span class="fu">zip</span> <span class="fu">.</span> first f <span class="fu">.</span> <span class="fu">unzip</span></code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">newtype</span> <span class="dt">A</span> a b <span class="fu">=</span> <span class="dt">A</span> {<span class="ot">unA ::</span> [a] <span class="ot">-&gt;</span> [b]}
+<span class="ot">&gt;</span> 
+<span class="ot">&gt;</span> <span class="kw">instance</span> <span class="dt">Category</span> <span class="dt">A</span> <span class="kw">where</span>
+<span class="ot">&gt;</span>   id <span class="fu">=</span> <span class="dt">A</span> id
+<span class="ot">&gt;</span>   <span class="dt">A</span> f <span class="fu">.</span> <span class="dt">A</span> g <span class="fu">=</span> <span class="dt">A</span> (f <span class="fu">.</span> g)
+<span class="ot">&gt;</span> 
+<span class="ot">&gt;</span> <span class="kw">instance</span> <span class="dt">Arrow</span> <span class="dt">A</span> <span class="kw">where</span>
+<span class="ot">&gt;</span>   arr f <span class="fu">=</span> <span class="dt">A</span> (map f)
+<span class="ot">&gt;</span>   first (<span class="dt">A</span> f) <span class="fu">=</span> <span class="dt">A</span> <span class="fu">$</span> uncurry zip <span class="fu">.</span> first f <span class="fu">.</span> unzip</code></pre>
 <p>First, the plain function. In other word, a function with <code>(-&gt;)</code> type.</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> plain ::</span> (<span class="ot">-&gt;</span>) <span class="dt">Int</span> <span class="dt">Int</span>
-<span class="fu">&gt;</span> plain <span class="fu">=</span> func2 <span class="fu">.</span> func1</code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; plain ::</span> (<span class="ot">-&gt;</span>) <span class="dt">Int</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span> plain <span class="fu">=</span> func2 <span class="fu">.</span> func1</code></pre>
 <p>Dumped core of <code>plain</code>, removed couple type signatures and variable suffixes for clarity.</p>
 <pre><code>| plain :: Int -&gt; Int
 | plain = \(x :: Int) -&gt; case x of _ { I# x1 -&gt; I# (*# (+# x1 3) 7) }</code></pre>
 <p>Next, arrow without syntax. Manually wrapping functions with <code>arr</code>, and combining with <code>(&gt;&gt;&gt;)</code> operator.</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> bitter ::</span> <span class="dt">A</span> <span class="dt">Int</span> <span class="dt">Int</span>
-<span class="fu">&gt;</span> bitter <span class="fu">=</span> arr func1 <span class="fu">&gt;&gt;&gt;</span> arr func2</code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; bitter ::</span> <span class="dt">A</span> <span class="dt">Int</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span> bitter <span class="fu">=</span> arr func1 <span class="fu">&gt;&gt;&gt;</span> arr func2</code></pre>
 <p>Excerpt of dumped core of <code>bitter</code>. Again, GHC type prefix and variable suffixes are removed.</p>
 <pre><code>| bitter :: A Int Int
 | bitter =
@@ -128,11 +128,11 @@ std dev: 1.552157 ns, lb 1.412139 ns, ub 1.726597 ns, ci 0.950</code></pre>
 | bitter2 = \(x :: Int) -&gt; case x of _ { I# x1 -&gt; I# (*# (+# x1 3) 7) }</code></pre>
 <p>Though delegation from <code>bitter</code> to <code>bitter1</code> and <code>bitter2</code> exists, from what we see in the function body of <code>bitter2</code>, the guts of its definition remains same as <code>plain</code>.</p>
 <p>And then, with arrow syntax. In its body, result of each arrow are bounded to varialbe with explicit name. Requires <code>Arrows</code> LANGUAGE pragma.</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span><span class="ot"> sweet ::</span> <span class="dt">A</span> <span class="dt">Int</span> <span class="dt">Int</span>
-<span class="fu">&gt;</span> sweet <span class="fu">=</span> proc x <span class="ot">-&gt;</span> <span class="kw">do</span>
-<span class="fu">&gt;</span>   y <span class="ot">&lt;-</span> arr func1 <span class="fu">-&lt;</span> x
-<span class="fu">&gt;</span>   z <span class="ot">&lt;-</span> arr func2 <span class="fu">-&lt;</span> y
-<span class="fu">&gt;</span>   returnA <span class="fu">-&lt;</span> z</code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; sweet ::</span> <span class="dt">A</span> <span class="dt">Int</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span> sweet <span class="fu">=</span> proc x <span class="ot">-&gt;</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>   y <span class="ot">&lt;-</span> arr func1 <span class="fu">-&lt;</span> x
+<span class="ot">&gt;</span>   z <span class="ot">&lt;-</span> arr func2 <span class="fu">-&lt;</span> y
+<span class="ot">&gt;</span>   returnA <span class="fu">-&lt;</span> z</code></pre>
 <p>Excerpt dumped core of <code>sweet</code>. We see zipping and unzipping done during the desugaring of syntax, in <code>main12</code> and <code>$fArrowA3</code>.</p>
 <pre><code>| sweet :: A Int Int
 | sweet =
@@ -187,22 +187,22 @@ std dev: 1.552157 ns, lb 1.412139 ns, ub 1.726597 ns, ci 0.950</code></pre>
 |    }
 | end Rec }</code></pre>
 <p>Finally, Arrow syntax with INLINE pragma. The only difference between newtype <code>A</code> and <code>B</code> is, the use of <code>INLINE</code> in function <code>first</code>. The function body of <code>sweet</code> and <code>sweet_inline</code>, and definitions for <code>Arrow</code> class in A and B are identical.</p>
-<pre class="sourceCode literate haskell"><code class="sourceCode haskell"><span class="fu">&gt;</span> <span class="kw">newtype</span> <span class="dt">B</span> a b <span class="fu">=</span> <span class="dt">B</span> {<span class="ot">unB ::</span> [a] <span class="ot">-&gt;</span> [b]}
-<span class="fu">&gt;</span> 
-<span class="fu">&gt;</span> <span class="kw">instance</span> <span class="dt">Category</span> <span class="dt">B</span> <span class="kw">where</span>
-<span class="fu">&gt;</span>   <span class="fu">id</span> <span class="fu">=</span> <span class="dt">B</span> <span class="fu">id</span>
-<span class="fu">&gt;</span>   <span class="dt">B</span> f <span class="fu">.</span> <span class="dt">B</span> g <span class="fu">=</span> <span class="dt">B</span> (f <span class="fu">.</span> g)
-<span class="fu">&gt;</span> 
-<span class="fu">&gt;</span> <span class="kw">instance</span> <span class="dt">Arrow</span> <span class="dt">B</span> <span class="kw">where</span>
-<span class="fu">&gt;</span>   arr f <span class="fu">=</span> <span class="dt">B</span> (<span class="fu">map</span> f)
-<span class="fu">&gt;</span>   <span class="ot">{-# INLINE first #-}</span>
-<span class="fu">&gt;</span>   first (<span class="dt">B</span> f) <span class="fu">=</span> <span class="dt">B</span> <span class="fu">$</span> <span class="fu">uncurry</span> <span class="fu">zip</span> <span class="fu">.</span> first f <span class="fu">.</span> <span class="fu">unzip</span>
-<span class="fu">&gt;</span> 
-<span class="fu">&gt;</span><span class="ot"> sweet_inline ::</span> <span class="dt">B</span> <span class="dt">Int</span> <span class="dt">Int</span>
-<span class="fu">&gt;</span> sweet_inline <span class="fu">=</span> proc x <span class="ot">-&gt;</span> <span class="kw">do</span>
-<span class="fu">&gt;</span>   y <span class="ot">&lt;-</span> arr func1 <span class="fu">-&lt;</span> x
-<span class="fu">&gt;</span>   z <span class="ot">&lt;-</span> arr func2 <span class="fu">-&lt;</span> y
-<span class="fu">&gt;</span>   returnA <span class="fu">-&lt;</span> z</code></pre>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">newtype</span> <span class="dt">B</span> a b <span class="fu">=</span> <span class="dt">B</span> {<span class="ot">unB ::</span> [a] <span class="ot">-&gt;</span> [b]}
+<span class="ot">&gt;</span> 
+<span class="ot">&gt;</span> <span class="kw">instance</span> <span class="dt">Category</span> <span class="dt">B</span> <span class="kw">where</span>
+<span class="ot">&gt;</span>   id <span class="fu">=</span> <span class="dt">B</span> id
+<span class="ot">&gt;</span>   <span class="dt">B</span> f <span class="fu">.</span> <span class="dt">B</span> g <span class="fu">=</span> <span class="dt">B</span> (f <span class="fu">.</span> g)
+<span class="ot">&gt;</span> 
+<span class="ot">&gt;</span> <span class="kw">instance</span> <span class="dt">Arrow</span> <span class="dt">B</span> <span class="kw">where</span>
+<span class="ot">&gt;</span>   arr f <span class="fu">=</span> <span class="dt">B</span> (map f)
+<span class="ot">&gt;</span>   <span class="ot">{-# INLINE first #-}</span>
+<span class="ot">&gt;</span>   first (<span class="dt">B</span> f) <span class="fu">=</span> <span class="dt">B</span> <span class="fu">$</span> uncurry zip <span class="fu">.</span> first f <span class="fu">.</span> unzip
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; sweet_inline ::</span> <span class="dt">B</span> <span class="dt">Int</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span> sweet_inline <span class="fu">=</span> proc x <span class="ot">-&gt;</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>   y <span class="ot">&lt;-</span> arr func1 <span class="fu">-&lt;</span> x
+<span class="ot">&gt;</span>   z <span class="ot">&lt;-</span> arr func2 <span class="fu">-&lt;</span> y
+<span class="ot">&gt;</span>   returnA <span class="fu">-&lt;</span> z</code></pre>
 <p>Excerpt dumped core of <code>sweet_inline</code>. Note that <code>zip</code> function is not used. Instead, more <code>Rec</code> blocks are used. <code>sweet_inline</code> runs 2x faster than <code>sweet</code>, a big difference made from single <code>INLINE</code> pragma.</p>
 <pre><code>| sweet_inline :: B Int Int
 | sweet_inline =
