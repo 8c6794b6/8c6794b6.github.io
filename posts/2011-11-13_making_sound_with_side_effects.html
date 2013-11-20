@@ -30,6 +30,9 @@
 <div id="post_date">
   <strong>November 13, 2011</strong>
 </div>
+<div class="post_tags">
+  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/supercollider.html">supercollider</a>, <a href="../tags/sound.html">sound</a>
+</div>
 
 <div id="post_body">
 <p>This post is a scratchy idea for making sound with side effects. Sample recording created with side effects from fibonacci sequence sounds like this:</p>
@@ -169,10 +172,6 @@ width="100" height="100" /></p>
 <span class="ot">&gt;</span> test_fib_score <span class="fu">=</span> write_fib_score <span class="st">&quot;/tmp/fib.osc&quot;</span> (fib_score <span class="dv">12</span>)</code></pre>
 <p>Attached recording in the beginning of this post was created from <code>fib.osc</code>, fed to scsynth in non-realtime mode.</p>
 <pre><code>| $ scsynth -o 2 -N /tmp/fib.osc _ out.wav 48000 WAVE float</code></pre>
-</div>
-
-<div class="post_tags">
-  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/supercollider.html">supercollider</a>, <a href="../tags/sound.html">sound</a>
 </div>
 
 

@@ -30,6 +30,9 @@
 <div id="post_date">
   <strong>March 24, 2012</strong>
 </div>
+<div class="post_tags">
+  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/cabal.html">cabal</a>, <a href="../tags/package.html">package</a>
+</div>
 
 <div id="post_body">
 <p>For self reminder. When we’re creating cabal package, sometime we want to call itself as a depdency, for instance when making a package with library and bundled executable, using cabal’s test-suite feature.</p>
@@ -85,10 +88,6 @@ Preprocessing executable 'foo' for selfdep-0.1.0.0...
 [1 of 1] Compiling Main             ( run/foo.hs, dist/build/foo/foo-tmp/Main.o )
 Linking dist/build/foo/foo ...</code></pre>
 <p>During the compilation of executable <code>foo</code>, modules under <code>Self.*</code> were not recompiled. This separation of the directory works also for tests.</p>
-</div>
-
-<div class="post_tags">
-  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/cabal.html">cabal</a>, <a href="../tags/package.html">package</a>
 </div>
 
 

@@ -30,6 +30,9 @@
 <div id="post_date">
   <strong>November 20, 2011</strong>
 </div>
+<div class="post_tags">
+  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/heroku.html">heroku</a>, <a href="../tags/web.html">web</a>
+</div>
 
 <div id="post_body">
 <p>The demo app is <a href="http://ixfts.herokuapp.com/">running here</a>.</p>
@@ -51,10 +54,6 @@ web: ./main serve -d state -s static -p  +RTS -N</code></pre>
 <p>Pass whatever option used by the web app. For instance, specifying port from environment variable ``.</p>
 <p>When uploading the app, need cedar to recognize the app somehow, otherwise, heroku will reject the git commit push. We can use dummy <code>Gemfile</code> to tell cedar that it’s a ruby app, or <code>requirements.txt</code> to tell as a python app, or whatever.</p>
 <p>After deploying the app, I found that Heroku’s Cedar stack and configuration done by Procfile was extremely flexible, way far flexible than I imagined.</p>
-</div>
-
-<div class="post_tags">
-  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/heroku.html">heroku</a>, <a href="../tags/web.html">web</a>
 </div>
 
 

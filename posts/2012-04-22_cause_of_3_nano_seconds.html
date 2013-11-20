@@ -30,6 +30,9 @@
 <div id="post_date">
   <strong>April 22, 2012</strong>
 </div>
+<div class="post_tags">
+  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/performance.html">performance</a>
+</div>
 
 <div id="post_body">
 <p><code>Unboxed Vector</code>, in <a href="http://hackage.haskell.org/package/vector">vector</a> package is efficient data structure. Iterating over unboxed value is pretty fast.</p>
@@ -204,10 +207,6 @@ benchmarking hand written recursion, take 2
 mean: 48.45895 ns, lb 48.37886 ns, ub 48.61787 ns, ci 0.950
 std dev: 554.6886 ps, lb 337.5092 ps, ub 946.0307 ps, ci 0.950</code></pre>
 <p>Now the hand written recursion performs about 1.4 nano second faster than unboxed vector. Whenever possible, compare with constant in guards. And, if few nano seconds does not matter, just use unboxed vector.</p>
-</div>
-
-<div class="post_tags">
-  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/performance.html">performance</a>
 </div>
 
 

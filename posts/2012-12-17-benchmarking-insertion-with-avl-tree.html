@@ -30,6 +30,9 @@
 <div id="post_date">
   <strong>December 17, 2012</strong>
 </div>
+<div class="post_tags">
+  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/tree.html">tree</a>, <a href="../tags/datastructure.html">datastructure</a>, <a href="../tags/algorithm.html">algorithm</a>
+</div>
 
 <div id="post_body">
 <p>While I was reading <a href="https://en.wikipedia.org/wiki/AVL_tree">AVL Tree</a> page on wikipedia, it motivated me enough to write the implementation in Haskell.</p>
@@ -196,10 +199,6 @@ $ ./AVL -o bench.html</code></pre>
 <p>Report is <a href="../static/bench-avl-insert-member.html">here</a>.</p>
 <p>Lessons learned: from above simple implementation, a data structure with performance close to those provided by standard package could be implemented. Benchmark show that AVL tree insertion was slightly slower than insertion in Data.Map, performance of member lookup was almost identical. Though when there is no need for making own implemntation, just use the implementation from proven package, in most case those provided data structures has more features, Data.Map.Map has useful functions like <code>insetWith</code>, <code>unionWith</code>, etc.</p>
 <p>By the way, during the benchmark I was using <code>nfIO</code> instead of <code>whnfIO</code> for a while, resulting to linearly increasing insertion time for while.</p>
-</div>
-
-<div class="post_tags">
-  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/tree.html">tree</a>, <a href="../tags/datastructure.html">datastructure</a>, <a href="../tags/algorithm.html">algorithm</a>
 </div>
 
 
