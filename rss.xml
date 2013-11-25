@@ -6,8 +6,28 @@
         <description><![CDATA[Warm and fuzzy]]></description>
         <atom:link href="http://8c6794b6.github.com/rss.xml" rel="self"
                    type="application/rss+xml" />
-        <lastBuildDate>Tue, 19 Nov 2013 00:00:00 UT</lastBuildDate>
+        <lastBuildDate>Thu, 21 Nov 2013 00:00:00 UT</lastBuildDate>
         <item>
+    <title>Notes about travis and ghc</title>
+    <link>http://8c6794b6.github.com/posts/2013-11-21-notes-about-travis-and-ghc.html</link>
+    <description><![CDATA[<h1>Notes about travis and ghc</h1>
+<div id="post_date">
+  <strong>November 21, 2013</strong>
+</div>
+<div class="post_tags">
+  <strong>Tags: </strong><a href="/tags/ci.html">ci</a>, <a href="/tags/ghc.html">ghc</a>, <a href="/tags/git.html">git</a>, <a href="/tags/travis.html">travis</a>
+</div>
+
+<div id="post_body">
+<p>Brief note about current status of ghc and <a href="http://travis-ci.org">travis-ci</a>.</p>
+<p>Recently made a build hook for continuous integration with travis, in one of the repository I have in github, by following <a href="http://about.travis-ci.org/docs/user/getting-started/">getting started guide</a>. The package is requiring <code>base &gt;= 4.6.0</code>, which is from <code>ghc-7.6.*</code>, though the version used in travis build was <code>base &gt;= 4.5.*</code>, which is from <code>ghc-7.4.1</code>. There is <a href="https://github.com/travis-ci/travis-ci/issues/882">an issue in github</a> mentioning ghc version used by travis builds.</p>
+<p>It is still possible to use <code>CPP</code>, <code>#ifdef</code>s and choose the appropriate dependency package version. Might be an opportunity to do this, though I’m not sure the package worth for having that much maintenance efforts.</p>
+</div>
+]]></description>
+    <pubDate>Thu, 21 Nov 2013 00:00:00 UT</pubDate>
+    <guid>http://8c6794b6.github.com/posts/2013-11-21-notes-about-travis-and-ghc.html</guid>
+</item>
+<item>
     <title>Updating gh-pages</title>
     <link>http://8c6794b6.github.com/posts/2013-11-19-updating-gh-pages.html</link>
     <description><![CDATA[<h1>Updating gh-pages</h1>
@@ -857,87 +877,6 @@ Linking dist/build/foo/foo ...</code></pre>
 ]]></description>
     <pubDate>Sat, 25 Feb 2012 00:00:00 UT</pubDate>
     <guid>http://8c6794b6.github.com/posts/2012-02-25_pdf_ps_viewers.html</guid>
-</item>
-<item>
-    <title>Serialization in a hurry</title>
-    <link>http://8c6794b6.github.com/posts/2012-02-18_serialization_in_a_hurry.html</link>
-    <description><![CDATA[<h1>Serialization in a hurry</h1>
-<div id="post_date">
-  <strong>February 18, 2012</strong>
-</div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="/tags/haskell.html">haskell</a>, <a href="/tags/generic.html">generic</a>, <a href="/tags/ghc.html">ghc</a>
-</div>
-
-<div id="post_body">
-<p>I need to serialize below data in 5 minutes:</p>
-<pre><code>| data Foo = Foo
-|  { one   :: Int
-|  , two   :: (Maybe Double, String)
-|  , three :: Vector Double
-|  }</code></pre>
-<p>Requires ghc-7.2.2 or above, and <a href="http://hackage.haskell.org/package/cereal">cereal</a> package.</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE DeriveGeneric #-}</span>
-<span class="ot">&gt;</span> <span class="kw">module</span> <span class="dt">SerializationInAHurry</span> <span class="kw">where</span></code></pre>
-<p>We are using <code>DeriveGeneric</code> language pragma.</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">import</span> GHC.Generics
-<span class="ot">&gt;</span> <span class="kw">import</span> Data.Serialize
-<span class="ot">&gt;</span> <span class="kw">import</span> Data.Vector (Vector(..))
-<span class="ot">&gt;</span> <span class="kw">import</span> <span class="kw">qualified</span> Data.ByteString <span class="kw">as</span> B
-<span class="ot">&gt;</span> <span class="kw">import</span> <span class="kw">qualified</span> Data.Vector <span class="kw">as</span> V</code></pre>
-<p>The target data type to serialize.</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">data</span> <span class="dt">Foo</span> <span class="fu">=</span> <span class="dt">Foo</span>
-<span class="ot">&gt;</span>  {<span class="ot"> one   ::</span> <span class="dt">Int</span>
-<span class="ot">&gt;</span>  ,<span class="ot"> two   ::</span> (<span class="dt">Maybe</span> <span class="dt">Double</span>, <span class="dt">String</span>)
-<span class="ot">&gt;</span>  ,<span class="ot"> three ::</span> <span class="dt">Vector</span> <span class="dt">Double</span>
-<span class="ot">&gt;</span>  } <span class="kw">deriving</span> (<span class="dt">Generic</span>, <span class="dt">Show</span>, <span class="dt">Eq</span>)</code></pre>
-<p>And sample data with target data type.</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; foo1 ::</span> <span class="dt">Foo</span>
-<span class="ot">&gt;</span> foo1 <span class="fu">=</span> <span class="dt">Foo</span>
-<span class="ot">&gt;</span>   { one   <span class="fu">=</span> <span class="dv">100</span>
-<span class="ot">&gt;</span>   , two   <span class="fu">=</span> (<span class="dt">Just</span> <span class="dv">8</span><span class="fu">.</span><span class="dv">5</span>, <span class="st">&quot;eight point five&quot;</span>)
-<span class="ot">&gt;</span>   , three <span class="fu">=</span> V.fromList [<span class="dv">11</span>,<span class="dv">13</span><span class="fu">..</span><span class="dv">21</span>]
-<span class="ot">&gt;</span>   }</code></pre>
-<p>As haddock document in cereal package notes, when the target data type has <code>Generic</code> instance, <code>Serialize</code> class will use it. What we need is to make instance of <code>Serialize</code> with empty body.</p>
-<p><code>Data.Generics.Generic</code> class has couple instances already defined.</p>
-<pre><code>| instance Generic [a] -- Defined in `GHC.Generics&#39;
-| instance Generic Ordering -- Defined in `GHC.Generics&#39;
-| instance Generic Int -- Defined in `GHC.Generics&#39;
-| instance Generic Float -- Defined in `GHC.Generics&#39;
-| instance Generic Double -- Defined in `GHC.Generics&#39;
-| instance Generic Char -- Defined in `GHC.Generics&#39;
-| instance Generic Bool -- Defined in `GHC.Generics&#39;
-| instance Generic (Maybe a) -- Defined in `Data.Maybe&#39;
-| instance Generic (Either a b) -- Defined in `Data.Either&#39;
-| instance Generic (a, b, c, d, e, f, g) -- Defined in `GHC.Tuple&#39;
-| instance Generic (a, b, c, d, e, f) -- Defined in `GHC.Tuple&#39;
-| instance Generic (a, b, c, d, e) -- Defined in `GHC.Tuple&#39;
-| instance Generic (a, b, c, d) -- Defined in `GHC.Tuple&#39;
-| instance Generic (a, b, c) -- Defined in `GHC.Tuple&#39;
-| instance Generic (a, b) -- Defined in `GHC.Tuple&#39;
-| instance Generic () -- Defined in `GHC.Tuple&#39;</code></pre>
-<p>The only missing definition we need is:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">instance</span> <span class="dt">Serialize</span> a <span class="ot">=&gt;</span> <span class="dt">Serialize</span> (<span class="dt">Vector</span> a) <span class="kw">where</span>
-<span class="ot">&gt;</span>   put <span class="fu">=</span> put <span class="ot">`fmap`</span> V.toList
-<span class="ot">&gt;</span>   get <span class="fu">=</span> V.fromList <span class="ot">`fmap`</span> get</code></pre>
-<p>There should be other way which shows better performance for serializing <code>Vector</code>, but recall the title of this post. Now we are ready to serialize.</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">instance</span> <span class="dt">Serialize</span> <span class="dt">Foo</span></code></pre>
-<p>Testing it with writing to file, reading from the file and comparing with original:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; main ::</span> <span class="dt">IO</span> ()
-<span class="ot">&gt;</span> main <span class="fu">=</span> <span class="kw">do</span>
-<span class="ot">&gt;</span>   <span class="kw">let</span> file <span class="fu">=</span> <span class="st">&quot;foo1.data&quot;</span>
-<span class="ot">&gt;</span>   B.writeFile file (encode foo1)
-<span class="ot">&gt;</span>   res <span class="ot">&lt;-</span> decode <span class="ot">`fmap`</span> B.readFile<span class="ot"> file ::</span> <span class="dt">IO</span> (<span class="dt">Either</span> <span class="dt">String</span> <span class="dt">Foo</span>)
-<span class="ot">&gt;</span>   <span class="kw">case</span> res <span class="kw">of</span>
-<span class="ot">&gt;</span>      <span class="dt">Right</span> foo1&#39; <span class="ot">-&gt;</span> print <span class="fu">$</span> foo1 <span class="fu">==</span> foo1&#39;
-<span class="ot">&gt;</span>      <span class="dt">Left</span>  err   <span class="ot">-&gt;</span> error err</code></pre>
-<p>Result:</p>
-<pre><code>| ghci&gt; main
-| True</code></pre>
-</div>
-]]></description>
-    <pubDate>Sat, 18 Feb 2012 00:00:00 UT</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2012-02-18_serialization_in_a_hurry.html</guid>
 </item>
 
     </channel> 
