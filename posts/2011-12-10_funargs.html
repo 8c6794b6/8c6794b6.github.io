@@ -14,7 +14,7 @@
       <div id="header">
         <div id="header_contents">
           <div id="header_left">
-            <a href="../">8c6794b6.github.io</a>
+            <h1><a href="../">8c6794b6.github.io</a></h1>
           </div>
           <div id="navigation">
             <a href="../index.html">Home</a>
@@ -24,16 +24,12 @@
         </div>
       </div>
       <div id="content">
-        <h1>Extracting argument names</h1>
+        <h2>Extracting argument names</h2>
 <div id="post_date">
   <strong>December 10, 2011</strong>
 </div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/templatehaskell.html">templatehaskell</a>
-</div>
-
 <div id="post_body">
-<p>Can we extract argument names from haskell function?</p>
+  <p>Can we extract argument names from haskell function?</p>
 <p>What <em>extracting the argument names</em> means, when we had a function <code>foo</code>:</p>
 <pre><code>| foo :: Int -&gt; Int -&gt; Int -&gt; String
 | foo apple banana cherry = show (apple*60 + banana*30 + cherry*10)</code></pre>
@@ -80,6 +76,9 @@
 <span class="ot">&gt;</span>          _      <span class="ot">-&gt;</span> <span class="st">&quot;&quot;</span>
 <span class="ot">&gt;</span>    listE (map (litE <span class="fu">.</span> stringL) args)</code></pre>
 <p>By the way, this argument extracter was heavily inspired by <a href="http://hackage.haskell.org/package/language-haskell-extract">language-haskell-extract</a>.</p>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/templatehaskell.html">templatehaskell</a>
+  </div>
 </div>
 
       </div>

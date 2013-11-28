@@ -14,7 +14,7 @@
       <div id="header">
         <div id="header_contents">
           <div id="header_left">
-            <a href="../">8c6794b6.github.io</a>
+            <h1><a href="../">8c6794b6.github.io</a></h1>
           </div>
           <div id="navigation">
             <a href="../index.html">Home</a>
@@ -24,16 +24,12 @@
         </div>
       </div>
       <div id="content">
-        <h1>Benchmarking insert and member with AVL tree</h1>
+        <h2>Benchmarking insert and member with AVL tree</h2>
 <div id="post_date">
   <strong>December 17, 2012</strong>
 </div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/tree.html">tree</a>, <a href="../tags/datastructure.html">datastructure</a>, <a href="../tags/algorithm.html">algorithm</a>
-</div>
-
 <div id="post_body">
-<p>While I was reading <a href="https://en.wikipedia.org/wiki/AVL_tree">AVL Tree</a> page on wikipedia, it motivated me enough to write the implementation in Haskell.</p>
+  <p>While I was reading <a href="https://en.wikipedia.org/wiki/AVL_tree">AVL Tree</a> page on wikipedia, it motivated me enough to write the implementation in Haskell.</p>
 <p>There are couple AVL Tree implementations already exist: <a href="http://hackage.haskell.org/package/AvlTree">a package uploaded to hackage</a>, <a href="https://gist.github.com/109729">gist snippet</a>, and <a href="http://www.okmij.org/ftp/Haskell/types.html#stanamic-AVL">polymorphic stanamically balanced AVL tree</a>. As for classic data structure and algorithm exercise, decided to write a simple implementation.</p>
 <pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE BangPatterns #-}</span>
 <span class="ot">&gt;</span> <span class="kw">module</span> <span class="dt">AVL</span> <span class="kw">where</span></code></pre>
@@ -197,6 +193,9 @@ $ ./AVL -o bench.html</code></pre>
 <p>Report is <a href="../static/bench-avl-insert-member.html">here</a>.</p>
 <p>Lessons learned: from above simple implementation, a data structure with performance close to those provided by standard package could be implemented. Benchmark show that AVL tree insertion was slightly slower than insertion in Data.Map, performance of member lookup was almost identical. Though when there is no need for making own implemntation, just use the implementation from proven package, in most case those provided data structures has more features, Data.Map.Map has useful functions like <code>insetWith</code>, <code>unionWith</code>, etc.</p>
 <p>By the way, during the benchmark I was using <code>nfIO</code> instead of <code>whnfIO</code> for a while, resulting to linearly increasing insertion time for while.</p>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/tree.html">tree</a>, <a href="../tags/datastructure.html">datastructure</a>, <a href="../tags/algorithm.html">algorithm</a>
+  </div>
 </div>
 
       </div>

@@ -14,7 +14,7 @@
       <div id="header">
         <div id="header_contents">
           <div id="header_left">
-            <a href="../">8c6794b6.github.io</a>
+            <h1><a href="../">8c6794b6.github.io</a></h1>
           </div>
           <div id="navigation">
             <a href="../index.html">Home</a>
@@ -24,16 +24,12 @@
         </div>
       </div>
       <div id="content">
-        <h1>Cause of 3 nano seconds difference</h1>
+        <h2>Cause of 3 nano seconds difference</h2>
 <div id="post_date">
   <strong>April 22, 2012</strong>
 </div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/performance.html">performance</a>
-</div>
-
 <div id="post_body">
-<p><code>Unboxed Vector</code>, in <a href="http://hackage.haskell.org/package/vector">vector</a> package is efficient data structure. Iterating over unboxed value is pretty fast.</p>
+  <p><code>Unboxed Vector</code>, in <a href="http://hackage.haskell.org/package/vector">vector</a> package is efficient data structure. Iterating over unboxed value is pretty fast.</p>
 <p>Is there any faster way to iterate than unboxed vector?</p>
 <p>Interest of comparision here is <em>efficiency of iteration</em>. Not the body contents of work in each iteration, but overhead we get from the loop.</p>
 <pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE BangPatterns #-}</span>
@@ -205,6 +201,9 @@ benchmarking hand written recursion, take 2
 mean: 48.45895 ns, lb 48.37886 ns, ub 48.61787 ns, ci 0.950
 std dev: 554.6886 ps, lb 337.5092 ps, ub 946.0307 ps, ci 0.950</code></pre>
 <p>Now the hand written recursion performs about 1.4 nano second faster than unboxed vector. Whenever possible, compare with constant in guards. And, if few nano seconds does not matter, just use unboxed vector.</p>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/performance.html">performance</a>
+  </div>
 </div>
 
       </div>

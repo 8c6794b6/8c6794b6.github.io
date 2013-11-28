@@ -14,7 +14,7 @@
       <div id="header">
         <div id="header_contents">
           <div id="header_left">
-            <a href="../">8c6794b6.github.io</a>
+            <h1><a href="../">8c6794b6.github.io</a></h1>
           </div>
           <div id="navigation">
             <a href="../index.html">Home</a>
@@ -24,16 +24,12 @@
         </div>
       </div>
       <div id="content">
-        <h1>Bytestring and unicode chars from U+0080 to U+00FF</h1>
+        <h2>Bytestring and unicode chars from U+0080 to U+00FF</h2>
 <div id="post_date">
   <strong>November  2, 2011</strong>
 </div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/utf-8.html">utf-8</a>, <a href="../tags/web.html">web</a>
-</div>
-
 <div id="post_body">
-<p>While I was viewing html files, got an error:</p>
+  <p>While I was viewing html files, got an error:</p>
 <pre><code>| A web handler threw an exception. Details:
 | Cannot decode byte '\xa0': Data.Text.Encoding.Fusion.streamUtf8: Invalid UTF-8 stream</code></pre>
 <p>The html file was served by <a href="http://www.snapframework.com">snap</a>. Somewhere inside in it’s data transfer, something wrong is happening with utf8 decoding with function in <a href="http://http://hackage.haskell.org/packages/archive/text/latest/doc/html/Data-Text.html">Data.Text</a>. The byte failed to decode: <code>'\xa0'</code>, was <a href="http://www.fileformat.info/info/unicode/char/a0/index.htm">no-break space</a>.</p>
@@ -100,6 +96,9 @@
 | *Main&gt; printUTF8 zhongwen
 | 中文</code></pre>
 <p>There should be a situation with more complicated character encoding issues. To get more support of unicode, using <a href="http://hackage.haskell.org/package/text-icu">text-icu</a> should be better, as suggested in haddock comment of <a href="http://hackage.haskell.org/package/text">text</a>.</p>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/utf-8.html">utf-8</a>, <a href="../tags/web.html">web</a>
+  </div>
 </div>
 
       </div>

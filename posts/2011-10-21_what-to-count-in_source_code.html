@@ -14,7 +14,7 @@
       <div id="header">
         <div id="header_contents">
           <div id="header_left">
-            <a href="../">8c6794b6.github.io</a>
+            <h1><a href="../">8c6794b6.github.io</a></h1>
           </div>
           <div id="navigation">
             <a href="../index.html">Home</a>
@@ -24,16 +24,12 @@
         </div>
       </div>
       <div id="content">
-        <h1>What to count in source code</h1>
+        <h2>What to count in source code</h2>
 <div id="post_date">
   <strong>October 21, 2011</strong>
 </div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/arc.html">arc</a>
-</div>
-
 <div id="post_body">
-<p>Below is a sample arc code:</p>
+  <p>Below is a sample arc code:</p>
 <pre><code> | (defop said req
  |   (aform [onlink &quot;click here&quot; (pr &quot;you said: &quot; (arg _ &quot;foo&quot;))]
  |     (input &quot;foo&quot;)
@@ -165,6 +161,9 @@
 | 5        Module &quot;Main&quot;</code></pre>
 <p>Getting better, but this is counting leaves only.</p>
 <p>Since all haskell expression in general is a function that takes single argument, and giving back another function, every expression other than constant value has child element. I’m not sure what we should count as interior node in expression.</p>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/arc.html">arc</a>
+  </div>
 </div>
 
       </div>

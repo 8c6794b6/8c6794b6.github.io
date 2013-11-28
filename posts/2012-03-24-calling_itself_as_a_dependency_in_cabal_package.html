@@ -14,7 +14,7 @@
       <div id="header">
         <div id="header_contents">
           <div id="header_left">
-            <a href="../">8c6794b6.github.io</a>
+            <h1><a href="../">8c6794b6.github.io</a></h1>
           </div>
           <div id="navigation">
             <a href="../index.html">Home</a>
@@ -24,16 +24,12 @@
         </div>
       </div>
       <div id="content">
-        <h1>Calling itself as a dependency in cabal package</h1>
+        <h2>Calling itself as a dependency in cabal package</h2>
 <div id="post_date">
   <strong>March 24, 2012</strong>
 </div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/cabal.html">cabal</a>, <a href="../tags/package.html">package</a>
-</div>
-
 <div id="post_body">
-<p>For self reminder. When we’re creating cabal package, sometime we want to call itself as a depdency, for instance when making a package with library and bundled executable, using cabal’s test-suite feature.</p>
+  <p>For self reminder. When we’re creating cabal package, sometime we want to call itself as a depdency, for instance when making a package with library and bundled executable, using cabal’s test-suite feature.</p>
 <p>For quite a while I didn’t realise that we can call itself as dependency and suppress compiling the whole library modules used in exectuables and tests. The trick was, <em>separating the directory containing library source and executable source</em> in single package.</p>
 <p>Sample cabal config:</p>
 <pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> name<span class="fu">:</span>          selfdep
@@ -86,6 +82,9 @@ Preprocessing executable 'foo' for selfdep-0.1.0.0...
 [1 of 1] Compiling Main             ( run/foo.hs, dist/build/foo/foo-tmp/Main.o )
 Linking dist/build/foo/foo ...</code></pre>
 <p>During the compilation of executable <code>foo</code>, modules under <code>Self.*</code> were not recompiled. This separation of the directory works also for tests.</p>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/cabal.html">cabal</a>, <a href="../tags/package.html">package</a>
+  </div>
 </div>
 
       </div>

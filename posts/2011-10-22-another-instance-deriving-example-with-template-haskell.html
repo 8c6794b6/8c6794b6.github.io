@@ -14,7 +14,7 @@
       <div id="header">
         <div id="header_contents">
           <div id="header_left">
-            <a href="../">8c6794b6.github.io</a>
+            <h1><a href="../">8c6794b6.github.io</a></h1>
           </div>
           <div id="navigation">
             <a href="../index.html">Home</a>
@@ -24,16 +24,12 @@
         </div>
       </div>
       <div id="content">
-        <h1>Another instance deriving example with template haskell</h1>
+        <h2>Another instance deriving example with template haskell</h2>
 <div id="post_date">
   <strong>October 22, 2011</strong>
 </div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/templatehaskell.html">templatehaskell</a>
-</div>
-
 <div id="post_body">
-<p>When I was writing small template haskell helper for deriving numeric classes, couldn’t find an example for deriving instance with passing functions. Deriving a type class with helper functions means, for instance, we write below code in client module:</p>
+  <p>When I was writing small template haskell helper for deriving numeric classes, couldn’t find an example for deriving instance with passing functions. Deriving a type class with helper functions means, for instance, we write below code in client module:</p>
 <pre><code>| deriveNum ''S 'i2s 'unaryS 'binaryS</code></pre>
 <p>to get this result:</p>
 <pre><code>| instance Num S where
@@ -203,6 +199,9 @@
 |           signum = THDeriveExample.unaryS &quot;signum&quot;
 |           fromIntegral x_0 = THDeriveExample.i2s x_0</code></pre>
 <p>It is verbose, and using extra index for variable name, though this is what we’ve intended to generate.</p>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/templatehaskell.html">templatehaskell</a>
+  </div>
 </div>
 
       </div>

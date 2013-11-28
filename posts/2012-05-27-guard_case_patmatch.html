@@ -14,7 +14,7 @@
       <div id="header">
         <div id="header_contents">
           <div id="header_left">
-            <a href="../">8c6794b6.github.io</a>
+            <h1><a href="../">8c6794b6.github.io</a></h1>
           </div>
           <div id="navigation">
             <a href="../index.html">Home</a>
@@ -24,16 +24,12 @@
         </div>
       </div>
       <div id="content">
-        <h1>Guard, case, and pattern match</h1>
+        <h2>Guard, case, and pattern match</h2>
 <div id="post_date">
   <strong>May 27, 2012</strong>
 </div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/performance.html">performance</a>, <a href="../tags/ghc.html">ghc</a>
-</div>
-
 <div id="post_body">
-<p>I tend to use case with tuples when a function takes more than one arguments. Alternate to tupling, we can write with guards or, with direct pattern match in function arguments.</p>
+  <p>I tend to use case with tuples when a function takes more than one arguments. Alternate to tupling, we can write with guards or, with direct pattern match in function arguments.</p>
 <p>What differences we can find in compiled result?</p>
 <pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE BangPatterns #-}</span>
 <span class="ot">&gt;</span> <span class="kw">module</span> <span class="dt">GuardCasePatmatch</span> <span class="kw">where</span>
@@ -178,6 +174,9 @@ GuardCasePatmatch.pow_patmatch =
     }
     }</code></pre>
 <p>No difference other than bounded names.</p>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/performance.html">performance</a>, <a href="../tags/ghc.html">ghc</a>
+  </div>
 </div>
 
       </div>

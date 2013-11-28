@@ -14,7 +14,7 @@
       <div id="header">
         <div id="header_contents">
           <div id="header_left">
-            <a href="../">8c6794b6.github.io</a>
+            <h1><a href="../">8c6794b6.github.io</a></h1>
           </div>
           <div id="navigation">
             <a href="../index.html">Home</a>
@@ -24,16 +24,12 @@
         </div>
       </div>
       <div id="content">
-        <h1>A situation when type families does not work, but functional dependencies does</h1>
+        <h2>A situation when type families does not work, but functional dependencies does</h2>
 <div id="post_date">
   <strong>November  7, 2011</strong>
 </div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/typefamily.html">typefamily</a>, <a href="../tags/functionaldependency.html">functionaldependency</a>
-</div>
-
 <div id="post_body">
-<p>Simon Peyton Jones has posted <a href="http://www.mail-archive.com/haskell-prime@haskell.org/msg03400.html">a summary</a> about relationship between type families and functional dependencies. As well as similarities, there exist difference between functional dependencies and type families.</p>
+  <p>Simon Peyton Jones has posted <a href="http://www.mail-archive.com/haskell-prime@haskell.org/msg03400.html">a summary</a> about relationship between type families and functional dependencies. As well as similarities, there exist difference between functional dependencies and type families.</p>
 <p>I met a code that work with functional dependencies but not with type families. As above mailing list thread points out, the root of difference comes from how overlapping instance are treated.</p>
 <p>The situation I met was combination of overlapping instance with higher rank type, and use of open recursion. Sound bit mixed up. To make myself clear about this, writing it down in detail.</p>
 <pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE TypeFamilies #-}</span>
@@ -204,6 +200,9 @@
 <p>The error message showing that <code>r</code>, <code>g</code>, and <code>h ~ Value</code> differing in each recursion. In current GHC implementation of type families, it does not allow us to overlap this with different value. So far I understand, that was the point. Though, I don’t think I fully understand what’s happening here, yet.</p>
 <hr />
 <p>By the way … another codes that could not written in TF but in FD, <a href="http://okmij.org/ftp/Haskell/solve-read-show.lhs">the silver bullet</a> of <a href="haskell-sc-scratch/Scratch/Oleg/typecast/">typecast</a>, in this case, used for solving read-show problem.</p>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/typefamily.html">typefamily</a>, <a href="../tags/functionaldependency.html">functionaldependency</a>
+  </div>
 </div>
 
       </div>

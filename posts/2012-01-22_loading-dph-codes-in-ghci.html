@@ -14,7 +14,7 @@
       <div id="header">
         <div id="header_contents">
           <div id="header_left">
-            <a href="../">8c6794b6.github.io</a>
+            <h1><a href="../">8c6794b6.github.io</a></h1>
           </div>
           <div id="navigation">
             <a href="../index.html">Home</a>
@@ -24,16 +24,12 @@
         </div>
       </div>
       <div id="content">
-        <h1>Loading dph codes in ghci</h1>
+        <h2>Loading dph codes in ghci</h2>
 <div id="post_date">
   <strong>January 22, 2012</strong>
 </div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/dph.html">dph</a>, <a href="../tags/ghc.html">ghc</a>, <a href="../tags/ghci.html">ghci</a>
-</div>
-
 <div id="post_body">
-<p>In haddock of dph-par package, we see functions like below:</p>
+  <p>In haddock of dph-par package, we see functions like below:</p>
 <pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; zipP ::</span> [<span class="fu">:</span>a<span class="fu">:</span>] <span class="ot">-&gt;</span> [<span class="fu">:</span>b<span class="fu">:</span>] <span class="ot">-&gt;</span> [<span class="fu">:</span>(a, b)<span class="fu">:</span>]
 <span class="ot">&gt;</span> <span class="ot">{-# NOINLINE zipP #-}</span>
 <span class="ot">&gt;</span> zipP <span class="fu">!</span>_ <span class="fu">!</span>_ <span class="fu">=</span> [<span class="ot">::</span>]
@@ -127,6 +123,9 @@
 | myZipInt_test:
 |   fromList&lt;PArray&gt; [(1,4),(2,5),(3,6)]</code></pre>
 <p>We see that <code>myZip_test</code> is showing empty list, and <code>myZipInt_test</code> is showing the zipped contents.</p>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/dph.html">dph</a>, <a href="../tags/ghc.html">ghc</a>, <a href="../tags/ghci.html">ghci</a>
+  </div>
 </div>
 
       </div>

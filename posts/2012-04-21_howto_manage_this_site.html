@@ -14,7 +14,7 @@
       <div id="header">
         <div id="header_contents">
           <div id="header_left">
-            <a href="../">8c6794b6.github.io</a>
+            <h1><a href="../">8c6794b6.github.io</a></h1>
           </div>
           <div id="navigation">
             <a href="../index.html">Home</a>
@@ -24,16 +24,12 @@
         </div>
       </div>
       <div id="content">
-        <h1>How to manage this site</h1>
+        <h2>How to manage this site</h2>
 <div id="post_date">
   <strong>April 21, 2012</strong>
 </div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="../tags/git.html">git</a>, <a href="../tags/hakyll.html">hakyll</a>, <a href="../tags/haskell.html">haskell</a>, <a href="../tags/web.html">web</a>
-</div>
-
 <div id="post_body">
-<p>I sometime forget how to manage this site.</p>
+  <p>I sometime forget how to manage this site.</p>
 <p>This site is managed with <a href="http://jaspervdj.be/hakyll/">hakyll</a>, a package to manage static html contents written in haskell. The contents of html is in a git repository hosted in <a href="http://github.com">github</a>, served as html with <a href="http://pages.github.com">github pages</a>.</p>
 <p>The contents of hakyll codes, css, template used to generate the site resides in <a href="https://github.com/8c6794b6/gh-pages-8c6794b6">gh-pages-8c6794b6</a>, and the git repository for generated contents is in <a href="https://github.com/8c6794b6/8c6794b6.github.com">8c6794b6.github.com</a> repository.</p>
 <p>When writing a new post, I start writing a new file under <code>posts/</code> directory in <code>gh-pages-8c6794b6</code> repository, and generate the html:</p>
@@ -53,6 +49,9 @@
 [~/repos/gh-pages-8c6794b6] $ git commit -m &quot;Add new post&quot;
 [~/repos/gh-pages-8c6794b6] $ git push origin master</code></pre>
 <p>And the new post is published.</p>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="../tags/git.html">git</a>, <a href="../tags/hakyll.html">hakyll</a>, <a href="../tags/haskell.html">haskell</a>, <a href="../tags/web.html">web</a>
+  </div>
 </div>
 
       </div>

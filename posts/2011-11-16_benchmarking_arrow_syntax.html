@@ -14,7 +14,7 @@
       <div id="header">
         <div id="header_contents">
           <div id="header_left">
-            <a href="../">8c6794b6.github.io</a>
+            <h1><a href="../">8c6794b6.github.io</a></h1>
           </div>
           <div id="navigation">
             <a href="../index.html">Home</a>
@@ -24,16 +24,12 @@
         </div>
       </div>
       <div id="content">
-        <h1>Benchmarking arrow syntax</h1>
+        <h2>Benchmarking arrow syntax</h2>
 <div id="post_date">
   <strong>November 16, 2011</strong>
 </div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/arrow.html">arrow</a>, <a href="../tags/performance.html">performance</a>
-</div>
-
 <div id="post_body">
-<p>Recently I read a paper about <a href="http://cs.yale.edu/c2/images/uploads/AudioProc-TR.pdf">“Audio Processing and Sound Synthesis in Haskell”</a> which uses <code>Arrow</code> and <code>[Double]</code> for its building block of signal data. While reading the document, it shows that using Arrow syntax will make the code slow, due to its wrapping and unwrapping in desugared tuples.</p>
+  <p>Recently I read a paper about <a href="http://cs.yale.edu/c2/images/uploads/AudioProc-TR.pdf">“Audio Processing and Sound Synthesis in Haskell”</a> which uses <code>Arrow</code> and <code>[Double]</code> for its building block of signal data. While reading the document, it shows that using Arrow syntax will make the code slow, due to its wrapping and unwrapping in desugared tuples.</p>
 <p>Does arrow syntax make the code slow?</p>
 <pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE Arrows, BangPatterns, NoImplicitPrelude #-}</span>
 <span class="ot">&gt;</span> <span class="kw">module</span> <span class="dt">BenchArrowSyntax</span> <span class="kw">where</span>
@@ -292,6 +288,9 @@ std dev: 1.552157 ns, lb 1.412139 ns, ub 1.726597 ns, ci 0.950</code></pre>
 | end Rec }</code></pre>
 <p>So, indeed, arrow syntax made the code slow, as written in the paper, mainly due to those use of tupling and untupling to reference varialbes by names, as we can find in <code>sweet</code> and <code>sweet_inline</code>. When arrow is used without syntax sugar, and there’s no tuple packing nor unpacking, its performance is almost same as pure function variant, as we see in comparison of <code>plain</code> and <code>bitter</code>.</p>
 <p>When do want to use arrow syntax, even we know that it runs slower? The main cause of slow down was packing and unpacking of tuples. When we see that these use of tupes are inevitable, it may show a better looking code. I have not yet met a practical situation heavily using arrow syntax, which seems valueable enough for performance trade-off.</p>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/arrow.html">arrow</a>, <a href="../tags/performance.html">performance</a>
+  </div>
 </div>
 
       </div>

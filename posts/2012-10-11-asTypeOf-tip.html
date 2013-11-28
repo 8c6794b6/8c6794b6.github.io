@@ -14,7 +14,7 @@
       <div id="header">
         <div id="header_contents">
           <div id="header_left">
-            <a href="../">8c6794b6.github.io</a>
+            <h1><a href="../">8c6794b6.github.io</a></h1>
           </div>
           <div id="navigation">
             <a href="../index.html">Home</a>
@@ -24,16 +24,12 @@
         </div>
       </div>
       <div id="content">
-        <h1>Tip using 'asTypeOf'</h1>
+        <h2>Tip using 'asTypeOf'</h2>
 <div id="post_date">
   <strong>October 11, 2012</strong>
 </div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/tips.html">tips</a>
-</div>
-
 <div id="post_body">
-<p>I found myself an idiot for such a long time I was not aware of this use of <code>asTypeOf</code> function.</p>
+  <p>I found myself an idiot for such a long time I was not aware of this use of <code>asTypeOf</code> function.</p>
 <pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">module</span> <span class="dt">AsTypeOf</span> <span class="kw">where</span></code></pre>
 <p>When we have a type with multiple varialbles, e.g. <code>Either</code>:</p>
 <pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> rightChar <span class="fu">=</span> <span class="dt">Right</span> <span class="ch">'a'</span></code></pre>
@@ -53,6 +49,9 @@ rightCharInList :: [Either Bool Char]</code></pre>
 Right 'a'
 ghci&gt; :t rightChar'
 rightChar' :: Either Bool Char</code></pre>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/tips.html">tips</a>
+  </div>
 </div>
 
       </div>

@@ -14,7 +14,7 @@
       <div id="header">
         <div id="header_contents">
           <div id="header_left">
-            <a href="../">8c6794b6.github.io</a>
+            <h1><a href="../">8c6794b6.github.io</a></h1>
           </div>
           <div id="navigation">
             <a href="../index.html">Home</a>
@@ -24,16 +24,12 @@
         </div>
       </div>
       <div id="content">
-        <h1>Running happstack app with heroku</h1>
+        <h2>Running happstack app with heroku</h2>
 <div id="post_date">
   <strong>November 20, 2011</strong>
 </div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/heroku.html">heroku</a>, <a href="../tags/web.html">web</a>
-</div>
-
 <div id="post_body">
-<p>The demo app is <a href="http://ixfts.herokuapp.com/">running here</a>.</p>
+  <p>The demo app is <a href="http://ixfts.herokuapp.com/">running here</a>.</p>
 <p>I had <a href="https://github.com/8c6794b6/ixfts">a small web app</a> witten in haskell. After reading a post about <a href="http://www.yesodweb.com/blog/2011/07/haskell-on-heroku">running yesod webapp on heroku</a> and having a look at <a href="https://github.com/mwotton/heroku_haskell_demo">heroku haskell demo codes</a>, trying <a href="http://www.heroku.com">heroku</a> to host this app seemed interesting.</p>
 <p>The web app I had was using <a href="http://happstack.com/index.html">happstack</a> instead of yesod. As the demo app shows, <a href="http://devcenter.heroku.com/articles/cedar">heroku cedar</a> can run happstack app. Moreover, it can run whatever executable that is runnable under heroku’s cedar stack. Rest of this post shows couple notes about setting up this demo app.</p>
 <p>After following the guide: <a href="http://devcenter.heroku.com/articles/quickstart">getting started with heroku</a>, and creating a <a href="http://devcenter.heroku.com/articles/cedar">cedar stack</a>, we are ready to deploy the app.</p>
@@ -52,6 +48,9 @@ web: ./main serve -d state -s static -p  +RTS -N</code></pre>
 <p>Pass whatever option used by the web app. For instance, specifying port from environment variable ``.</p>
 <p>When uploading the app, need cedar to recognize the app somehow, otherwise, heroku will reject the git commit push. We can use dummy <code>Gemfile</code> to tell cedar that it’s a ruby app, or <code>requirements.txt</code> to tell as a python app, or whatever.</p>
 <p>After deploying the app, I found that Heroku’s Cedar stack and configuration done by Procfile was extremely flexible, way far flexible than I imagined.</p>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/heroku.html">heroku</a>, <a href="../tags/web.html">web</a>
+  </div>
 </div>
 
       </div>

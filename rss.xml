@@ -6,22 +6,78 @@
         <description><![CDATA[Warm and fuzzy]]></description>
         <atom:link href="http://8c6794b6.github.com/rss.xml" rel="self"
                    type="application/rss+xml" />
-        <lastBuildDate>Thu, 21 Nov 2013 00:00:00 UT</lastBuildDate>
+        <lastBuildDate>Thu, 28 Nov 2013 00:00:00 UT</lastBuildDate>
         <item>
+    <title>French input methods and œ</title>
+    <link>http://8c6794b6.github.com/posts/2013-11-28-french-input-methods-and-oe.html</link>
+    <description><![CDATA[<h2>French input methods and œ</h2>
+<div id="post_date">
+  <strong>November 28, 2013</strong>
+</div>
+<div id="post_body">
+  <p>Notes about typing français in emacs with English keyboard.</p>
+<p>Change input method with <code>C-x RET C-\</code> or <code>M-x set-input-method</code>. There are three french input methods for English keyboard: <code>french-prefix</code>, <code>french-postfix</code>, and <code>french-alt-postfix</code>. <code>french-prefix</code> input method will let the accent to be typed before alphabets, e.g: to type <code>ç</code>, type <code>,c</code>. In <code>french-postfix</code> input method, type <code>c,</code>. Help of <code>french-prefix</code> input method, which shown with <code>C-h I</code> or <code>M-x describe-input-method</code>, had a nice table:</p>
+<pre><code>Input method: french-prefix (mode line indicator:FR&gt;)
+
+French (Français) input method with prefix modifiers
+
+    effect   | prefix | examples
+ ------------+--------+----------
+    acute    |   &#39;    | &#39;e -&gt; é
+    grave    |   `    | `a -&gt; à
+  circumflex |   ^    | ^a -&gt; â
+  diaeresis  |   &quot;    | &quot;i -&gt; ï
+   cedilla   | ~ or , | ~c -&gt; ç   ,c -&gt; ç
+   symbol    |   ~    | ~&gt; -&gt; »   ~&lt; -&gt; «</code></pre>
+<p>Characters with accents were able to type with these two modes, though the character <code>œ</code> was not. Found an entry in emacs-devel thread posted in 2008 which mentioning <a href="http://lists.gnu.org/archive/html/emacs-devel/2008-10/msg00760.html">french ç and œ</a>. To type in œ, use <code>latin-postfix</code> or <code>latin-prefix</code> input method, the key sequence to type <code>œ</code> is <code>o/2</code> and <code>/o2</code>, respectively. <code>latin-prefix</code> and <code>latin-postfix</code> input methods contains those characters typed in with french input methods:</p>
+<pre><code>Input method: latin-postfix (mode line indicator:L&lt;)
+
+Latin character input method with postfix modifiers.
+This is the union of various input methods originally made for input
+of characters from a single Latin-N charset.
+
+             | postfix | examples
+ ------------+---------+----------
+  acute      |    &#39;    | a&#39; -&gt; á
+  grave      |    `    | a` -&gt; à
+  circumflex |    ^    | a^ -&gt; â
+  diaeresis  |    &quot;    | a&quot; -&gt; ä
+  tilde      |    ~    | a~ -&gt; ã
+  cedilla    |    ,    | c, -&gt; ç
+  ogonek     |    ,    | a, -&gt; ą
+  breve      |    ~    | a~ -&gt; ă
+  caron      |    ~    | c~ -&gt; č
+  dbl. acute |    :    | o: -&gt; ő
+  ring       |    .    | u. -&gt; ů
+  dot        |    .    | z. -&gt; ż
+  stroke     |    /    | d/ -&gt; đ
+  nordic     |    /    | d/ -&gt; ð   t/ -&gt; þ   a/ -&gt; å   e/ -&gt; æ   o/ -&gt; ø
+  others     |    /    | s/ -&gt; ß   ?/ -&gt; ¿   !/ -&gt; ¡   // -&gt; °
+             | various | &lt;&lt; -&gt; «   &gt;&gt; -&gt; »   o_ -&gt; º   a_ -&gt; ª
+
+Doubling the postfix separates the letter and postfix: e.g. a&#39;&#39; -&gt; a&#39;</code></pre>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="/tags/emacs.html">emacs</a>, <a href="/tags/french.html">french</a>
+  </div>
+</div>
+]]></description>
+    <pubDate>Thu, 28 Nov 2013 00:00:00 UT</pubDate>
+    <guid>http://8c6794b6.github.com/posts/2013-11-28-french-input-methods-and-oe.html</guid>
+</item>
+<item>
     <title>Notes about travis and ghc</title>
     <link>http://8c6794b6.github.com/posts/2013-11-21-notes-about-travis-and-ghc.html</link>
-    <description><![CDATA[<h1>Notes about travis and ghc</h1>
+    <description><![CDATA[<h2>Notes about travis and ghc</h2>
 <div id="post_date">
   <strong>November 21, 2013</strong>
 </div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="/tags/ci.html">ci</a>, <a href="/tags/ghc.html">ghc</a>, <a href="/tags/git.html">git</a>, <a href="/tags/travis.html">travis</a>
-</div>
-
 <div id="post_body">
-<p>Brief note about current status of ghc and <a href="http://travis-ci.org">travis-ci</a>.</p>
+  <p>Brief note about current status of ghc and <a href="http://travis-ci.org">travis-ci</a>.</p>
 <p>Recently made a build hook for continuous integration with travis, in one of the repository I have in github, by following <a href="http://about.travis-ci.org/docs/user/getting-started/">getting started guide</a>. The package is requiring <code>base &gt;= 4.6.0</code>, which is from <code>ghc-7.6.*</code>, though the version used in travis build was <code>base &gt;= 4.5.*</code>, which is from <code>ghc-7.4.1</code>. There is <a href="https://github.com/travis-ci/travis-ci/issues/882">an issue in github</a> mentioning ghc version used by travis builds.</p>
 <p>It is still possible to use <code>CPP</code>, <code>#ifdef</code>s and choose the appropriate dependency package version. Might be an opportunity to do this, though I’m not sure the package worth for having that much maintenance efforts.</p>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="/tags/ci.html">ci</a>, <a href="/tags/ghc.html">ghc</a>, <a href="/tags/git.html">git</a>, <a href="/tags/travis.html">travis</a>
+  </div>
 </div>
 ]]></description>
     <pubDate>Thu, 21 Nov 2013 00:00:00 UT</pubDate>
@@ -30,19 +86,18 @@
 <item>
     <title>Updating gh-pages</title>
     <link>http://8c6794b6.github.com/posts/2013-11-19-updating-gh-pages.html</link>
-    <description><![CDATA[<h1>Updating gh-pages</h1>
+    <description><![CDATA[<h2>Updating gh-pages</h2>
 <div id="post_date">
   <strong>November 19, 2013</strong>
 </div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="/tags/git.html">git</a>, <a href="/tags/hakyll.html">hakyll</a>, <a href="/tags/haskell.html">haskell</a>, <a href="/tags/web.html">web</a>
-</div>
-
 <div id="post_body">
-<p>Made couple updates to this gh-pages.</p>
+  <p>Made couple updates to this gh-pages.</p>
 <p>Migrated to hakyll 4. Had a thought for doing this but haven’t done for … perhaps more than a year. As <a href="http://jaspervdj.be/hakyll/tutorials/hakyll-3-to-hakyll4-migration-guide.html">already</a> <a href="http://blog.clement.delafargue.name/posts/2013-01-17-hakyll-4.html">mentioned</a>, <code>Compiler</code> is not an instance of <code>Arrow</code>, instead an instance of <code>Monad</code>, <code>Page</code> and MetaCompilers have been removed, and couple more changes.</p>
 <p>Replaced “8c6794b6.github.com” to “8c6794b6.github.io”, since URLs for gh-pages have changed. According to <a href="https://help.github.com/articles/user-organization-and-project-pages">User, Organization and Project Pages</a> from GitHub Help, repository with <code>*.github.io</code> is the latest naming scheme.</p>
 <p>Update <a href="/404.html">404 page</a>, showing bigger lambda face now.</p>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="/tags/git.html">git</a>, <a href="/tags/hakyll.html">hakyll</a>, <a href="/tags/haskell.html">haskell</a>, <a href="/tags/web.html">web</a>
+  </div>
 </div>
 ]]></description>
     <pubDate>Tue, 19 Nov 2013 00:00:00 UT</pubDate>
@@ -51,16 +106,12 @@
 <item>
     <title>Benchmarking insert and member with AVL tree</title>
     <link>http://8c6794b6.github.com/posts/2012-12-17-benchmarking-insertion-with-avl-tree.html</link>
-    <description><![CDATA[<h1>Benchmarking insert and member with AVL tree</h1>
+    <description><![CDATA[<h2>Benchmarking insert and member with AVL tree</h2>
 <div id="post_date">
   <strong>December 17, 2012</strong>
 </div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="/tags/haskell.html">haskell</a>, <a href="/tags/tree.html">tree</a>, <a href="/tags/datastructure.html">datastructure</a>, <a href="/tags/algorithm.html">algorithm</a>
-</div>
-
 <div id="post_body">
-<p>While I was reading <a href="https://en.wikipedia.org/wiki/AVL_tree">AVL Tree</a> page on wikipedia, it motivated me enough to write the implementation in Haskell.</p>
+  <p>While I was reading <a href="https://en.wikipedia.org/wiki/AVL_tree">AVL Tree</a> page on wikipedia, it motivated me enough to write the implementation in Haskell.</p>
 <p>There are couple AVL Tree implementations already exist: <a href="http://hackage.haskell.org/package/AvlTree">a package uploaded to hackage</a>, <a href="https://gist.github.com/109729">gist snippet</a>, and <a href="http://www.okmij.org/ftp/Haskell/types.html#stanamic-AVL">polymorphic stanamically balanced AVL tree</a>. As for classic data structure and algorithm exercise, decided to write a simple implementation.</p>
 <pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE BangPatterns #-}</span>
 <span class="ot">&gt;</span> <span class="kw">module</span> <span class="dt">AVL</span> <span class="kw">where</span></code></pre>
@@ -224,6 +275,9 @@ $ ./AVL -o bench.html</code></pre>
 <p>Report is <a href="../static/bench-avl-insert-member.html">here</a>.</p>
 <p>Lessons learned: from above simple implementation, a data structure with performance close to those provided by standard package could be implemented. Benchmark show that AVL tree insertion was slightly slower than insertion in Data.Map, performance of member lookup was almost identical. Though when there is no need for making own implemntation, just use the implementation from proven package, in most case those provided data structures has more features, Data.Map.Map has useful functions like <code>insetWith</code>, <code>unionWith</code>, etc.</p>
 <p>By the way, during the benchmark I was using <code>nfIO</code> instead of <code>whnfIO</code> for a while, resulting to linearly increasing insertion time for while.</p>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="/tags/haskell.html">haskell</a>, <a href="/tags/tree.html">tree</a>, <a href="/tags/datastructure.html">datastructure</a>, <a href="/tags/algorithm.html">algorithm</a>
+  </div>
 </div>
 ]]></description>
     <pubDate>Mon, 17 Dec 2012 00:00:00 UT</pubDate>
@@ -232,16 +286,12 @@ $ ./AVL -o bench.html</code></pre>
 <item>
     <title>Tip using 'asTypeOf'</title>
     <link>http://8c6794b6.github.com/posts/2012-10-11-asTypeOf-tip.html</link>
-    <description><![CDATA[<h1>Tip using 'asTypeOf'</h1>
+    <description><![CDATA[<h2>Tip using 'asTypeOf'</h2>
 <div id="post_date">
   <strong>October 11, 2012</strong>
 </div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="/tags/haskell.html">haskell</a>, <a href="/tags/tips.html">tips</a>
-</div>
-
 <div id="post_body">
-<p>I found myself an idiot for such a long time I was not aware of this use of <code>asTypeOf</code> function.</p>
+  <p>I found myself an idiot for such a long time I was not aware of this use of <code>asTypeOf</code> function.</p>
 <pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">module</span> <span class="dt">AsTypeOf</span> <span class="kw">where</span></code></pre>
 <p>When we have a type with multiple varialbles, e.g. <code>Either</code>:</p>
 <pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> rightChar <span class="fu">=</span> <span class="dt">Right</span> <span class="ch">&#39;a&#39;</span></code></pre>
@@ -261,6 +311,9 @@ rightCharInList :: [Either Bool Char]</code></pre>
 Right &#39;a&#39;
 ghci&gt; :t rightChar&#39;
 rightChar&#39; :: Either Bool Char</code></pre>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="/tags/haskell.html">haskell</a>, <a href="/tags/tips.html">tips</a>
+  </div>
 </div>
 ]]></description>
     <pubDate>Thu, 11 Oct 2012 00:00:00 UT</pubDate>
@@ -269,16 +322,12 @@ rightChar&#39; :: Either Bool Char</code></pre>
 <item>
     <title>Mapping 'show' to tuples with TH</title>
     <link>http://8c6794b6.github.com/posts/2012-05-28-mapping-show-with-th.html</link>
-    <description><![CDATA[<h1>Mapping 'show' to tuples with TH</h1>
+    <description><![CDATA[<h2>Mapping 'show' to tuples with TH</h2>
 <div id="post_date">
   <strong>May 28, 2012</strong>
 </div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="/tags/haskell.html">haskell</a>, <a href="/tags/templatehaskell.html">templatehaskell</a>
-</div>
-
 <div id="post_body">
-<p>Consider:</p>
+  <p>Consider:</p>
 <pre><code>&gt; mapM_ putStrLn [show 1, show (1,2), show (1,2,3), show (1,2,3,4) ...]</code></pre>
 <p>The contents of list is String, but before applying ‘show’, type of elements differ. Goal of this post is to express above with using template haskell, like:</p>
 <pre><code>&gt; mapM_ putStrLn $(tups 3)</code></pre>
@@ -379,6 +428,9 @@ main = t8s_view &gt;&gt; t8s_view_th</code></pre>
 (1,2,3,4,5,6)
 (1,2,3,4,5,6,7)
 (1,2,3,4,5,6,7,8)</code></pre>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="/tags/haskell.html">haskell</a>, <a href="/tags/templatehaskell.html">templatehaskell</a>
+  </div>
 </div>
 ]]></description>
     <pubDate>Mon, 28 May 2012 00:00:00 UT</pubDate>
@@ -387,16 +439,12 @@ main = t8s_view &gt;&gt; t8s_view_th</code></pre>
 <item>
     <title>Guard, case, and pattern match</title>
     <link>http://8c6794b6.github.com/posts/2012-05-27-guard_case_patmatch.html</link>
-    <description><![CDATA[<h1>Guard, case, and pattern match</h1>
+    <description><![CDATA[<h2>Guard, case, and pattern match</h2>
 <div id="post_date">
   <strong>May 27, 2012</strong>
 </div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="/tags/haskell.html">haskell</a>, <a href="/tags/performance.html">performance</a>, <a href="/tags/ghc.html">ghc</a>
-</div>
-
 <div id="post_body">
-<p>I tend to use case with tuples when a function takes more than one arguments. Alternate to tupling, we can write with guards or, with direct pattern match in function arguments.</p>
+  <p>I tend to use case with tuples when a function takes more than one arguments. Alternate to tupling, we can write with guards or, with direct pattern match in function arguments.</p>
 <p>What differences we can find in compiled result?</p>
 <pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE BangPatterns #-}</span>
 <span class="ot">&gt;</span> <span class="kw">module</span> <span class="dt">GuardCasePatmatch</span> <span class="kw">where</span>
@@ -541,6 +589,9 @@ GuardCasePatmatch.pow_patmatch =
     }
     }</code></pre>
 <p>No difference other than bounded names.</p>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="/tags/haskell.html">haskell</a>, <a href="/tags/performance.html">performance</a>, <a href="/tags/ghc.html">ghc</a>
+  </div>
 </div>
 ]]></description>
     <pubDate>Sun, 27 May 2012 00:00:00 UT</pubDate>
@@ -549,16 +600,12 @@ GuardCasePatmatch.pow_patmatch =
 <item>
     <title>Cause of 3 nano seconds difference</title>
     <link>http://8c6794b6.github.com/posts/2012-04-22_cause_of_3_nano_seconds.html</link>
-    <description><![CDATA[<h1>Cause of 3 nano seconds difference</h1>
+    <description><![CDATA[<h2>Cause of 3 nano seconds difference</h2>
 <div id="post_date">
   <strong>April 22, 2012</strong>
 </div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="/tags/haskell.html">haskell</a>, <a href="/tags/performance.html">performance</a>
-</div>
-
 <div id="post_body">
-<p><code>Unboxed Vector</code>, in <a href="http://hackage.haskell.org/package/vector">vector</a> package is efficient data structure. Iterating over unboxed value is pretty fast.</p>
+  <p><code>Unboxed Vector</code>, in <a href="http://hackage.haskell.org/package/vector">vector</a> package is efficient data structure. Iterating over unboxed value is pretty fast.</p>
 <p>Is there any faster way to iterate than unboxed vector?</p>
 <p>Interest of comparision here is <em>efficiency of iteration</em>. Not the body contents of work in each iteration, but overhead we get from the loop.</p>
 <pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE BangPatterns #-}</span>
@@ -730,6 +777,9 @@ benchmarking hand written recursion, take 2
 mean: 48.45895 ns, lb 48.37886 ns, ub 48.61787 ns, ci 0.950
 std dev: 554.6886 ps, lb 337.5092 ps, ub 946.0307 ps, ci 0.950</code></pre>
 <p>Now the hand written recursion performs about 1.4 nano second faster than unboxed vector. Whenever possible, compare with constant in guards. And, if few nano seconds does not matter, just use unboxed vector.</p>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="/tags/haskell.html">haskell</a>, <a href="/tags/performance.html">performance</a>
+  </div>
 </div>
 ]]></description>
     <pubDate>Sun, 22 Apr 2012 00:00:00 UT</pubDate>
@@ -738,16 +788,12 @@ std dev: 554.6886 ps, lb 337.5092 ps, ub 946.0307 ps, ci 0.950</code></pre>
 <item>
     <title>How to manage this site</title>
     <link>http://8c6794b6.github.com/posts/2012-04-21_howto_manage_this_site.html</link>
-    <description><![CDATA[<h1>How to manage this site</h1>
+    <description><![CDATA[<h2>How to manage this site</h2>
 <div id="post_date">
   <strong>April 21, 2012</strong>
 </div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="/tags/git.html">git</a>, <a href="/tags/hakyll.html">hakyll</a>, <a href="/tags/haskell.html">haskell</a>, <a href="/tags/web.html">web</a>
-</div>
-
 <div id="post_body">
-<p>I sometime forget how to manage this site.</p>
+  <p>I sometime forget how to manage this site.</p>
 <p>This site is managed with <a href="http://jaspervdj.be/hakyll/">hakyll</a>, a package to manage static html contents written in haskell. The contents of html is in a git repository hosted in <a href="http://github.com">github</a>, served as html with <a href="http://pages.github.com">github pages</a>.</p>
 <p>The contents of hakyll codes, css, template used to generate the site resides in <a href="https://github.com/8c6794b6/gh-pages-8c6794b6">gh-pages-8c6794b6</a>, and the git repository for generated contents is in <a href="https://github.com/8c6794b6/8c6794b6.github.com">8c6794b6.github.com</a> repository.</p>
 <p>When writing a new post, I start writing a new file under <code>posts/</code> directory in <code>gh-pages-8c6794b6</code> repository, and generate the html:</p>
@@ -767,6 +813,9 @@ std dev: 554.6886 ps, lb 337.5092 ps, ub 946.0307 ps, ci 0.950</code></pre>
 [~/repos/gh-pages-8c6794b6] $ git commit -m &quot;Add new post&quot;
 [~/repos/gh-pages-8c6794b6] $ git push origin master</code></pre>
 <p>And the new post is published.</p>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="/tags/git.html">git</a>, <a href="/tags/hakyll.html">hakyll</a>, <a href="/tags/haskell.html">haskell</a>, <a href="/tags/web.html">web</a>
+  </div>
 </div>
 ]]></description>
     <pubDate>Sat, 21 Apr 2012 00:00:00 UT</pubDate>
@@ -775,16 +824,12 @@ std dev: 554.6886 ps, lb 337.5092 ps, ub 946.0307 ps, ci 0.950</code></pre>
 <item>
     <title>Calling itself as a dependency in cabal package</title>
     <link>http://8c6794b6.github.com/posts/2012-03-24-calling_itself_as_a_dependency_in_cabal_package.html</link>
-    <description><![CDATA[<h1>Calling itself as a dependency in cabal package</h1>
+    <description><![CDATA[<h2>Calling itself as a dependency in cabal package</h2>
 <div id="post_date">
   <strong>March 24, 2012</strong>
 </div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="/tags/haskell.html">haskell</a>, <a href="/tags/cabal.html">cabal</a>, <a href="/tags/package.html">package</a>
-</div>
-
 <div id="post_body">
-<p>For self reminder. When we’re creating cabal package, sometime we want to call itself as a depdency, for instance when making a package with library and bundled executable, using cabal’s test-suite feature.</p>
+  <p>For self reminder. When we’re creating cabal package, sometime we want to call itself as a depdency, for instance when making a package with library and bundled executable, using cabal’s test-suite feature.</p>
 <p>For quite a while I didn’t realise that we can call itself as dependency and suppress compiling the whole library modules used in exectuables and tests. The trick was, <em>separating the directory containing library source and executable source</em> in single package.</p>
 <p>Sample cabal config:</p>
 <pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> name<span class="fu">:</span>          selfdep
@@ -837,46 +882,13 @@ Preprocessing executable &#39;foo&#39; for selfdep-0.1.0.0...
 [1 of 1] Compiling Main             ( run/foo.hs, dist/build/foo/foo-tmp/Main.o )
 Linking dist/build/foo/foo ...</code></pre>
 <p>During the compilation of executable <code>foo</code>, modules under <code>Self.*</code> were not recompiled. This separation of the directory works also for tests.</p>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="/tags/haskell.html">haskell</a>, <a href="/tags/cabal.html">cabal</a>, <a href="/tags/package.html">package</a>
+  </div>
 </div>
 ]]></description>
     <pubDate>Sat, 24 Mar 2012 00:00:00 UT</pubDate>
     <guid>http://8c6794b6.github.com/posts/2012-03-24-calling_itself_as_a_dependency_in_cabal_package.html</guid>
-</item>
-<item>
-    <title>Minimalistic pdf and ps viewers for linux - Winter/Spring 2012</title>
-    <link>http://8c6794b6.github.com/posts/2012-02-25_pdf_ps_viewers.html</link>
-    <description><![CDATA[<h1>Minimalistic pdf and ps viewers for linux - Winter/Spring 2012</h1>
-<div id="post_date">
-  <strong>February 25, 2012</strong>
-</div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="/tags/linux.html">linux</a>, <a href="/tags/pdf.html">pdf</a>, <a href="/tags/ps.html">ps</a>
-</div>
-
-<div id="post_body">
-<p>I’m reading bunch of pdf and ps files recently. After a system upgrade in arch linux, <a href="https://bugs.archlinux.org/task/28516">segfault in gv</a> happened. For couple years, I was using <a href="http://wino.physik.uni-mainz.de/~plass/gv/">gv</a> for viewing pdf and postscript files. This segfault made me to dig in to current trends in linux pdf viewer.</p>
-<p>My preferences are:</p>
-<ul>
-<li>Supports pdf and postscript files</li>
-<li>Supports mouse-less control</li>
-<li>Has minimalistic user interface</li>
-<li>Starts quickly</li>
-<li>Use less memory</li>
-</ul>
-<p>I took a try to these viewers:</p>
-<ul>
-<li><a href="http://naihe2010.github.com/apvlv/">apvlv</a>: Nice vi-style scroll keybindings, light. But does not support postscript …</li>
-<li><a href="http://trac.emma-soft.com/epdfview/">epdfviewer</a>: No support for postscript …</li>
-<li><a href="http://projects.gnome.org/evince/">evince</a>: Supports postscript and pdf. Keybind support for scrolling.</li>
-<li><a href="http://www.mupdf.com/">mupdf</a>: Light, simple interface (shows nothing other than document contents), keybind support for scrolling. But no support for postscript ….</li>
-<li><a href="http://pwmt.org/projects/zathura/">zathura</a>: Minimalistic interface, keybinding support. Scrolling worked smoothly than mupdf. Customizable config. Has supports for viewing potscript files with <a href="http://pwmt.org/projects/zathura/plugins/">additional plugin</a>.</li>
-</ul>
-<p>Those fullfilled my requirement were <code>evince</code> and <code>zathura</code>. Choosing between these two, <code>zathura</code> met my taste more. Another alternative is <code>mupdf</code>, which uses less memory than <code>zathura</code>, but has no supports for postscript files. If memory usage of zathura become a problem, I’ll try <a href="http://pwmt.org/projects/zathura/plugins/">mupdf plugin</a>, or seek for alternative again. Until that happen, using <code>zathura</code>.</p>
-<p>Lessons I learned: sometime it’s not a bad thing to get segmentation fault with package update, if it give opportunity to look for progress in opensource softwares with same purpose, and find a good alternative.</p>
-</div>
-]]></description>
-    <pubDate>Sat, 25 Feb 2012 00:00:00 UT</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2012-02-25_pdf_ps_viewers.html</guid>
 </item>
 
     </channel> 

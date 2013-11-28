@@ -14,7 +14,7 @@
       <div id="header">
         <div id="header_contents">
           <div id="header_left">
-            <a href="../">8c6794b6.github.io</a>
+            <h1><a href="../">8c6794b6.github.io</a></h1>
           </div>
           <div id="navigation">
             <a href="../index.html">Home</a>
@@ -24,16 +24,12 @@
         </div>
       </div>
       <div id="content">
-        <h1>Adhoc update of ugen parameters</h1>
+        <h2>Adhoc update of ugen parameters</h2>
 <div id="post_date">
   <strong>October 25, 2011</strong>
 </div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/supercollider.html">supercollider</a>, <a href="../tags/generic.html">generic</a>
-</div>
-
 <div id="post_body">
-<p>Adhoc update of UGen parameters, with generic functions.</p>
+  <p>Adhoc update of UGen parameters, with generic functions.</p>
 <p>Requires ghc 7.0 or higher:</p>
 <pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE DeriveDataTypeable, StandaloneDeriving #-}</span>
 <span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE TypeSynonymInstances #-}</span>
@@ -296,6 +292,9 @@
 <p>The result UGen graph is different from <code>s03</code>. Since <code>s03</code> may replaces oscillator used for left and right of same frequency with different oscillators. s03’ uses same oscillator for left and right of same frequency.</p>
 <pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; play_s03_rand' ::</span> <span class="dt">Double</span> <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
 <span class="ot">&gt;</span> play_s03_rand' x <span class="fu">=</span> audition <span class="fu">=&lt;&lt;</span> s03' x</code></pre>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/supercollider.html">supercollider</a>, <a href="../tags/generic.html">generic</a>
+  </div>
 </div>
 
       </div>

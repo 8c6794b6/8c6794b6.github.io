@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>8c6794b6.github.io - French input methods and œ</title>
+    <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon">
+    <link rel="icon" href="favicon.ico" type="image/ico">
+    <link rel="stylesheet" type="text/css" href="../css/style.css">
+    <link rel="stylesheet" type="text/css" href="../css/hk-tango.css">
+    <link rel="alternate" type="application/rss+xml" title="8c6794b6" href="../rss.xml">
+  </head>
+  <body>
+    <div>
+      <div id="header">
+        <div id="header_contents">
+          <div id="header_left">
+            <h1><a href="../">8c6794b6.github.io</a></h1>
+          </div>
+          <div id="navigation">
+            <a href="../index.html">Home</a>
+            <a href="../archive.html">Archive</a>
+            <a href="../rss.xml">RSS</a>
+          </div>
+        </div>
+      </div>
+      <div id="content">
+        <h2>French input methods and œ</h2>
+<div id="post_date">
+  <strong>November 28, 2013</strong>
+</div>
+<div id="post_body">
+  <p>Notes about typing français in emacs with English keyboard.</p>
+<p>Change input method with <code>C-x RET C-\</code> or <code>M-x set-input-method</code>. There are three french input methods for English keyboard: <code>french-prefix</code>, <code>french-postfix</code>, and <code>french-alt-postfix</code>. <code>french-prefix</code> input method will let the accent to be typed before alphabets, e.g: to type <code>ç</code>, type <code>,c</code>. In <code>french-postfix</code> input method, type <code>c,</code>. Help of <code>french-prefix</code> input method, which shown with <code>C-h I</code> or <code>M-x describe-input-method</code>, had a nice table:</p>
+<pre><code>Input method: french-prefix (mode line indicator:FR&gt;)
+
+French (Français) input method with prefix modifiers
+
+    effect   | prefix | examples
+ ------------+--------+----------
+    acute    |   '    | 'e -&gt; é
+    grave    |   `    | `a -&gt; à
+  circumflex |   ^    | ^a -&gt; â
+  diaeresis  |   &quot;    | &quot;i -&gt; ï
+   cedilla   | ~ or , | ~c -&gt; ç   ,c -&gt; ç
+   symbol    |   ~    | ~&gt; -&gt; »   ~&lt; -&gt; «</code></pre>
+<p>Characters with accents were able to type with these two modes, though the character <code>œ</code> was not. Found an entry in emacs-devel thread posted in 2008 which mentioning <a href="http://lists.gnu.org/archive/html/emacs-devel/2008-10/msg00760.html">french ç and œ</a>. To type in œ, use <code>latin-postfix</code> or <code>latin-prefix</code> input method, the key sequence to type <code>œ</code> is <code>o/2</code> and <code>/o2</code>, respectively. <code>latin-prefix</code> and <code>latin-postfix</code> input methods contains those characters typed in with french input methods:</p>
+<pre><code>Input method: latin-postfix (mode line indicator:L&lt;)
+
+Latin character input method with postfix modifiers.
+This is the union of various input methods originally made for input
+of characters from a single Latin-N charset.
+
+             | postfix | examples
+ ------------+---------+----------
+  acute      |    '    | a' -&gt; á
+  grave      |    `    | a` -&gt; à
+  circumflex |    ^    | a^ -&gt; â
+  diaeresis  |    &quot;    | a&quot; -&gt; ä
+  tilde      |    ~    | a~ -&gt; ã
+  cedilla    |    ,    | c, -&gt; ç
+  ogonek     |    ,    | a, -&gt; ą
+  breve      |    ~    | a~ -&gt; ă
+  caron      |    ~    | c~ -&gt; č
+  dbl. acute |    :    | o: -&gt; ő
+  ring       |    .    | u. -&gt; ů
+  dot        |    .    | z. -&gt; ż
+  stroke     |    /    | d/ -&gt; đ
+  nordic     |    /    | d/ -&gt; ð   t/ -&gt; þ   a/ -&gt; å   e/ -&gt; æ   o/ -&gt; ø
+  others     |    /    | s/ -&gt; ß   ?/ -&gt; ¿   !/ -&gt; ¡   // -&gt; °
+             | various | &lt;&lt; -&gt; «   &gt;&gt; -&gt; »   o_ -&gt; º   a_ -&gt; ª
+
+Doubling the postfix separates the letter and postfix: e.g. a'' -&gt; a'</code></pre>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="../tags/emacs.html">emacs</a>, <a href="../tags/french.html">french</a>
+  </div>
+</div>
+
+      </div>
+      <div id="footer">
+        <div id="footer_content">
+          <p>
+            <a href="../index.html">Home</a> |
+            <a href="../archive.html">Archive</a> |
+            <a href="../rss.xml">RSS</a>
+          </p>
+          Site contents licensed under
+          <a href="http://creativecommons.org/licenses/by/3.0/">
+            CC Attribution 3.0
+          </a>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

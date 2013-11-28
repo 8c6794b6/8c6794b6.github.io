@@ -14,7 +14,7 @@
       <div id="header">
         <div id="header_contents">
           <div id="header_left">
-            <a href="../">8c6794b6.github.io</a>
+            <h1><a href="../">8c6794b6.github.io</a></h1>
           </div>
           <div id="navigation">
             <a href="../index.html">Home</a>
@@ -24,16 +24,12 @@
         </div>
       </div>
       <div id="content">
-        <h1>Mapping 'show' to tuples with TH</h1>
+        <h2>Mapping 'show' to tuples with TH</h2>
 <div id="post_date">
   <strong>May 28, 2012</strong>
 </div>
-<div class="post_tags">
-  <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/templatehaskell.html">templatehaskell</a>
-</div>
-
 <div id="post_body">
-<p>Consider:</p>
+  <p>Consider:</p>
 <pre><code>&gt; mapM_ putStrLn [show 1, show (1,2), show (1,2,3), show (1,2,3,4) ...]</code></pre>
 <p>The contents of list is String, but before applying ‘show’, type of elements differ. Goal of this post is to express above with using template haskell, like:</p>
 <pre><code>&gt; mapM_ putStrLn $(tups 3)</code></pre>
@@ -134,6 +130,9 @@ main = t8s_view &gt;&gt; t8s_view_th</code></pre>
 (1,2,3,4,5,6)
 (1,2,3,4,5,6,7)
 (1,2,3,4,5,6,7,8)</code></pre>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="../tags/haskell.html">haskell</a>, <a href="../tags/templatehaskell.html">templatehaskell</a>
+  </div>
 </div>
 
       </div>
