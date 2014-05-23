@@ -8,9 +8,9 @@
                    type="application/rss+xml" />
         <lastBuildDate>Fri, 23 May 2014 00:00:00 UT</lastBuildDate>
         <item>
-    <title>Syntaxes for building rose tree</title>
-    <link>http://8c6794b6.github.com/posts/2014-05-23-syntaxes-for-building-rose-trees.html</link>
-    <description><![CDATA[<h2>Syntaxes for building rose tree</h2>
+    <title>Syntax for building rose tree</title>
+    <link>http://8c6794b6.github.com/posts/2014-05-23-syntax-for-building-rose-trees.html</link>
+    <description><![CDATA[<h2>Syntax for building rose tree</h2>
 <div id="post_date">
   <strong>May 23, 2014</strong>
 </div>
@@ -201,7 +201,7 @@ True</code></pre>
 </div>
 ]]></description>
     <pubDate>Fri, 23 May 2014 00:00:00 UT</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2014-05-23-syntaxes-for-building-rose-trees.html</guid>
+    <guid>http://8c6794b6.github.com/posts/2014-05-23-syntax-for-building-rose-trees.html</guid>
 </item>
 <item>
     <title>French input methods and œ</title>
