@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>8c6794b6.github.io - Syntaxes for building rose tree</title>
+    <link rel="shortcut icon" href="../favicon.ico" type="image/x-icon">
+    <link rel="icon" href="favicon.ico" type="image/ico">
+    <link rel="stylesheet" type="text/css" href="../css/style.css">
+    <link rel="stylesheet" type="text/css" href="../css/hk-tango.css">
+    <link rel="alternate" type="application/rss+xml" title="8c6794b6" href="../rss.xml">
+  </head>
+  <body>
+    <div>
+      <div id="header">
+        <div id="header_contents">
+          <div id="header_left">
+            <h1><a href="../">8c6794b6.github.io</a></h1>
+          </div>
+          <div id="navigation">
+            <a href="../index.html">Home</a>
+            <a href="../archive.html">Archive</a>
+            <a href="../rss.xml">RSS</a>
+          </div>
+        </div>
+      </div>
+      <div id="content">
+        <h2>Syntaxes for building rose tree</h2>
+<div id="post_date">
+  <strong>May 23, 2014</strong>
+</div>
+<div id="post_body">
+  <p><strong><em>Introduction</em></strong></p>
+<p>Suppose that, we want to write contents of following rose tree, by hand:</p>
+<pre><code>0
+|
++- 1
+|  |
+|  `- 2
+|
++- 3
+|
++- 4
+|  |
+|  +- 5
+|  |  |
+|  |  +- 6
+|  |  |
+|  |  `- 7
+|  |
+|  `- 8
+|
+`- 9</code></pre>
+<p>Using <code>Data.Tree.Tree</code> from <code>containers</code> package for our purpose, the definition is:</p>
+<pre><code>data Tree a = Node { rootLabel :: a
+                   , subForest :: Forest a }
+
+type Forest a = [Tree a]</code></pre>
+<p>This document explores couple alternative ways to write rose tree data structure, mainly focusing on situations when writing by hand.</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE FlexibleContexts #-}</span>
+<span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE FlexibleInstances #-}</span>
+<span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE FunctionalDependencies #-}</span>
+<span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span>
+<span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE MultiParamTypeClasses #-}</span>
+<span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE TypeFamilies #-}</span>
+<span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE UndecidableInstances #-}</span>
+<span class="ot">&gt;</span> <span class="kw">module</span> <span class="dt">Main</span> <span class="kw">where</span>
+<span class="ot">&gt;</span> 
+<span class="ot">&gt;</span> <span class="kw">import</span> Data.Tree
+<span class="ot">&gt;</span> <span class="kw">import</span> Control.Monad.Writer</code></pre>
+<p>It could be nice if we can write the rose tree in single line like:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; t3' ::</span> <span class="dt">Tree</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span> t3' <span class="fu">=</span> buildBranch <span class="fu">$</span> pnode <span class="dv">0</span> (pnode <span class="dv">1</span> <span class="dv">2</span>) <span class="dv">3</span> (pnode <span class="dv">4</span> (pnode <span class="dv">5</span> <span class="dv">6</span> <span class="dv">7</span>) <span class="dv">8</span>) <span class="dv">9</span></code></pre>
+<p>Here, <code>pnode</code> is a polyvariadic function, treating the first argument as element in itself, and rest as leaves. The code used for writing <code>t3'</code> is shown in Take 3.</p>
+<p><strong>Take 1: <em>The Straightforward Way</em></strong></p>
+<p>In straightforward way, sample tree may written like below:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; t0 ::</span> <span class="dt">Tree</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span> t0 <span class="fu">=</span>
+<span class="ot">&gt;</span>     <span class="dt">Node</span> <span class="dv">0</span>
+<span class="ot">&gt;</span>     [ <span class="dt">Node</span> <span class="dv">1</span>
+<span class="ot">&gt;</span>       [ <span class="dt">Node</span> <span class="dv">2</span> [] ]
+<span class="ot">&gt;</span>     , <span class="dt">Node</span> <span class="dv">3</span> []
+<span class="ot">&gt;</span>     , <span class="dt">Node</span> <span class="dv">4</span>
+<span class="ot">&gt;</span>       [ <span class="dt">Node</span> <span class="dv">5</span>
+<span class="ot">&gt;</span>         [ <span class="dt">Node</span> <span class="dv">6</span> [], <span class="dt">Node</span> <span class="dv">7</span> []]
+<span class="ot">&gt;</span>       , <span class="dt">Node</span> <span class="dv">8</span> [] ]
+<span class="ot">&gt;</span>     , <span class="dt">Node</span> <span class="dv">9</span> [] ]</code></pre>
+<p>The sample tree containing 10 nodes already looks a bit cumbersome to write by hand. From my point of view, things making the typing hard were:</p>
+<ol type="1">
+<li>Use of CAPITAL LETTERS: In general typing lower case letters are easier than typing capital letters.</li>
+<li>Use of brackets and commas: I realised that when typing numbers and commas, my fingers are making quite a large movements on the keyboard. This coulbe be a problem arise when typing numbers only. Say, if <code>Char</code> was used instead of <code>Int</code>, may not be a problem.</li>
+</ol>
+<p><strong>Take 2: <em>Slightly Less Straightforward Way</em></strong></p>
+<p>Pretty simple replacement of type constructors with functions with lower case letters. Also using variant of <code>node</code> function named <code>leaf</code> which takes empty list as second argument of <code>Node</code>. The sample tree looks like below:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; t1 ::</span> <span class="dt">Tree</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span> t1 <span class="fu">=</span>
+<span class="ot">&gt;</span>     node <span class="dv">0</span>
+<span class="ot">&gt;</span>     [ node <span class="dv">1</span>
+<span class="ot">&gt;</span>       [ leaf <span class="dv">2</span> ]
+<span class="ot">&gt;</span>     , leaf <span class="dv">3</span>
+<span class="ot">&gt;</span>     , node <span class="dv">4</span>
+<span class="ot">&gt;</span>       [ node <span class="dv">5</span>
+<span class="ot">&gt;</span>         [leaf <span class="dv">6</span>, leaf <span class="dv">7</span>]
+<span class="ot">&gt;</span>       , leaf <span class="dv">8</span> ]
+<span class="ot">&gt;</span>     , leaf <span class="dv">9</span> ]
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; node ::</span> a <span class="ot">-&gt;</span> [<span class="dt">Tree</span> a] <span class="ot">-&gt;</span> <span class="dt">Tree</span> a
+<span class="ot">&gt;</span> node a fs <span class="fu">=</span> <span class="dt">Node</span> a fs
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; leaf ::</span> a <span class="ot">-&gt;</span> <span class="dt">Tree</span> a
+<span class="ot">&gt;</span> leaf a <span class="fu">=</span> <span class="dt">Node</span> a []</code></pre>
+<p>Confirm that the two trees are identical:</p>
+<pre><code>ghci&gt; t1 == t0
+True</code></pre>
+<p>Now <code>t1</code> does not contain capital letters in its body, though nested lists might still look clumsy.</p>
+<p><strong>Take 3: <em>Reducing Commas And Brackets</em></strong></p>
+<p>Avoid typing commas and brackets (<code>,</code>, <code>[</code>, and <code>]</code>), let the <code>do notation</code> to take care of node grouping. The sample tree looks like below:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; t2 ::</span> <span class="dt">Tree</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span> t2 <span class="fu">=</span> buildTree <span class="fu">$</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>     mnode <span class="dv">0</span> <span class="fu">$</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>         mnode <span class="dv">1</span> <span class="fu">$</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>             mleaf <span class="dv">2</span>
+<span class="ot">&gt;</span>         mleaf <span class="dv">3</span>
+<span class="ot">&gt;</span>         mnode <span class="dv">4</span> <span class="fu">$</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>             mnode <span class="dv">5</span> <span class="fu">$</span> <span class="kw">do</span>
+<span class="ot">&gt;</span>                 mleaf <span class="dv">6</span> <span class="fu">&gt;&gt;</span> mleaf <span class="dv">7</span>
+<span class="ot">&gt;</span>             mleaf <span class="dv">8</span>
+<span class="ot">&gt;</span>         mleaf <span class="dv">9</span></code></pre>
+<p>Implementation is done with <code>Writer</code> monad with simple <code>DiffList</code>:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">newtype</span> <span class="dt">DiffList</span> a <span class="fu">=</span> <span class="dt">DiffList</span> ([a] <span class="ot">-&gt;</span> [a])
+<span class="ot">&gt;</span>     <span class="kw">deriving</span> (<span class="dt">Monoid</span>)
+<span class="ot">&gt;</span> 
+<span class="ot">&gt;</span> <span class="kw">instance</span> <span class="dt">Show</span> a <span class="ot">=&gt;</span> <span class="dt">Show</span> (<span class="dt">DiffList</span> a) <span class="kw">where</span>
+<span class="ot">&gt;</span>     show (<span class="dt">DiffList</span> f) <span class="fu">=</span> show (f [])
+<span class="ot">&gt;</span> 
+<span class="ot">&gt;</span> <span class="kw">type</span> <span class="dt">TreeBuilder</span> a <span class="fu">=</span> <span class="dt">Writer</span> (<span class="dt">DiffList</span> a) ()
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; snoc ::</span> a <span class="ot">-&gt;</span> <span class="dt">DiffList</span> a
+<span class="ot">&gt;</span> snoc x <span class="fu">=</span> <span class="dt">DiffList</span> (x<span class="fu">:</span>)
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; runTreeBuilder ::</span> <span class="dt">TreeBuilder</span> (<span class="dt">Tree</span> a) <span class="ot">-&gt;</span> [<span class="dt">Tree</span> a]
+<span class="ot">&gt;</span> runTreeBuilder builder <span class="fu">=</span> <span class="kw">case</span> runWriter builder <span class="kw">of</span> (_,<span class="dt">DiffList</span> f) <span class="ot">-&gt;</span> f []
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; buildTree ::</span> <span class="dt">TreeBuilder</span> (<span class="dt">Tree</span> a) <span class="ot">-&gt;</span> <span class="dt">Tree</span> a
+<span class="ot">&gt;</span> buildTree builder <span class="fu">=</span> <span class="kw">case</span> runTreeBuilder builder <span class="kw">of</span>
+<span class="ot">&gt;</span>     []  <span class="ot">-&gt;</span> error <span class="st">&quot;buildTree: empty tree&quot;</span>
+<span class="ot">&gt;</span>     t<span class="fu">:</span>_ <span class="ot">-&gt;</span> t
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; mnode ::</span> a <span class="ot">-&gt;</span> <span class="dt">TreeBuilder</span> (<span class="dt">Tree</span> a) <span class="ot">-&gt;</span> <span class="dt">TreeBuilder</span> (<span class="dt">Tree</span> a)
+<span class="ot">&gt;</span> mnode x builder <span class="fu">=</span> tell (snoc (<span class="dt">Node</span> x (runTreeBuilder builder)))
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; mleaf ::</span> a <span class="ot">-&gt;</span> <span class="dt">TreeBuilder</span> (<span class="dt">Tree</span> a)
+<span class="ot">&gt;</span> mleaf x <span class="fu">=</span> tell (snoc (<span class="dt">Node</span> x []))</code></pre>
+<p>Checking whether that <code>t2</code> is identical to <code>t0</code>:</p>
+<pre><code>ghci&gt; t2 == t0
+True</code></pre>
+<p><strong>Take 4: <em>Removing Do Notation</em></strong></p>
+<p>Use of <code>do notation</code> has freed us from using commans and brackets, though introduced redundancy with <code>do</code>s. Introducing <code>Monoid</code> wrapper newtype and polyvariadic function to remove <code>do</code>s. Sample tree may looks like below:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; t3 ::</span> <span class="dt">Tree</span> <span class="dt">Int</span>
+<span class="ot">&gt;</span> t3 <span class="fu">=</span> buildBranch <span class="fu">$</span>
+<span class="ot">&gt;</span>     pnode <span class="dv">0</span>
+<span class="ot">&gt;</span>     (pnode <span class="dv">1</span>
+<span class="ot">&gt;</span>      (pleaf <span class="dv">2</span>))
+<span class="ot">&gt;</span>     (pleaf <span class="dv">3</span>)
+<span class="ot">&gt;</span>     (pnode <span class="dv">4</span>
+<span class="ot">&gt;</span>      (pnode <span class="dv">5</span>
+<span class="ot">&gt;</span>       (pleaf <span class="dv">6</span>) (pleaf <span class="dv">7</span>))
+<span class="ot">&gt;</span>      (pleaf <span class="dv">8</span>))
+<span class="ot">&gt;</span>     (pleaf <span class="dv">9</span>)</code></pre>
+<p>Now <code>do</code>s are removed, thought increase of parenthesis is making the code quite <em>lisp</em>y. Implementation is heavily inspired by <a href="http://okmij.org/ftp/Scheme/xml.html#typed-SXML">HSXML</a>.</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">newtype</span> <span class="dt">Branch</span> a <span class="fu">=</span> <span class="dt">Branch</span> (<span class="dt">DiffList</span> (<span class="dt">Tree</span> a))
+<span class="ot">&gt;</span>     <span class="kw">deriving</span> (<span class="dt">Show</span>, <span class="dt">Monoid</span>)
+<span class="ot">&gt;</span> 
+<span class="ot">&gt;</span> <span class="kw">class</span> <span class="dt">Monoid</span> acc <span class="ot">=&gt;</span> <span class="dt">BuildTree</span> acc out ret <span class="fu">|</span> ret <span class="ot">-&gt;</span> out <span class="kw">where</span>
+<span class="ot">&gt;     build ::</span> (acc<span class="ot">-&gt;</span>out) <span class="ot">-&gt;</span> acc <span class="ot">-&gt;</span> ret
+<span class="ot">&gt;</span> 
+<span class="ot">&gt;</span> <span class="kw">instance</span> <span class="dt">Monoid</span> acc <span class="ot">=&gt;</span> <span class="dt">BuildTree</span> acc (<span class="dt">Branch</span> a) (<span class="dt">Branch</span> a) <span class="kw">where</span>
+<span class="ot">&gt;</span>     build f acc <span class="fu">=</span> f acc
+<span class="ot">&gt;</span> 
+<span class="ot">&gt;</span> <span class="kw">instance</span> (<span class="dt">BuildTree</span> acc out ret, e <span class="fu">~</span> acc) <span class="ot">=&gt;</span> <span class="dt">BuildTree</span> acc out (e<span class="ot">-&gt;</span>ret) <span class="kw">where</span>
+<span class="ot">&gt;</span>     build f acc <span class="fu">=</span> \t <span class="ot">-&gt;</span> build f (acc <span class="fu">&lt;&gt;</span> t)
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; pnode ::</span> <span class="dt">BuildTree</span> (<span class="dt">Branch</span> a) (<span class="dt">Branch</span> a) ret <span class="ot">=&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">Branch</span> a <span class="ot">-&gt;</span> ret
+<span class="ot">&gt;</span> pnode x <span class="fu">=</span> build (\(<span class="dt">Branch</span> (<span class="dt">DiffList</span> b)) <span class="ot">-&gt;</span> <span class="dt">Branch</span> (snoc (<span class="dt">Node</span> x (b []))))
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; pleaf ::</span> a <span class="ot">-&gt;</span> <span class="dt">Branch</span> a
+<span class="ot">&gt;</span> pleaf x <span class="fu">=</span> <span class="dt">Branch</span> (snoc (<span class="dt">Node</span> x mempty))
+<span class="ot">&gt;</span> 
+<span class="ot">&gt; buildBranch ::</span> <span class="dt">Branch</span> a <span class="ot">-&gt;</span> <span class="dt">Tree</span> a
+<span class="ot">&gt;</span> buildBranch (<span class="dt">Branch</span> (<span class="dt">DiffList</span> ts)) <span class="fu">=</span> <span class="kw">case</span> ts [] <span class="kw">of</span>
+<span class="ot">&gt;</span>     []  <span class="ot">-&gt;</span> error <span class="st">&quot;buildBranch: empty branch&quot;</span>
+<span class="ot">&gt;</span>     t<span class="fu">:</span>_ <span class="ot">-&gt;</span> t</code></pre>
+<p>Checking again:</p>
+<pre><code>ghci&gt; t3 == t0
+True</code></pre>
+<p><strong><em>Some Thoughts</em></strong></p>
+<p>Other data type than <code>Data.Tree.Tree</code> could be used, though haven’t explored.</p>
+<p>In take 2, monadic approach may easy to combine with other monads with <code>mtl</code>. For instance, use <code>State</code> monad and count the number of leaves while traversing.</p>
+<p>In take 3, by defining <code>Branch</code> as instance of <code>Num class</code>, <code>t3</code> could rewritten in single line, which is shown as <code>t3'</code> at the beginning of this document:</p>
+<pre><code>t3' = buildBranch $ pnode 0 (pnode 1 2) 3 (pnode 4 (pnode 5 6 7) 8) 9</code></pre>
+<p>Checking:</p>
+<pre><code>ghci&gt; t3' == t0
+True</code></pre>
+<p>Purpose of making as <code>Num</code> instance is merely for helping syntax. Other functions than <code>fromInteger</code> may left <code>undefined</code>:</p>
+<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">instance</span> <span class="dt">Num</span> a <span class="ot">=&gt;</span> <span class="dt">Num</span> (<span class="dt">Branch</span> a) <span class="kw">where</span>
+<span class="ot">&gt;</span>     (<span class="fu">+</span>)         <span class="fu">=</span> undefined
+<span class="ot">&gt;</span>     (<span class="fu">*</span>)         <span class="fu">=</span> undefined
+<span class="ot">&gt;</span>     negate      <span class="fu">=</span> undefined
+<span class="ot">&gt;</span>     abs         <span class="fu">=</span> undefined
+<span class="ot">&gt;</span>     signum      <span class="fu">=</span> undefined
+<span class="ot">&gt;</span>     fromInteger <span class="fu">=</span> pleaf <span class="fu">.</span> fromInteger</code></pre>
+<p>GHC has restriction in context reduction stack, as of ghc-7.8.2, default size is 21. Polyvariadic function taking more than 22 arguments needs <code>-fcontext-stack=N</code> option and increase the context stack with using large context stack size <em>N</em>.</p>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="../tags/datastructure.html">datastructure</a>, <a href="../tags/dsl.html">dsl</a>, <a href="../tags/haskell.html">haskell</a>, <a href="../tags/tree.html">tree</a>
+  </div>
+</div>
+
+      </div>
+      <div id="footer">
+        <div id="footer_content">
+          <p>
+            <a href="../index.html">Home</a> |
+            <a href="../archive.html">Archive</a> |
+            <a href="../rss.xml">RSS</a>
+          </p>
+          Site contents licensed under
+          <a href="http://creativecommons.org/licenses/by/3.0/">
+            CC Attribution 3.0
+          </a>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
