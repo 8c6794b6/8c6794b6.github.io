@@ -6,8 +6,41 @@
         <description><![CDATA[Warm and fuzzy]]></description>
         <atom:link href="http://8c6794b6.github.com/rss.xml" rel="self"
                    type="application/rss+xml" />
-        <lastBuildDate>Fri, 23 May 2014 00:00:00 UT</lastBuildDate>
+        <lastBuildDate>Fri, 30 May 2014 00:00:00 UT</lastBuildDate>
         <item>
+    <title>Modifying commit attributes and editing hunk in git</title>
+    <link>http://8c6794b6.github.com/posts/2014-05-30-git-modifying-commit-attributes-and-editing-hunk.html</link>
+    <description><![CDATA[<h2>Modifying commit attributes and editing hunk in git</h2>
+<div id="post_date">
+  <strong>May 30, 2014</strong>
+</div>
+<div id="post_body">
+  <p><strong>Changing author (or any other commit attribute) in existing commits</strong></p>
+<p>From <a href="http://stackoverflow.com/questions/750172/how-do-i-change-the-author-of-a-commit-in-git">this SOF Q&amp;A</a>. Linked page was showing a scenario to change committer and author’s name and email from old value to new value:</p>
+<pre><code>git filter-branch --commit-filter &#39;
+    if [ &quot;$GIT_COMMITTER_NAME&quot; = &quot;&lt;OLD_NAME&gt;&quot; ];
+    then
+        GIT_COMMITTER_NAME=&quot;&lt;NEW_NAME&gt;&quot;;
+
+        # ...
+        # modify other attributes if any, then...
+
+        git commit-tree &quot;$@&quot;;
+    else
+        git commit-tree &quot;$@&quot;;
+    fi&#39; HEAD</code></pre>
+<p>Comment in the answer was mentioning <code>git env-filter</code> will change all commits, but the one shown above allows conditional behaviour.</p>
+<p><strong>Editing hunk while adding commits</strong></p>
+<p>There are <a href="http://joaquin.windmuller.ca/post/35-selectively-select-changes-to-commit-with-git-or-imma-edit-your-hunk">couple</a> <a href="http://pivotallabs.com/git-add-e/">articles</a> mentioning it, including the <a href="http://git-scm.com/docs/git-add">git add man page</a>. Section <code>EDITING PATCHES</code> in the manual has detailed explanation.</p>
+  <div class="post_tags">
+    <strong>Tags: </strong><a href="/tags/git.html">git</a>
+  </div>
+</div>
+]]></description>
+    <pubDate>Fri, 30 May 2014 00:00:00 UT</pubDate>
+    <guid>http://8c6794b6.github.com/posts/2014-05-30-git-modifying-commit-attributes-and-editing-hunk.html</guid>
+</item>
+<item>
     <title>Syntax for building rose tree</title>
     <link>http://8c6794b6.github.com/posts/2014-05-23-syntax-for-building-rose-trees.html</link>
     <description><![CDATA[<h2>Syntax for building rose tree</h2>
@@ -980,42 +1013,6 @@ std dev: 554.6886 ps, lb 337.5092 ps, ub 946.0307 ps, ci 0.950</code></pre>
 ]]></description>
     <pubDate>Sun, 22 Apr 2012 00:00:00 UT</pubDate>
     <guid>http://8c6794b6.github.com/posts/2012-04-22_cause_of_3_nano_seconds.html</guid>
-</item>
-<item>
-    <title>How to manage this site</title>
-    <link>http://8c6794b6.github.com/posts/2012-04-21_howto_manage_this_site.html</link>
-    <description><![CDATA[<h2>How to manage this site</h2>
-<div id="post_date">
-  <strong>April 21, 2012</strong>
-</div>
-<div id="post_body">
-  <p>I sometime forget how to manage this site.</p>
-<p>This site is managed with <a href="http://jaspervdj.be/hakyll/">hakyll</a>, a package to manage static html contents written in haskell. The contents of html is in a git repository hosted in <a href="http://github.com">github</a>, served as html with <a href="http://pages.github.com">github pages</a>.</p>
-<p>The contents of hakyll codes, css, template used to generate the site resides in <a href="https://github.com/8c6794b6/gh-pages-8c6794b6">gh-pages-8c6794b6</a>, and the git repository for generated contents is in <a href="https://github.com/8c6794b6/8c6794b6.github.com">8c6794b6.github.com</a> repository.</p>
-<p>When writing a new post, I start writing a new file under <code>posts/</code> directory in <code>gh-pages-8c6794b6</code> repository, and generate the html:</p>
-<pre><code>[~/repos/gh-pages-8c6794b6] $ emacs posts/new_post.mkd
-... edit the post
-[~/repos/gh-pages-8c6794b6] $ ./hakyll build</code></pre>
-<p>The generated output will be created under <code>_site</code> directory. The <code>_site</code> directory is a <a href="http://book.git-scm.com/5_submodules.html">git submodule</a> of <code>gh-pages-8c6794b6</code> repository. When finished generating the html files, commit the contents of <code>_site</code>:</p>
-<pre><code>[~/repos/gh-pages-8c6794b6] $ cd _site
-[~/repos/gh-pages-8c6794b6/_site] $ git add -i
-... add new post, new tags, update archives, rss, tags, etc ...
-[~/repos/gh-pages-8c6794b6/_site] $ git commit -m &quot;Add new post&quot;
-[~/repos/gh-pages-8c6794b6/_site] $ git push origin master</code></pre>
-<p>Now add the updated submodule to <code>gh-pages-8c6794b6</code> repository:</p>
-<pre><code>[~/repos/gh-pages-8c6794b6/_site] $ cd ../
-[~/repos/gh-pages-8c6794b6] $ git add -i
-... add submodule, new post, etc ...
-[~/repos/gh-pages-8c6794b6] $ git commit -m &quot;Add new post&quot;
-[~/repos/gh-pages-8c6794b6] $ git push origin master</code></pre>
-<p>And the new post is published.</p>
-  <div class="post_tags">
-    <strong>Tags: </strong><a href="/tags/git.html">git</a>, <a href="/tags/hakyll.html">hakyll</a>, <a href="/tags/haskell.html">haskell</a>, <a href="/tags/web.html">web</a>
-  </div>
-</div>
-]]></description>
-    <pubDate>Sat, 21 Apr 2012 00:00:00 UT</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2012-04-21_howto_manage_this_site.html</guid>
 </item>
 
     </channel> 
