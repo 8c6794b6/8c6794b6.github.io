@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=defice-width, initial-scale=1"> <title>8c6794b6.github.io</title> <link href="/css/style.css" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=Noto+Serif" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=PT+Serif" rel="stylesheet" type="text/css" /> <link rel="icon" type="image/png" href="/static/favicon.png"/>  </head> <body> <header> <h1><a href="/index.html">8c6794b6.github.io</a></h1> <nav> <a href="/index.html">HOME</a> • <a href="/about.html">ABOUT</a> • <a href="/archive.html">ARCHIVE</a> • <a href="/rss.xml">RSS</a> </nav> </header> <div class="contents"> <div class="post-title"> <h2>Minimalistic pdf and ps viewers for linux - Winter/Spring 2012</h2> <em class="post-date">2012-02-25</em> </div> <div class="post"> <p>I'm reading bunch of pdf and ps files recently. After a system upgrade in
+arch linux, <a href="https://bugs.archlinux.org/task/28516" >segfault in gv</a>
+happened.  For couple years, I was using
+<a href="http://wino.physik.uni-mainz.de/~plass/gv/" >gv</a> for viewing pdf and
+postscript files. This segfault made me to dig in to current trends in linux
+pdf viewer.</p>
+
+<p>My preferences are:</p>
+
+<ul>
+<li>Supports pdf and postscript files</li>
+<li>Supports mouse-less control</li>
+<li>Has minimalistic user interface</li>
+<li>Starts quickly</li>
+<li>Use less memory</li>
+</ul>
+
+<p>I took a try to these viewers:</p>
+
+<ul>
+<li><a href="http://naihe2010.github.com/apvlv/" >apvlv</a>:
+  Nice vi-style scroll keybindings, light. But does not support postscript ...</li>
+<li><a href="http://trac.emma-soft.com/epdfview/" >epdfviewer</a>:
+   No support for postscript ...</li>
+<li><a href="http://projects.gnome.org/evince/" >evince</a>:
+  Supports postscript and pdf. Keybind support for scrolling.</li>
+<li><a href="http://www.mupdf.com/" >mupdf</a>:
+  Light, simple interface (shows nothing other than document contents),
+  keybind support for scrolling.  But no support for postscript ....</li>
+<li><a href="http://pwmt.org/projects/zathura/" >zathura</a>:
+  Minimalistic interface, keybinding support. Scrolling worked smoothly
+  than mupdf. Customizable config. Has supports for viewing potscript files
+  with <a href="http://pwmt.org/projects/zathura/plugins/" >additional plugin</a>.</li>
+</ul>
+
+<p>Those fullfilled my requirement were <code>evince</code> and <code>zathura</code>. Choosing between
+these two, <code>zathura</code> met my taste more. Another alternative is <code>mupdf</code>, which
+uses less memory than <code>zathura</code>, but has no supports for postscript files. If
+memory usage of zathura become a problem, I'll try
+<a href="http://pwmt.org/projects/zathura/plugins/" >mupdf plugin</a>, or seek for alternative
+again. Until that happen, using <code>zathura</code>.</p>
+
+<p>Lessons I learned: sometime it's not a bad thing to get segmentation fault
+with package update, if it give opportunity to look for progress in
+opensource softwares with same purpose, and find a good alternative.</p>
+ </div> <div class="post-tags"> TAGGED: <a href="/tag/linux.html">linux</a>, <a href="/tag/pdf.html">pdf</a>, <a href="/tag/ps.html">ps</a> </div> <div class="prev-post-link"> Prev: <a href="/posts/Serialization-in-a-hurry.html">Serialization in a hurry</a> </div> <div class="next-post-link"> Next: <a href="/posts/Calling-itself-as-a-dependency-in-cabal-package.html">Calling itself as a dependency in cabal package</a> </div> </div> <footer> <section class="tags"> <h3>Tags</h3> <a href="/tag/algorithm.html">algorithm</a> • <a href="/tag/arc.html">arc</a> • <a href="/tag/arrow.html">arrow</a> • <a href="/tag/cabal.html">cabal</a> • <a href="/tag/ci.html">ci</a> • <a href="/tag/coleslaw.html">coleslaw</a> • <a href="/tag/commonlisp.html">commonlisp</a> • <a href="/tag/continuation.html">continuation</a> • <a href="/tag/datastructure.html">datastructure</a> • <a href="/tag/delimited.html">delimited</a> • <a href="/tag/dph.html">dph</a> • <a href="/tag/dsl.html">dsl</a> • <a href="/tag/emacs.html">emacs</a> • <a href="/tag/french.html">french</a> • <a href="/tag/functionaldependency.html">functionaldependency</a> • <a href="/tag/generic.html">generic</a> • <a href="/tag/ghc.html">ghc</a> • <a href="/tag/ghci.html">ghci</a> • <a href="/tag/git.html">git</a> • <a href="/tag/hakyll.html">hakyll</a> • <a href="/tag/haskell.html">haskell</a> • <a href="/tag/heroku.html">heroku</a> • <a href="/tag/image.html">image</a> • <a href="/tag/linux.html">linux</a> • <a href="/tag/lisp.html">lisp</a> • <a href="/tag/monad.html">monad</a> • <a href="/tag/package.html">package</a> • <a href="/tag/pdf.html">pdf</a> • <a href="/tag/performance.html">performance</a> • <a href="/tag/ps.html">ps</a> • <a href="/tag/repa.html">repa</a> • <a href="/tag/sound.html">sound</a> • <a href="/tag/supercollider.html">supercollider</a> • <a href="/tag/templatehaskell.html">templatehaskell</a> • <a href="/tag/tips.html">tips</a> • <a href="/tag/travis.html">travis</a> • <a href="/tag/tree.html">tree</a> • <a href="/tag/typefamily.html">typefamily</a> • <a href="/tag/utf-8.html">utf-8</a> • <a href="/tag/web.html">web</a> </section> Copyright © 2011-2017 8c6794b6; Unless otherwise noted, site contents licensed under <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"> CC-by-SA</a>. </footer> </body> </html>

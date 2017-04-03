@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=defice-width, initial-scale=1"> <title>8c6794b6.github.io</title> <link href="/css/style.css" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=Noto+Serif" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=PT+Serif" rel="stylesheet" type="text/css" /> <link rel="icon" type="image/png" href="/static/favicon.png"/>  </head> <body> <header> <h1><a href="/index.html">8c6794b6.github.io</a></h1> <nav> <a href="/index.html">HOME</a> • <a href="/about.html">ABOUT</a> • <a href="/archive.html">ARCHIVE</a> • <a href="/rss.xml">RSS</a> </nav> </header> <div class="contents"> <div class="post-title"> <h2>Extracting argument names</h2> <em class="post-date">2011-12-10</em> </div> <div class="post"> <p>Can we extract argument names from haskell function?</p>
+
+<p>What <em>extracting the argument names</em> means, when we had a function
+<code>foo</code>:</p>
+
+<pre><code>| foo :: Int -&gt; Int -&gt; Int -&gt; String
+| foo apple banana cherry = show (apple*60 + banana*30 + cherry*10)
+</code></pre>
+
+<p>We want to get the bounded variables: 'apple', 'banana', and 'cherry'.
+It is possible to write this argument extracter with template haskell,
+generics, and haskell source code representation.</p>
+
+<p>We want to call the extracter function <code>funArgs</code> by writing something
+like below, in caller module:</p>
+
+<pre><code>| fooargs :: [String]
+| fooargs = $(funArgs 'foo)
+</code></pre>
+
+<p>Loading the module in ghci, and viewing the result:</p>
+
+<pre><code>| ghci&gt; print fooargs
+| [&quot;apple&quot;,&quot;banana&quot;,&quot;cherry&quot;]
+</code></pre>
+
+<p>We see variable names: <code>apple</code>, <code>banana</code>, and <code>cherry</code>.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">module</span> <span class="variable">FunArgs</span> <span class="paren1">(<span class="code">funArgs</span>)</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Control</span><span class="atom">.</span><span class="variable">Monad</span> <span class="paren1">(<span class="code">when</span>)</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Data</span><span class="atom">.</span><span class="variable">Generics</span> <span class="paren1">(<span class="code">everything, mkQ</span>)</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Language</span><span class="atom">.</span><span class="variable">Haskell</span><span class="atom">.</span><span class="variable">TH</span> hiding <span class="paren1">(<span class="code"><span class="variable">Match</span></span>)</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">System</span><span class="atom">.</span><span class="variable">Directory</span> <span class="paren1">(<span class="code">doesFileExist</span>)</span></span></code></pre>
+
+<p>Using <code>haskell-src-exts</code> package. Alternatively, one can use
+<code>haskell-src</code> package, when working with haskell98 source codes only.
+Importing with hiding <code>Name</code> and <code>listE</code>, since it conflicts with
+<code>Language.Haskell.TH</code>.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Language</span><span class="atom">.</span><span class="variable">Haskell</span><span class="atom">.</span><span class="variable">Exts</span> hiding <span class="paren1">(<span class="code"><span class="variable">Name,</span> listE</span>)</span></span></code></pre>
+
+<p>The worker function will take a <code>Name</code> of target function to extract
+variable names, and returns TH expression.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> funArgs <span class="keyword">::</span> <span class="variable">Name</span> <span class="keyword">-&gt;</span> <span class="variable">ExpQ</span></span></code></pre>
+
+<p>Firstly, accessing the source code of caller. In current implementation,
+<code>funArgs</code> cannot extract a function defined in ghci interactively. In
+this case, merely calling <code>error</code>.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> funArgs fname <span class="keyword">=</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>   path <span class="keyword">&lt;-</span> loc_filename <span class="atom">`fmap`</span> location
+<span class="atom">&gt;</span>   exists <span class="keyword">&lt;-</span> runIO <span class="atom">$</span> doesFileExist path
+<span class="atom">&gt;</span>   when <span class="paren1">(<span class="code">not exists</span>)</span> <span class="atom">$</span> error <span class="atom">$</span> <span class="string">"Cannot access: "</span> <span class="atom">++</span> path
+<span class="atom">&gt;</span>   result <span class="keyword">&lt;-</span> runIO <span class="atom">$</span> parseFileWithMode defaultParseMode path
+<span class="atom">&gt;</span>   <span class="keyword">case</span> result <span class="keyword">of</span>
+<span class="atom">&gt;</span>     <span class="variable">ParseFailed</span> l e <span class="keyword">-&gt;</span> error <span class="atom">$</span> <span class="string">"Failed to parse: "</span> <span class="atom">++</span> show l <span class="atom">++</span> <span class="string">", "</span> <span class="atom">++</span> e
+<span class="atom">&gt;</span>     <span class="variable">ParseOk</span> mdl     <span class="keyword">-&gt;</span> extractArgs mdl fname</span></code></pre>
+
+<p>When we can acces the source code, parsing the source code to get
+haskell representation. Parsing may fail, and in that case, showing
+error message with <code>error</code> again. There should be nicer way to handle
+these error cases, though we just print out the messages, and moving on
+for now.</p>
+
+<p>Guts of argument extracter is shown below. Applying pattern match and
+collecting matches with <code>everything</code> and <code>mkQ</code>. When we find the target
+function, extracting the contents of <code>Ident</code>.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> extractArgs <span class="keyword">::</span> <span class="variable">Module</span> <span class="keyword">-&gt;</span> <span class="variable">Name</span> <span class="keyword">-&gt;</span> <span class="variable">ExpQ</span>
+<span class="atom">&gt;</span> extractArgs mdl fname <span class="keyword">=</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>    <span class="keyword">let</span> args <span class="keyword">=</span> everything <span class="paren1">(<span class="code"><span class="atom">++</span></span>)</span> <span class="paren1">(<span class="code"><span class="paren2">[<span class="code"></span>]</span> <span class="atom">`mkQ`</span> arg</span>)</span> mdl
+<span class="atom">&gt;</span>        arg m <span class="keyword">=</span> <span class="keyword">case</span> m <span class="keyword">of</span>
+<span class="atom">&gt;</span>          <span class="variable">Match</span> _ <span class="paren1">(<span class="code"><span class="variable">Ident</span> idnt</span>)</span> ps _ _ _
+<span class="atom">&gt;</span>            <span class="keyword">|</span> idnt <span class="atom">==</span> name' <span class="keyword">-&gt;</span> map unPVar ps
+<span class="atom">&gt;</span>            <span class="keyword">|</span> otherwise     <span class="keyword">-&gt;</span> <span class="paren1">[<span class="code"></span>]</span>
+<span class="atom">&gt;</span>          _ <span class="keyword">-&gt;</span> <span class="paren1">[<span class="code"></span>]</span>
+<span class="atom">&gt;</span>        name' <span class="keyword">=</span> nameBase fname
+<span class="atom">&gt;</span>        unPVar pv <span class="keyword">=</span> <span class="keyword">case</span> pv <span class="keyword">of</span>
+<span class="atom">&gt;</span>          <span class="variable">PVar</span> n <span class="keyword">-&gt;</span> <span class="keyword">case</span> n <span class="keyword">of</span> <span class="variable">Ident</span> i <span class="keyword">-&gt;</span> i; _ <span class="keyword">-&gt;</span> <span class="string">""</span>
+<span class="atom">&gt;</span>          _      <span class="keyword">-&gt;</span> <span class="string">""</span>
+<span class="atom">&gt;</span>    listE <span class="paren1">(<span class="code">map <span class="paren2">(<span class="code">litE <span class="atom">.</span> stringL</span>)</span> args</span>)</span></span></code></pre>
+
+<p>By the way, this argument extracter was heavily inspired by
+<a href="http://hackage.haskell.org/package/language-haskell-extract" >language-haskell-extract</a>.</p>
+ </div> <div class="post-tags"> TAGGED: <a href="/tag/haskell.html">haskell</a>, <a href="/tag/templatehaskell.html">templatehaskell</a> </div> <div class="prev-post-link"> Prev: <a href="/posts/Sound-of-lena.html">Sound of lena</a> </div> <div class="next-post-link"> Next: <a href="/posts/Loading-dph-codes-in-ghci.html">Loading dph codes in ghci</a> </div> </div> <footer> <section class="tags"> <h3>Tags</h3> <a href="/tag/algorithm.html">algorithm</a> • <a href="/tag/arc.html">arc</a> • <a href="/tag/arrow.html">arrow</a> • <a href="/tag/cabal.html">cabal</a> • <a href="/tag/ci.html">ci</a> • <a href="/tag/coleslaw.html">coleslaw</a> • <a href="/tag/commonlisp.html">commonlisp</a> • <a href="/tag/continuation.html">continuation</a> • <a href="/tag/datastructure.html">datastructure</a> • <a href="/tag/delimited.html">delimited</a> • <a href="/tag/dph.html">dph</a> • <a href="/tag/dsl.html">dsl</a> • <a href="/tag/emacs.html">emacs</a> • <a href="/tag/french.html">french</a> • <a href="/tag/functionaldependency.html">functionaldependency</a> • <a href="/tag/generic.html">generic</a> • <a href="/tag/ghc.html">ghc</a> • <a href="/tag/ghci.html">ghci</a> • <a href="/tag/git.html">git</a> • <a href="/tag/hakyll.html">hakyll</a> • <a href="/tag/haskell.html">haskell</a> • <a href="/tag/heroku.html">heroku</a> • <a href="/tag/image.html">image</a> • <a href="/tag/linux.html">linux</a> • <a href="/tag/lisp.html">lisp</a> • <a href="/tag/monad.html">monad</a> • <a href="/tag/package.html">package</a> • <a href="/tag/pdf.html">pdf</a> • <a href="/tag/performance.html">performance</a> • <a href="/tag/ps.html">ps</a> • <a href="/tag/repa.html">repa</a> • <a href="/tag/sound.html">sound</a> • <a href="/tag/supercollider.html">supercollider</a> • <a href="/tag/templatehaskell.html">templatehaskell</a> • <a href="/tag/tips.html">tips</a> • <a href="/tag/travis.html">travis</a> • <a href="/tag/tree.html">tree</a> • <a href="/tag/typefamily.html">typefamily</a> • <a href="/tag/utf-8.html">utf-8</a> • <a href="/tag/web.html">web</a> </section> Copyright © 2011-2017 8c6794b6; Unless otherwise noted, site contents licensed under <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"> CC-by-SA</a>. </footer> </body> </html>

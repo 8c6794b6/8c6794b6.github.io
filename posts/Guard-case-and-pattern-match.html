@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=defice-width, initial-scale=1"> <title>8c6794b6.github.io</title> <link href="/css/style.css" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=Noto+Serif" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=PT+Serif" rel="stylesheet" type="text/css" /> <link rel="icon" type="image/png" href="/static/favicon.png"/>  </head> <body> <header> <h1><a href="/index.html">8c6794b6.github.io</a></h1> <nav> <a href="/index.html">HOME</a> • <a href="/about.html">ABOUT</a> • <a href="/archive.html">ARCHIVE</a> • <a href="/rss.xml">RSS</a> </nav> </header> <div class="contents"> <div class="post-title"> <h2>Guard, case, and pattern match</h2> <em class="post-date">2012-05-27</em> </div> <div class="post"> <p>I tend to use case with tuples when a function takes more than one
+arguments. Alternate to tupling, we can write with guards or, with
+direct pattern match in function arguments.</p>
+
+<p>What differences we can find in compiled result?</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="comment">{-# LANGUAGE BangPatterns #-}</span>
+<span class="atom">&gt;</span> <span class="keyword">module</span> <span class="variable">GuardCasePatmatch</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Criterion</span><span class="atom">.</span><span class="variable">Main</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Data</span><span class="atom">.</span><span class="variable">Int</span></span></code></pre>
+
+<p>Target function is, naive power function. First, with guard:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> pow_guard <span class="keyword">::</span> <span class="variable">Int64</span> <span class="keyword">-&gt;</span> <span class="variable">Int64</span> <span class="keyword">-&gt;</span> <span class="variable">Int64</span>
+<span class="atom">&gt;</span> pow_guard <span class="atom">!</span>a <span class="atom">!</span>b
+<span class="atom">&gt;</span>   <span class="keyword">|</span> b <span class="atom">==</span> 0    <span class="keyword">=</span> 1
+<span class="atom">&gt;</span>   <span class="keyword">|</span> otherwise <span class="keyword">=</span> a <span class="atom">*</span> pow_guard a <span class="paren1">(<span class="code">b<span class="atom">-</span>1</span>)</span></span></code></pre>
+
+<p>Next, tupled case:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> pow_case <span class="keyword">::</span> <span class="variable">Int64</span> <span class="keyword">-&gt;</span> <span class="variable">Int64</span> <span class="keyword">-&gt;</span> <span class="variable">Int64</span>
+<span class="atom">&gt;</span> pow_case <span class="atom">!</span>a <span class="atom">!</span>b <span class="keyword">=</span> <span class="keyword">case</span> <span class="paren1">(<span class="code">a,b</span>)</span> <span class="keyword">of</span>
+<span class="atom">&gt;</span>   <span class="paren1">(<span class="code">_,0</span>)</span> <span class="keyword">-&gt;</span> 1
+<span class="atom">&gt;</span>   _     <span class="keyword">-&gt;</span> a <span class="atom">*</span> pow_case a <span class="paren1">(<span class="code">b<span class="atom">-</span>1</span>)</span></span></code></pre>
+
+<p>Last, pattern match</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> pow_patmatch <span class="keyword">::</span> <span class="variable">Int64</span> <span class="keyword">-&gt;</span> <span class="variable">Int64</span> <span class="keyword">-&gt;</span> <span class="variable">Int64</span>
+<span class="atom">&gt;</span> pow_patmatch <span class="atom">!</span>a 0 <span class="keyword">=</span> 1
+<span class="atom">&gt;</span> pow_patmatch <span class="atom">!</span>a <span class="atom">!</span>b <span class="keyword">=</span> a <span class="atom">*</span> pow_patmatch a <span class="paren1">(<span class="code">b<span class="atom">-</span>1</span>)</span></span></code></pre>
+
+<p>Testing that all three give same result:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> test <span class="keyword">::</span> <span class="variable">Bool</span>
+<span class="atom">&gt;</span> test <span class="keyword">=</span> all id <span class="paren1">[<span class="code">f x y <span class="keyword">|</span> x <span class="keyword">&lt;-</span> <span class="paren2">[<span class="code">1<span class="keyword">..</span>32</span>]</span>, y <span class="keyword">&lt;-</span> <span class="paren2">[<span class="code">1<span class="keyword">..</span>32</span>]</span></span>]</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>   f a b <span class="keyword">=</span>
+<span class="atom">&gt;</span>     <span class="keyword">let</span> pc <span class="keyword">=</span> pow_case a b
+<span class="atom">&gt;</span>         pg <span class="keyword">=</span> pow_guard a b
+<span class="atom">&gt;</span>         pp <span class="keyword">=</span> pow_patmatch a b
+<span class="atom">&gt;</span>     <span class="keyword">in</span>  pc <span class="atom">==</span> pg <span class="atom">&amp;&amp;</span> pg <span class="atom">==</span> pp</span></code></pre>
+
+<p>Result:</p>
+
+<pre><code>ghci&gt; test
+True
+</code></pre>
+
+<p>Seems fine. Now benchmarking:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> main <span class="keyword">::</span> <span class="variable">IO</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span> main <span class="keyword">=</span> defaultMain
+<span class="atom">&gt;</span>  <span class="paren1">[<span class="code"> bench <span class="string">"guard"</span> <span class="paren2">(<span class="code">nf <span class="paren3">(<span class="code">pow_guard 2</span>)</span> 64</span>)</span>
+<span class="atom">&gt;</span>  , bench <span class="string">"case"</span> <span class="paren2">(<span class="code">nf <span class="paren3">(<span class="code">pow_case 2</span>)</span> 64</span>)</span>
+<span class="atom">&gt;</span>  , bench <span class="string">"patmatch"</span> <span class="paren2">(<span class="code">nf <span class="paren3">(<span class="code">pow_patmatch 2</span>)</span> 64</span>)</span>
+<span class="atom">&gt;</span>  </span>]</span></span></code></pre>
+
+<p>Compile and run:</p>
+
+<pre><code>$ ghc --numeric-version
+7.4.1
+$ ghc -fllvm -optl-O3 -O3 -o a.out -main-is GuardCasePatmatch gcp.lhs
+</code></pre>
+
+<p>Result:</p>
+
+<pre><code>benchmarking guard
+mean: 386.1059 ns, lb 385.6170 ns, ub 386.6460 ns, ci 0.950
+std dev: 2.640960 ns, lb 2.261563 ns, ub 3.111325 ns, ci 0.950
+
+benchmarking case
+mean: 382.4345 ns, lb 382.0820 ns, ub 382.8864 ns, ci 0.950
+std dev: 2.030602 ns, lb 1.667205 ns, ub 2.567343 ns, ci 0.950
+
+benchmarking patmatch
+mean: 385.1643 ns, lb 384.6979 ns, ub 385.7441 ns, ci 0.950
+std dev: 2.657997 ns, lb 2.163594 ns, ub 3.363755 ns, ci 0.950
+</code></pre>
+
+<p>Almost same. How about dumped core?</p>
+
+<p>Exerpt of dumped core of <code>power_guard</code> looks like this:</p>
+
+<pre><code>Rec {
+GuardCasePatmatch.$wpow_guard [Occ=LoopBreaker]
+  :: GHC.Prim.Int# -&gt; GHC.Prim.Int# -&gt; GHC.Prim.Int#
+[GblId, Arity=2, Caf=NoCafRefs, Str=DmdType LL]
+GuardCasePatmatch.$wpow_guard =
+  \ (ww_s2qq :: GHC.Prim.Int#) (ww1_s2qu :: GHC.Prim.Int#) -&gt;
+    case ww1_s2qu of wild_X1r {
+      __DEFAULT -&gt;
+        case GuardCasePatmatch.$wpow_guard ww_s2qq (GHC.Prim.-# wild_X1r 1)
+        of ww2_s2qy { __DEFAULT -&gt;
+        GHC.Prim.*# ww_s2qq ww2_s2qy
+        };
+      0 -&gt; 1
+    }
+end Rec }
+
+...
+
+GuardCasePatmatch.pow_guard =
+  \ (w_s2qo :: GHC.Int.Int64) (w1_s2qs :: GHC.Int.Int64) -&gt;
+    case w_s2qo of _ { GHC.Int.I64# ww_s2qq -&gt;
+    case w1_s2qs of _ { GHC.Int.I64# ww1_s2qu -&gt;
+    case GuardCasePatmatch.$wpow_guard ww_s2qq ww1_s2qu
+    of ww2_s2qy { __DEFAULT -&gt;
+    GHC.Int.I64# ww2_s2qy
+    }
+    }
+    }
+</code></pre>
+
+<p>Dumped core of <code>power_case</code>:</p>
+
+<pre><code>Rec {
+GuardCasePatmatch.$wpow_case [Occ=LoopBreaker]
+  :: GHC.Prim.Int# -&gt; GHC.Prim.Int# -&gt; GHC.Prim.Int#
+[GblId, Arity=2, Caf=NoCafRefs, Str=DmdType LL]
+GuardCasePatmatch.$wpow_case =
+  \ (ww_s2qc :: GHC.Prim.Int#) (ww1_s2qg :: GHC.Prim.Int#) -&gt;
+    case ww1_s2qg of wild_X1n {
+      __DEFAULT -&gt;
+        case GuardCasePatmatch.$wpow_case ww_s2qc (GHC.Prim.-# wild_X1n 1)
+        of ww2_s2qk { __DEFAULT -&gt;
+        GHC.Prim.*# ww_s2qc ww2_s2qk
+        };
+      0 -&gt; 1
+    }
+end Rec }
+
+...
+
+GuardCasePatmatch.pow_case =
+  \ (w_s2qa :: GHC.Int.Int64) (w1_s2qe :: GHC.Int.Int64) -&gt;
+    case w_s2qa of _ { GHC.Int.I64# ww_s2qc -&gt;
+    case w1_s2qe of _ { GHC.Int.I64# ww1_s2qg -&gt;
+    case GuardCasePatmatch.$wpow_case ww_s2qc ww1_s2qg
+    of ww2_s2qk { __DEFAULT -&gt;
+    GHC.Int.I64# ww2_s2qk
+    }
+    }
+    }
+</code></pre>
+
+<p>And dumped core of <code>pow_patmatch</code>:</p>
+
+<pre><code>Rec {
+GuardCasePatmatch.$wpow_patmatch [Occ=LoopBreaker]
+  :: GHC.Prim.Int# -&gt; GHC.Prim.Int# -&gt; GHC.Prim.Int#
+[GblId, Arity=2, Caf=NoCafRefs, Str=DmdType LL]
+GuardCasePatmatch.$wpow_patmatch =
+  \ (ww_s2qE :: GHC.Prim.Int#) (ww1_s2qI :: GHC.Prim.Int#) -&gt;
+    case ww1_s2qI of wild_X1t {
+      __DEFAULT -&gt;
+        case GuardCasePatmatch.$wpow_patmatch
+               ww_s2qE (GHC.Prim.-# wild_X1t 1)
+        of ww2_s2qM { __DEFAULT -&gt;
+        GHC.Prim.*# ww_s2qE ww2_s2qM
+        };
+      0 -&gt; 1
+    }
+end Rec }
+
+...
+
+GuardCasePatmatch.pow_patmatch =
+  \ (w_s2qC :: GHC.Int.Int64) (w1_s2qG :: GHC.Int.Int64) -&gt;
+    case w_s2qC of _ { GHC.Int.I64# ww_s2qE -&gt;
+    case w1_s2qG of _ { GHC.Int.I64# ww1_s2qI -&gt;
+    case GuardCasePatmatch.$wpow_patmatch ww_s2qE ww1_s2qI
+    of ww2_s2qM { __DEFAULT -&gt;
+    GHC.Int.I64# ww2_s2qM
+    }
+    }
+    }
+</code></pre>
+
+<p>No difference other than bounded names.</p>
+ </div> <div class="post-tags"> TAGGED: <a href="/tag/haskell.html">haskell</a>, <a href="/tag/performance.html">performance</a>, <a href="/tag/ghc.html">ghc</a> </div> <div class="prev-post-link"> Prev: <a href="/posts/Cause-of-3-nano-seconds-difference.html">Cause of 3 nano seconds difference</a> </div> <div class="next-post-link"> Next: <a href="/posts/Mapping-show-to-tuples-with-TH.html">Mapping &#039;show&#039; to tuples with TH</a> </div> </div> <footer> <section class="tags"> <h3>Tags</h3> <a href="/tag/algorithm.html">algorithm</a> • <a href="/tag/arc.html">arc</a> • <a href="/tag/arrow.html">arrow</a> • <a href="/tag/cabal.html">cabal</a> • <a href="/tag/ci.html">ci</a> • <a href="/tag/coleslaw.html">coleslaw</a> • <a href="/tag/commonlisp.html">commonlisp</a> • <a href="/tag/continuation.html">continuation</a> • <a href="/tag/datastructure.html">datastructure</a> • <a href="/tag/delimited.html">delimited</a> • <a href="/tag/dph.html">dph</a> • <a href="/tag/dsl.html">dsl</a> • <a href="/tag/emacs.html">emacs</a> • <a href="/tag/french.html">french</a> • <a href="/tag/functionaldependency.html">functionaldependency</a> • <a href="/tag/generic.html">generic</a> • <a href="/tag/ghc.html">ghc</a> • <a href="/tag/ghci.html">ghci</a> • <a href="/tag/git.html">git</a> • <a href="/tag/hakyll.html">hakyll</a> • <a href="/tag/haskell.html">haskell</a> • <a href="/tag/heroku.html">heroku</a> • <a href="/tag/image.html">image</a> • <a href="/tag/linux.html">linux</a> • <a href="/tag/lisp.html">lisp</a> • <a href="/tag/monad.html">monad</a> • <a href="/tag/package.html">package</a> • <a href="/tag/pdf.html">pdf</a> • <a href="/tag/performance.html">performance</a> • <a href="/tag/ps.html">ps</a> • <a href="/tag/repa.html">repa</a> • <a href="/tag/sound.html">sound</a> • <a href="/tag/supercollider.html">supercollider</a> • <a href="/tag/templatehaskell.html">templatehaskell</a> • <a href="/tag/tips.html">tips</a> • <a href="/tag/travis.html">travis</a> • <a href="/tag/tree.html">tree</a> • <a href="/tag/typefamily.html">typefamily</a> • <a href="/tag/utf-8.html">utf-8</a> • <a href="/tag/web.html">web</a> </section> Copyright © 2011-2017 8c6794b6; Unless otherwise noted, site contents licensed under <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"> CC-by-SA</a>. </footer> </body> </html>

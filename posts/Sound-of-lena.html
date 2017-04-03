@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=defice-width, initial-scale=1"> <title>8c6794b6.github.io</title> <link href="/css/style.css" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=Noto+Serif" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=PT+Serif" rel="stylesheet" type="text/css" /> <link rel="icon" type="image/png" href="/static/favicon.png"/>  </head> <body> <header> <h1><a href="/index.html">8c6794b6.github.io</a></h1> <nav> <a href="/index.html">HOME</a> • <a href="/about.html">ABOUT</a> • <a href="/archive.html">ARCHIVE</a> • <a href="/rss.xml">RSS</a> </nav> </header> <div class="contents"> <div class="post-title"> <h2>Sound of lena</h2> <em class="post-date">2011-12-01</em> </div> <div class="post"> <p>The idea of making sound from images was there from quite a long time ago.</p>
+
+<p>For instance, using a picture of probably
+<a href="http://en.wikipedia.org/wiki/Lenna" >the most famouse lady in image processing</a>
+as input:</p>
+
+<p align="center">
+<img alt="lena_in" src="http://github.com/8c6794b6/spectrofy/raw/gh-pages/lena_in.bmp">
+</p>
+
+<p>to get a sound with this spectrogram:</p>
+
+<p align="center">
+<img alt="lena_out" src="http://github.com/8c6794b6/spectrofy/raw/gh-pages/lena_out.png">
+</p>
+
+<p>No idea what human beings in stone ages were thinking, but in the ages of
+computers, Iannis Xenakis was already thinking about the use of images as
+input data for making audio, in 1970s, in a system called
+<a href="http://en.wikipedia.org/wiki/UPIC" >UPIC</a>.
+So far I know, couple commercial software exist for editing sound data
+in frequency domain via graphical user interface. Like
+<a href="http://www.uisoftware.com/MetaSynth/index.php" >metasynth</a> and
+<a href="http://photosounder.com" >photosounder</a>,
+to name a few. One use of this technique I know is in
+<a href="http://en.wikipedia.org/wiki/Windowlicker" >Windowlicker</a>,
+by Aphex Twin.</p>
+
+<p>There is
+<a href="http://www.devrand.org/2013/04/image-to-spectrogram.html" >a nice article</a>
+which describing about making spectrogram of image with perl,
+it inspired me to do it with haskell. The code used to convert above image
+was implemented in haskell, with
+<a href="http://repa.ouroborus.net/" >repa</a>,
+<a href="http://www.fftw.org/" >fftw</a>, and
+<a href="http://www.mega-nerd.com/libsndfile/" >libsndfile</a>.</p>
+
+<p>Source code of executable, named <em>spectrofy</em>, could be found
+<a href="http://github.com/8c6794b6/spectrofy" >here</a>.
+Couple packages that I packed as repa interface are also available.
+The BMP image of lena was converted to wav audio, and then spectrogram
+was created with sox:</p>
+
+<pre><code>$ spectrofy fft -f512 lena.bmp lena.wav
+$ sox lena.wav -n spectrogram -x 256 -y 257 -Z -48 -z 45
+</code></pre>
+
+<p>The spectrogram shown above was created with above commands. Not with
+<a href="http://www.gimp.org" >photoshop</a>.</p>
+
+<hr/>
+
+<p>Update: November 21, 2013 - modified links to images and spectrogram article.</p>
+ </div> <div class="post-tags"> TAGGED: <a href="/tag/haskell.html">haskell</a>, <a href="/tag/sound.html">sound</a>, <a href="/tag/image.html">image</a>, <a href="/tag/repa.html">repa</a> </div> <div class="prev-post-link"> Prev: <a href="/posts/Running-happstack-app-with-heroku.html">Running happstack app with heroku</a> </div> <div class="next-post-link"> Next: <a href="/posts/Extracting-argument-names.html">Extracting argument names</a> </div> </div> <footer> <section class="tags"> <h3>Tags</h3> <a href="/tag/algorithm.html">algorithm</a> • <a href="/tag/arc.html">arc</a> • <a href="/tag/arrow.html">arrow</a> • <a href="/tag/cabal.html">cabal</a> • <a href="/tag/ci.html">ci</a> • <a href="/tag/coleslaw.html">coleslaw</a> • <a href="/tag/commonlisp.html">commonlisp</a> • <a href="/tag/continuation.html">continuation</a> • <a href="/tag/datastructure.html">datastructure</a> • <a href="/tag/delimited.html">delimited</a> • <a href="/tag/dph.html">dph</a> • <a href="/tag/dsl.html">dsl</a> • <a href="/tag/emacs.html">emacs</a> • <a href="/tag/french.html">french</a> • <a href="/tag/functionaldependency.html">functionaldependency</a> • <a href="/tag/generic.html">generic</a> • <a href="/tag/ghc.html">ghc</a> • <a href="/tag/ghci.html">ghci</a> • <a href="/tag/git.html">git</a> • <a href="/tag/hakyll.html">hakyll</a> • <a href="/tag/haskell.html">haskell</a> • <a href="/tag/heroku.html">heroku</a> • <a href="/tag/image.html">image</a> • <a href="/tag/linux.html">linux</a> • <a href="/tag/lisp.html">lisp</a> • <a href="/tag/monad.html">monad</a> • <a href="/tag/package.html">package</a> • <a href="/tag/pdf.html">pdf</a> • <a href="/tag/performance.html">performance</a> • <a href="/tag/ps.html">ps</a> • <a href="/tag/repa.html">repa</a> • <a href="/tag/sound.html">sound</a> • <a href="/tag/supercollider.html">supercollider</a> • <a href="/tag/templatehaskell.html">templatehaskell</a> • <a href="/tag/tips.html">tips</a> • <a href="/tag/travis.html">travis</a> • <a href="/tag/tree.html">tree</a> • <a href="/tag/typefamily.html">typefamily</a> • <a href="/tag/utf-8.html">utf-8</a> • <a href="/tag/web.html">web</a> </section> Copyright © 2011-2017 8c6794b6; Unless otherwise noted, site contents licensed under <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"> CC-by-SA</a>. </footer> </body> </html>

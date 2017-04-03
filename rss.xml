@@ -1,55 +1,459 @@
-<?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-    <channel>
-        <title>Warm fuzzy thing by 8c6794b6</title>
-        <link>http://8c6794b6.github.com</link>
-        <description><![CDATA[Warm and fuzzy]]></description>
-        <atom:link href="http://8c6794b6.github.com/rss.xml" rel="self"
-                   type="application/rss+xml" />
-        <lastBuildDate>Fri, 30 May 2014 00:00:00 UT</lastBuildDate>
-        <item>
-    <title>Modifying commit attributes and editing hunk in git</title>
-    <link>http://8c6794b6.github.com/posts/2014-05-30-git-modifying-commit-attributes-and-editing-hunk.html</link>
-    <description><![CDATA[<h2>Modifying commit attributes and editing hunk in git</h2>
-<div id="post_date">
-  <strong>May 30, 2014</strong>
-</div>
-<div id="post_body">
-  <p><strong>Changing author (or any other commit attribute) in existing commits</strong></p>
-<p>From <a href="http://stackoverflow.com/questions/750172/how-do-i-change-the-author-of-a-commit-in-git">this SOF Q&amp;A</a>. Linked page was showing a scenario to change committer and author’s name and email from old value to new value:</p>
-<pre><code>git filter-branch --commit-filter &#39;
-    if [ &quot;$GIT_COMMITTER_NAME&quot; = &quot;&lt;OLD_NAME&gt;&quot; ];
+<?xml version="1.0"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"> <channel> <title>8c6794b6.github.io</title> <link></link> <atom:link href="/rss.xml" rel="self" type="application/rss+xml" /> <language>en-us</language> <pubDate>Mon, 03 Apr 2017 16:21:50 +0900</pubDate> <item> <title>Delimited continuations with monadic functions in Common Lisp</title> <link>/posts/Delimited-continuations-with-monadic-functions-in-Common-Lisp.html</link> <pubDate>2017-02-07</pubDate> <author>8c6794b6</author> <guid isPermaLink="true">/posts/Delimited-continuations-with-monadic-functions-in-Common-Lisp.html</guid> <category><![CDATA[ continuation ]]></category><category><![CDATA[ delimited ]]></category><category><![CDATA[ monad ]]></category><category><![CDATA[ commonlisp ]]></category><category><![CDATA[ lisp ]]></category> <description><![CDATA[ <h3>Introduction</h3>
+
+<p>Exploring
+<a href="https://en.wikipedia.org/wiki/Delimited_continuation" >delimited continuation</a> in
+Common Lisp, in
+particular,
+<a href="http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.43.8753" ><code>shift</code> and <code>reset</code> from Danvy and Filinski</a>. There
+is <a href="http://quickdocs.org/cl-cont/" >cl-cont</a> package, which supports
+shift/reset style continuation with rewriting expression inside
+<code>with-call/cc</code> macro. The implementation shown in this post is simple,
+short (less than 50 lines), and uses monadic functions to capture
+continuations.</p>
+
+<h3>Monad for Continuation</h3>
+
+<p>As
+<a href="http://homepages.inf.ed.ac.uk/wadler/topics/monads.html" >Wadler mentioned in various papers</a>,
+monads could be used to express continuations. Monads consists of type
+constructor <code>M</code> and following two operations:</p>
+
+<pre><code><span class="code"><span class="function">unit</span> <span class="keyword">::</span> a <span class="keyword">-&gt;</span> <span class="variable">M</span> a
+<span class="paren1">(<span class="code">★</span>)</span>  <span class="keyword">::</span> <span class="variable">M</span> a <span class="keyword">-&gt;</span> <span class="paren1">(<span class="code">a <span class="keyword">-&gt;</span> <span class="variable">M</span> b</span>)</span> <span class="keyword">-&gt;</span> <span class="variable">M</span> b</span></code></pre>
+
+<p>It is possible to express concept of Monads in other programming
+languages than Haskell. Several implementation already exist, such as
+in <a href="http://okmij.org/ftp/Scheme/monad-in-Scheme.html" >Scheme</a>
+and <a href="http://okmij.org/ftp/Scheme/monad-in-Scheme.html" >JavaScript</a>, to
+name a few. In impure languages, there are not much needs for monad,
+since the problems solved by monads in purely functional language are
+solved with different techniques. Though, one of the programming
+techniques which could be solved with monad, and missing in most
+language is, expressing first class continuation.</p>
+
+<p>One of the programming languages supporting first class continuation is
+Scheme. Scheme has <code>call-with-current-continuation</code>, which captures
+undelimited continuation as first class value. Some of the Scheme
+implementations also support delimited continuations. Delimited
+continuations are not in the Scheme language specifications so far,
+though it
+is
+<a href="http://okmij.org/ftp/continuations/implementations.html" >possible to implement it with undelimited continuations</a>.</p>
+
+<h3>Wrapping Expression Into CPS</h3>
+
+<p>In a programming language without builtin support for continuation, one
+need to express the computation in Continuation-Passing-Style (CPS) to
+capture the continuation, and that is where monad is used for. Firstly,
+defining a structure to represent continuation. The structure <code>CONT</code> has
+single field, a function taking the current continuation.</p>
+
+<pre><code><span class="code"><span class="paren1">(<span class="code"><i><span class="symbol">defstruct</span></i> <span class="paren2">(<span class="code">cont <span class="paren3">(<span class="code"><span class="keyword">:constructor</span> make-cont <span class="paren4">(<span class="code">fn</span>)</span></span>)</span></span>)</span>
+  <span class="paren2">(<span class="code">fn #'values <span class="keyword">:type</span> <i><span class="symbol">function</span></i></span>)</span></span>)</span>
+
+<span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> run-cont <span class="paren2">(<span class="code">c k</span>)</span>
+  <span class="paren2">(<span class="code">funcall <span class="paren3">(<span class="code">cont-fn c</span>)</span> k</span>)</span></span>)</span></span></code></pre>
+
+<p>Defining <code>unit</code> and <code>(★)</code> to make <code>CONT</code> as an instance of monad. In the
+code shown below, <code>unit</code> is renamed to <code>returnc</code>, and <code>(★)</code> is renamed
+to <code>bindc</code>.</p>
+
+<pre><code><span class="code"><span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> returnc <span class="paren2">(<span class="code">x</span>)</span>
+  <span class="paren2">(<span class="code">make-cont <span class="paren3">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren4">(<span class="code">k</span>)</span>
+               <span class="paren4">(<span class="code">funcall k x</span>)</span></span>)</span></span>)</span></span>)</span>
+
+<span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> bindc <span class="paren2">(<span class="code">c f</span>)</span>
+  <span class="paren2">(<span class="code">make-cont <span class="paren3">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren4">(<span class="code">k</span>)</span>
+               <span class="paren4">(<span class="code">run-cont c <span class="paren5">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren6">(<span class="code">x</span>)</span>
+                             <span class="paren6">(<span class="code">run-cont <span class="paren1">(<span class="code">funcall f x</span>)</span> k</span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span></code></pre>
+
+<p>Definition of <code>returnc</code> makes CPS representation of <code>x</code> wrapped with
+<code>CONT</code> structure. <code>bindc</code> runs the continuation <code>c</code>, then pass the
+result to <code>f</code>, and runs the continuation returned by <code>f</code> with the
+current continuation <code>k</code>. Note that in <code>bindc</code>, current continuation <code>k</code>
+is not passed to <code>c</code> but to the returned value of <code>f</code>.</p>
+
+<p>Some examples:</p>
+
+<pre><code>&gt; (run-cont (returnc 'foo) #'values)
+FOO
+&gt; (run-cont (bindc (returnc 21) (lambda (x) (returnc (* x 2)))) #'values)
+42</code></pre>
+
+<p>Adding two syntax helper macros, <code>letc*</code> and <code>progc</code>. The macro <code>letc*</code>
+is similar to <code>let*</code>, but instead of binding result of pure expressions,
+<code>letc*</code> binds the variable to the argument passed to the continuation.</p>
+
+<pre><code><span class="code"><span class="paren1">(<span class="code"><i><span class="symbol">defmacro</span></i> letc* <span class="paren2">(<span class="code">bindings &amp;body body</span>)</span>
+  <span class="paren2">(<span class="code"><i><span class="symbol">if</span></i> <span class="paren3">(<span class="code">null bindings</span>)</span>
+      `<span class="paren3">(<span class="code"><i><span class="symbol">progn</span></i> ,@body</span>)</span>
+      <span class="paren3">(<span class="code">destructuring-bind <span class="paren4">(<span class="code">name c</span>)</span> <span class="paren4">(<span class="code">car bindings</span>)</span>
+        `<span class="paren4">(<span class="code">bindc ,c <span class="paren5">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren6">(<span class="code">,name</span>)</span>
+                     <span class="paren6">(<span class="code">letc* ,<span class="paren1">(<span class="code">cdr bindings</span>)</span> ,@body</span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span></code></pre>
+
+<p>The second example shown above could be written with <code>letc*</code> as follows:</p>
+
+<pre><code>&gt; (run-cont (letc* ((x (returnc 21)))
+              (returnc (* x 2)))
+            #'values)
+42</code></pre>
+
+<p><code>progc</code> is similar to <code>letc*</code>, but discards the variable, intended to be
+used in the codes where side effects of continuations are the main
+concern.</p>
+
+<pre><code><span class="code"><span class="paren1">(<span class="code"><i><span class="symbol">defmacro</span></i> progc <span class="paren2">(<span class="code">&amp;body body</span>)</span>
+  <span class="paren2">(<span class="code"><i><span class="symbol">if</span></i> <span class="paren3">(<span class="code">null <span class="paren4">(<span class="code">cdr body</span>)</span></span>)</span>
+      <span class="paren3">(<span class="code">car body</span>)</span>
+      <span class="paren3">(<span class="code"><i><span class="symbol">let</span></i> <span class="paren4">(<span class="code"><span class="paren5">(<span class="code">garg <span class="paren6">(<span class="code">gensym</span>)</span></span>)</span></span>)</span>
+        `<span class="paren4">(<span class="code">bindc ,<span class="paren5">(<span class="code">car body</span>)</span>
+                <span class="paren5">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren6">(<span class="code">,garg</span>)</span>
+                  <span class="paren6">(<span class="code">declare <span class="paren1">(<span class="code">ignore ,garg</span>)</span></span>)</span>
+                  <span class="paren6">(<span class="code">progc ,@<span class="paren1">(<span class="code">cdr body</span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span></code></pre>
+
+<h3>Shift And Reset</h3>
+
+<p>With monadic interfaces for continuation, <code>shift</code> and <code>reset</code> could be
+expressed as below. The function <code>reset</code> unwrap the <code>CONT</code> structure if
+the given argument is <code>CONT</code>, otherwise returns the given value itself.</p>
+
+<pre><code><span class="code"><span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> reset <span class="paren2">(<span class="code">k</span>)</span>
+  <span class="paren2">(<span class="code"><i><span class="symbol">if</span></i> <span class="paren3">(<span class="code">cont-p k</span>)</span>
+      <span class="paren3">(<span class="code">run-cont k #'values</span>)</span>
+      k</span>)</span></span>)</span></span></code></pre>
+
+<p>The macro <code>shift</code> binds the current continuation to given <code>var</code> as a
+function defined with <code>flet</code>, and then invoke the <code>expr</code>. Inside <code>expr</code>,
+bounded continuation could be invoked as an ordinary function. In other
+words, <code>shift</code> captures the continuation from the captured place until
+the first appearance of enclosing <code>reset</code>.</p>
+
+<pre><code><span class="code"><span class="paren1">(<span class="code"><i><span class="symbol">defmacro</span></i> shift <span class="paren2">(<span class="code">var expr</span>)</span>
+  <span class="paren2">(<span class="code"><i><span class="symbol">let</span></i> <span class="paren3">(<span class="code"><span class="paren4">(<span class="code">gk <span class="paren5">(<span class="code">gensym</span>)</span></span>)</span>
+        <span class="paren4">(<span class="code">garg <span class="paren5">(<span class="code">gensym</span>)</span></span>)</span></span>)</span>
+    `<span class="paren3">(<span class="code">make-cont <span class="paren4">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren5">(<span class="code">,gk</span>)</span>
+                  <span class="paren5">(<span class="code">declare <span class="paren6">(<span class="code"><i><span class="symbol">function</span></i> ,gk</span>)</span></span>)</span>
+                  <span class="paren5">(<span class="code"><i><span class="symbol">flet</span></i> <span class="paren6">(<span class="code"><span class="paren1">(<span class="code">,var <span class="paren2">(<span class="code">,garg</span>)</span>
+                           <span class="paren2">(<span class="code">funcall ,gk ,garg</span>)</span></span>)</span></span>)</span>
+                    <span class="paren6">(<span class="code">declare <span class="paren1">(<span class="code">ignorable <span class="paren2">(<span class="code"><i><span class="symbol">function</span></i> ,var</span>)</span></span>)</span></span>)</span>
+                    ,expr</span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span></code></pre>
+
+<p>Evaluating some sample expressions with <code>shift</code> and <code>reset</code>. The
+resulting value of <code>shift</code> is a <code>CONT</code>:</p>
+
+<pre><code>&gt; (shift k (k 2))
+#S(CONT :FN #&lt;FUNCTION (LAMBDA (#:G656)) {1004B9A55B}&gt;)</code></pre>
+
+<p>To perform the computation in <code>CONT</code>, one can apply <code>reset</code>:</p>
+
+<pre><code>&gt; (reset (shift k (k 2))
+2</code></pre>
+
+<p>The resulting <code>CONT</code> object from <code>shift</code> could be passed to <code>bindc</code>, as
+those made from <code>returnc</code>:</p>
+
+<pre><code>&gt; (reset (letc* ((x (shift k (k 2))))
+           (returnc (+ x 3))))
+5</code></pre>
+
+<p>When the expression in <code>shift</code> returns without calling captured
+continuation, the whole computation will escape immediately. Instead of
+the sum of <code>x</code> and <code>y</code> or an error from <code>+</code>, following expression
+evaluates as symbol <code>FOO</code>:</p>
+
+<pre><code>&gt; (reset (letc* ((x (returnc 100))
+                 (y (shift k 'foo)))
+           (returnc (+ x y))))
+FOO</code></pre>
+
+<p>Since captured continuation is an ordinary function, it could be invoked
+multiple times. In the following expression, the captured computation
+with <code>shift</code> could be viewed as <code>(lambda (x) (+ x 3))</code>. The captured
+continuation is applied twice, which results in <code>(+ (+ 2 3) 3)</code>:</p>
+
+<pre><code>&gt; (reset (letc* ((x (shift k (k (k 2)))))
+           (returnc (+ x 3))))
+8</code></pre>
+
+<p>Inside the expression of <code>shift</code>, further computation could be done with
+returned value from captured computation. Following expression applies
+captured continuation twice as in previous example, then multiplies by
+<code>2</code>:</p>
+
+<pre><code>&gt; (reset (letc* ((x (shift k (* 2 (k (k 2))))))
+           (returnc (+ x 3))))
+16</code></pre>
+
+<p>In the implementation of <code>shift</code> and <code>reset</code> shown here, continuations
+are captured with monad, hence some wrapping with <code>returnc</code> and
+unwrapping with <code>letc*</code> are required. In an implementation which has
+builtin support of <code>shift</code> and <code>reset</code>
+(e.g.: <a href="https://racket-lang.org/" >Racket</a>), the last example could be
+written as:</p>
+
+<pre><code>&gt; (reset (+ (shift k (* 2 (k (k 2)))) 3))
+16</code></pre>
+
+<h3>Example: Nondeterminism</h3>
+
+<p>One common use of continuation is for nondeterministic
+programming. Showing an implementation of <code>choice</code> from
+the
+<a href="http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.43.8753" >Danvy and Filinski's paper</a>,
+and its use with function <code>triple</code>. The problem we have is to find out
+all triples of distinct positive integers <code>i</code>, <code>j</code>, and <code>k</code> less than or
+equal to a given integer <code>n</code> that sums to a given integer <code>s</code>:</p>
+
+<pre><code><span class="code"><span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> fail <span class="paren2">(<span class="code"></span>)</span>
+  <span class="paren2">(<span class="code">shift k 'no</span>)</span></span>)</span>
+
+<span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> choice <span class="paren2">(<span class="code">n</span>)</span>
+  <span class="paren2">(<span class="code">shift k <span class="paren3">(<span class="code"><i><span class="symbol">loop</span></i> for i from 1 to n do <span class="paren4">(<span class="code">k i</span>)</span> finally 'no</span>)</span></span>)</span></span>)</span>
+
+<span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> triple <span class="paren2">(<span class="code">n s</span>)</span>
+  <span class="paren2">(<span class="code">letc* <span class="paren3">(<span class="code"><span class="paren4">(<span class="code">i <span class="paren5">(<span class="code">choice n</span>)</span></span>)</span>
+          <span class="paren4">(<span class="code">j <span class="paren5">(<span class="code">choice <span class="paren6">(<span class="code">- i 1</span>)</span></span>)</span></span>)</span>
+          <span class="paren4">(<span class="code">k <span class="paren5">(<span class="code">choice <span class="paren6">(<span class="code">- j 1</span>)</span></span>)</span></span>)</span></span>)</span>
+    <span class="paren3">(<span class="code"><i><span class="symbol">if</span></i> <span class="paren4">(<span class="code">= s <span class="paren5">(<span class="code">+ i j k</span>)</span></span>)</span>
+        <span class="paren4">(<span class="code">returnc <span class="paren5">(<span class="code">list i j k</span>)</span></span>)</span>
+        <span class="paren4">(<span class="code">fail</span>)</span></span>)</span></span>)</span></span>)</span></span></code></pre>
+
+<p>To print the results of <code>triple</code>, one may write as follows:</p>
+
+<pre><code><span class="code">&gt; <span class="paren1">(<span class="code">reset <span class="paren2">(<span class="code">letc* <span class="paren3">(<span class="code">ijk <span class="paren4">(<span class="code">triple 9 15</span>)</span></span>)</span></span>)</span>
+           <span class="paren2">(<span class="code">returnc <span class="paren3">(<span class="code">print ijk</span>)</span></span>)</span></span>)</span>)
+<span class="paren1">(<span class="code">6 5 4</span>)</span>
+<span class="paren1">(<span class="code">7 5 3</span>)</span>
+<span class="paren1">(<span class="code">7 6 2</span>)</span>
+<span class="paren1">(<span class="code">8 4 3</span>)</span>
+<span class="paren1">(<span class="code">8 5 2</span>)</span>
+<span class="paren1">(<span class="code">8 6 1</span>)</span>
+<span class="paren1">(<span class="code">9 4 2</span>)</span>
+<span class="paren1">(<span class="code">9 5 1</span>)</span>
+NIL</span></code></pre>
+
+<p>Note that unlike the original example in the paper, the version of
+<code>shift</code> in this post returns a value of <code>CONT</code> structure. The expression
+<code>(triple 9 15)</code> is evaluated as <code>CONT</code> structure, not the answer values
+returned by <code>(returnc (list i j k))</code>. The answers need to be unwrapped
+with <code>letc*</code> or <code>bindc</code> to print with <code>print</code> function.</p>
+
+<h3>Example: Coroutine</h3>
+
+<p>Another famous problem solved with continuation is, so-called the
+<em>same-fringe</em> problem. Two binary trees have the same fringe if they
+have exactly the same leaves reading from left to right. The problem is
+to decide whether two binary trees have the same fringe. Basically, we
+want to return from the tree traversal as soon as we detect that the
+trees are different.</p>
+
+<pre><code><span class="code"><span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> donep <span class="paren2">(<span class="code">x</span>)</span> <span class="paren2">(<span class="code">eq 'done x</span>)</span></span>)</span>
+
+<span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> nextp <span class="paren2">(<span class="code">x</span>)</span> <span class="paren2">(<span class="code">not <span class="paren3">(<span class="code">donep x</span>)</span></span>)</span></span>)</span>
+
+<span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> next <span class="paren2">(<span class="code">n k</span>)</span> <span class="paren2">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren3">(<span class="code"></span>)</span> <span class="paren3">(<span class="code">values n k</span>)</span></span>)</span></span>)</span>
+
+<span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> walkerc <span class="paren2">(<span class="code">tree</span>)</span>
+  <span class="paren2">(<span class="code"><i><span class="symbol">cond</span></i>
+    <span class="paren3">(<span class="code"><span class="paren4">(<span class="code">null tree</span>)</span> <span class="paren4">(<span class="code">returnc 'done</span>)</span></span>)</span>
+    <span class="paren3">(<span class="code"><span class="paren4">(<span class="code">atom tree</span>)</span> <span class="paren4">(<span class="code">shift k <span class="paren5">(<span class="code">next tree #'k</span>)</span></span>)</span></span>)</span>
+    <span class="paren3">(<span class="code">t <span class="paren4">(<span class="code">progc
+         <span class="paren5">(<span class="code">walkerc <span class="paren6">(<span class="code">car tree</span>)</span></span>)</span>
+         <span class="paren5">(<span class="code">walkerc <span class="paren6">(<span class="code">cdr tree</span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span></code></pre>
+
+<p>The function <code>walkerc</code> takes a tree, returns a <code>CONT</code> value. Each
+element of the tree is converted as a closure with the function <code>next</code>.
+The closure returns two values: the element and the captured
+continuation. The resulting <code>CONT</code> could be viewed as a coroutine
+object, which traverses the tree from right to left order.</p>
+
+<p>With <code>walkerc</code>, function <code>same-fringe</code> could be written as below:</p>
+
+<pre><code><span class="code"><span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> same-fringe <span class="paren2">(<span class="code">t1 t2</span>)</span>
+  <span class="paren2">(<span class="code"><i><span class="symbol">labels</span></i> <span class="paren3">(<span class="code"><span class="paren4">(<span class="code">rec <span class="paren5">(<span class="code">r1 r2</span>)</span>
+             <span class="paren5">(<span class="code"><i><span class="symbol">if</span></i> <span class="paren6">(<span class="code">nextp r1</span>)</span>
+                 <span class="paren6">(<span class="code">and <span class="paren1">(<span class="code">nextp r2</span>)</span>
+                      <span class="paren1">(<span class="code">multiple-value-bind <span class="paren2">(<span class="code">n1 k1</span>)</span> <span class="paren2">(<span class="code">funcall r1</span>)</span>
+                        <span class="paren2">(<span class="code">multiple-value-bind <span class="paren3">(<span class="code">n2 k2</span>)</span> <span class="paren3">(<span class="code">funcall r2</span>)</span>
+                          <span class="paren3">(<span class="code">and <span class="paren4">(<span class="code">eql n1 n2</span>)</span>
+                               <span class="paren4">(<span class="code">rec <span class="paren5">(<span class="code">funcall k1 nil</span>)</span>
+                                    <span class="paren5">(<span class="code">funcall k2 nil</span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span>
+                 <span class="paren6">(<span class="code">donep r2</span>)</span></span>)</span></span>)</span></span>)</span>
+    <span class="paren3">(<span class="code">rec <span class="paren4">(<span class="code">reset <span class="paren5">(<span class="code">walkerc t1</span>)</span></span>)</span>
+         <span class="paren4">(<span class="code">reset <span class="paren5">(<span class="code">walkerc t2</span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span></code></pre>
+
+<p>Sample runs:</p>
+
+<pre><code><span class="code">&gt; <span class="paren1">(<span class="code">same-fringe '<span class="paren2">(<span class="code"><span class="paren3">(<span class="code">1</span>)</span> <span class="paren3">(<span class="code">2 <span class="paren4">(<span class="code">3 <span class="paren5">(<span class="code">4</span>)</span> 5</span>)</span></span>)</span></span>)</span> '<span class="paren2">(<span class="code"><span class="paren3">(<span class="code">1 <span class="paren4">(<span class="code">2</span>)</span> <span class="paren4">(<span class="code">3 4</span>)</span> 5</span>)</span></span>)</span></span>)</span>
+T
+&gt; <span class="paren1">(<span class="code">same-fringe '<span class="paren2">(<span class="code"><span class="paren3">(<span class="code">1</span>)</span> <span class="paren3">(<span class="code">2 <span class="paren4">(<span class="code">3 <span class="paren5">(<span class="code">4</span>)</span> 5</span>)</span></span>)</span></span>)</span> '<span class="paren2">(<span class="code"><span class="paren3">(<span class="code">1 <span class="paren4">(<span class="code">2</span>)</span> <span class="paren4">(<span class="code">4</span>)</span> 5</span>)</span></span>)</span></span>)</span>
+NIL</span></code></pre>
+
+<h3>Some thoughts</h3>
+
+<p>Both non-deterministic example and coroutine example could be directly written
+in continuation passing style (CPS), which shall be slightly efficient since
+direct CPS does not require to make the <code>cont</code> structure.</p>
+
+<p>Te implementation shown in this post is similar to the one done
+by
+<a href="https://groups.google.com/forum/#!topic/comp.lang.lisp/D72jdiAmiBE" >Matthew D Swank</a>,
+written in 2006.</p>
+
+<!--
+Local Variables:
+mode: markdown;
+fill column: 72;
+End;
+-->
+ ]]></description> </item><item> <title>Migrating to Coleslaw</title> <link>/posts/Migrating-to-Coleslaw.html</link> <pubDate>2016-12-27</pubDate> <author>8c6794b6</author> <guid isPermaLink="true">/posts/Migrating-to-Coleslaw.html</guid> <category><![CDATA[ git ]]></category><category><![CDATA[ lisp ]]></category><category><![CDATA[ coleslaw ]]></category><category><![CDATA[ commonlisp ]]></category><category><![CDATA[ web ]]></category> <description><![CDATA[ <p>Made updates to this gh-page. The site is still generated with static site
+generator, though the generator has changed
+from <a href="https://jaspervdj.be/hakyll/" >Hakyll</a>
+to <a href="http://github.com/kingcons/coleslaw" >Coleslaw</a>.  The site uses
+hand-made scratchy CSS with color scheme borrowed
+from <a href="http://ethanschoonover.com/solarized" >Solarized</a>.</p>
+
+<p>Coleslaw is a static site generator written in Common Lisp. As of the
+version included in Quicklisp 2016-12-08, Coleslaw supports plain
+HTML, <a href="https://daringfireball.net/projects/markdown/" >Markdown</a>
+and <a href="http://docutils.sourceforge.net/rst.html" >reStructuredText</a> for
+writing contents. Basic usage of Coleslaw is written
+in <a href="https://github.com/kingcons/coleslaw/blob/master/README.md" >README</a>
+file. Coleslaw uses <code>.coleslawrc</code> file to configure the site. The
+configuration file could be placed under the user's home directory (i.e.:
+<code>$HOME/.coleslawrc</code>), or under the directory containing all the other
+files for building the site (e.g.: <code>/path/to/my/site/.coleslawrc</code>).  It
+uses <a href="https://github.com/archimag/cl-closure-template" >Common Lisp port</a>
+of <a href="https://developers.google.com/closure/templates/" >Closure Templates</a>
+for defining theme templates. Markdown parser used by Coleslaw
+is <a href="https://github.com/3b/3bmd" >3bmd</a>.</p>
+
+<p>Coleslaw recommends the use of <em>plugins</em> to customize and extend the
+site. The <a href="../archive.html" >archive page of this site</a> and the pages
+showing the posts for each tag are built with simple plugins. Plugins are
+simply a Common Lisp source code, which should be a package with
+Coleslaw's naming convention. The naming convention is
+<code>coleslaw-NAME_OF_PLUGIN</code>, where <code>NAME_OF_PLUGIN</code> is name of the plugin
+(e.g.: Package name of the <code>archive</code> plugin is <code>coleslaw-archive</code>).
+Suppose that, the directory containing the static site is structured as
+below:</p>
+
+<pre><code>/path/to/my/site/
+├── .coleslawrc
+├── 404.page
+├── about.page
+├── plugins
+│   ├── archive.lisp
+│   └── tags.lisp
+├── posts
+│   ├── 2011-10-21-what-to-count-in-source-code.post
+│   ├── ...
+│   └── 2016-12-27-migrating-to-coleslaw.post
+├── static
+│   ├── bench-avl-insert-member.html
+│   └── ...
+├── the.archive
+└── themes
+    └── simple
+        ├── archive.tmpl
+        ├── base.tmpl
+        ├── css
+        │   └── style.css
+        ├── index.tmpl
+        ├── post.tmpl
+        └── tag.tmpl</code></pre>
+
+<p>And the contents of <code>.coleslawrc</code> similar to below:</p>
+
+<pre><code><span class="code"><span class="paren1">(<span class="code"><span class="keyword">:author</span> <span class="string">"8c6794b6"</span>
+ <span class="keyword">:charset</span> <span class="string">"UTF-8"</span>
+ <span class="keyword">:deploy-dir</span> <span class="string">"/path/for/deploy/"</span>
+ <span class="keyword">:domain</span> <span class="string">"http://my.url.com"</span>
+ <span class="keyword">:plugins</span> <span class="paren2">(<span class="code"><span class="paren3">(<span class="code">mathjax</span>)</span>
+           <span class="paren3">(<span class="code">static-pages</span>)</span>
+           <span class="paren3">(<span class="code">sitemap</span>)</span>
+           <span class="paren3">(<span class="code">archive</span>)</span>
+           <span class="paren3">(<span class="code">tags</span>)</span></span>)</span>
+ <span class="keyword">:routing</span> <span class="paren2">(<span class="code"><span class="paren3">(<span class="code"><span class="keyword">:post</span>           <span class="string">"posts/~a"</span></span>)</span>
+           <span class="paren3">(<span class="code"><span class="keyword">:tag-index</span>      <span class="string">"tag/~a"</span></span>)</span>
+           <span class="paren3">(<span class="code"><span class="keyword">:month-index</span>    <span class="string">"date/~a"</span></span>)</span>
+           <span class="paren3">(<span class="code"><span class="keyword">:numeric-index</span>  <span class="string">"~d"</span></span>)</span>
+           <span class="paren3">(<span class="code"><span class="keyword">:feed</span>           <span class="string">"~a.xml"</span></span>)</span>
+           <span class="paren3">(<span class="code"><span class="keyword">:tag-feed</span>       <span class="string">"tag/~a.xml"</span></span>)</span></span>)</span>
+ <span class="keyword">:staging-dir</span> <span class="string">"/tmp/coleslaw-staging/"</span>
+ <span class="keyword">:title</span> <span class="string">"8c6794b6.github.io"</span>
+ <span class="keyword">:theme</span> <span class="string">"simple"</span></span>)</span></span></code></pre>
+
+<p>By evaluating <code>(coleslaw:main #p&quot;/path/to/my/site&quot;)</code> in Common Lisp,
+coleslaw will generate the site contents. Some of the works done are:</p>
+
+<ul>
+<li><p>Load plugins. Coleslaw will look for <code>coleslaw-mathjax</code>,
+  <code>coleslaw-static-pages</code>, <code>coleslaw-sitemap</code>, <code>coleslaw-archive</code>, and
+  <code>coleslaw-tags</code> under <code>/path/to/my/site/plugins</code> and installed
+  coleslaw's source directory. Coleslaw seeks the plugins under the
+  directory named <code>plugins</code> of the site contents, and under the Coleslaw's
+  source directory. Plugins <code>mathjax</code>, <code>static-pages</code>, and <code>sitemap</code> are
+  bundled within default coleslaw installation.</p></li>
+<li><p>Search the specified theme. Coleslaw will search the
+  <code>/path/to/my/site/themes</code> first, then if not found, search for the theme
+  under Coleslaw's default installation. The name of the theme is
+  specified in the file <code>.coleslawrc</code>. There is
+  a
+  <a href="https://github.com/kingcons/coleslaw/blob/master/docs/themes.md" >guide</a>
+  for writing theme in the Coleslaw source. The theme <code>simple</code> is the one
+  used for this site.</p></li>
+<li><p>Copy the files under the directory named <code>static</code> in <code>/path/to/my/site</code>
+  to the deploy directory.</p></li>
+<li><p>Apply functions according to file extensions. Files for post pages have
+  <code>.post</code> in its file name, static pages has <code>.page</code>, and so on.</p></li>
+</ul>
+
+<p>For <code>archive</code> and <code>tags</code> plugins, which are made for this site, the source
+codes and templates are tightly coupled, so the plugins are not much
+reusable.</p>
+
+<!--
+Local Variables:
+mode: markdown;
+fill-column: 74;
+End:
+-->
+ ]]></description> </item><item> <title>Modifying commit attributes and editing hunk in git</title> <link>/posts/Modifying-commit-attributes-and-editing-hunk-in-git.html</link> <pubDate>2014-05-30</pubDate> <author>8c6794b6</author> <guid isPermaLink="true">/posts/Modifying-commit-attributes-and-editing-hunk-in-git.html</guid> <category><![CDATA[ git ]]></category> <description><![CDATA[ <h3>Changing author (or any other commit attribute) in existing commits</h3>
+
+<p>From
+<a href="http://stackoverflow.com/questions/750172/how-do-i-change-the-author-of-a-commit-in-git" >this SOF Q&amp;A</a>. Linked
+page was showing a scenario to change committer and author's name and email from
+old value to new value:</p>
+
+<pre><code>git filter-branch --commit-filter '
+    if [ "$GIT_COMMITTER_NAME" = "&lt;OLD_NAME&gt;" ];
     then
-        GIT_COMMITTER_NAME=&quot;&lt;NEW_NAME&gt;&quot;;
+        GIT_COMMITTER_NAME="&lt;NEW_NAME&gt;";
 
         # ...
         # modify other attributes if any, then...
 
-        git commit-tree &quot;$@&quot;;
+        git commit-tree "$@";
     else
-        git commit-tree &quot;$@&quot;;
-    fi&#39; HEAD</code></pre>
-<p>Comment in the answer was mentioning <code>git env-filter</code> will change all commits, but the one shown above allows conditional behaviour.</p>
-<p><strong>Editing hunk while adding commits</strong></p>
-<p>There are <a href="http://joaquin.windmuller.ca/post/35-selectively-select-changes-to-commit-with-git-or-imma-edit-your-hunk">couple</a> <a href="http://pivotallabs.com/git-add-e/">articles</a> mentioning it, including the <a href="http://git-scm.com/docs/git-add">git add man page</a>. Section <code>EDITING PATCHES</code> in the manual has detailed explanation.</p>
-  <div class="post_tags">
-    <strong>Tags: </strong><a href="/tags/git.html">git</a>
-  </div>
-</div>
-]]></description>
-    <pubDate>Fri, 30 May 2014 00:00:00 UT</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2014-05-30-git-modifying-commit-attributes-and-editing-hunk.html</guid>
-</item>
-<item>
-    <title>Syntax for building rose tree</title>
-    <link>http://8c6794b6.github.com/posts/2014-05-23-syntax-for-building-rose-trees.html</link>
-    <description><![CDATA[<h2>Syntax for building rose tree</h2>
-<div id="post_date">
-  <strong>May 23, 2014</strong>
-</div>
-<div id="post_body">
-  <p><strong><em>Introduction</em></strong></p>
+        git commit-tree "$@";
+    fi' HEAD</code></pre>
+
+<p>Comment in the answer was mentioning <code>git env-filter</code> will change all commits,
+but the one shown above allows conditional behaviour.</p>
+
+<h3>Editing hunk while adding commits</h3>
+
+<p>There are
+<a href="http://joaquin.windmuller.ca/post/35-selectively-select-changes-to-commit-with-git-or-imma-edit-your-hunk" >couple</a>
+<a href="http://pivotallabs.com/git-add-e/" >articles</a> mentioning it, including the
+<a href="http://git-scm.com/docs/git-add" >git add man page</a>. Section <code>EDITING PATCHES</code>
+in the manual has detailed explanation.</p>
+ ]]></description> </item><item> <title>Syntax for building rose tree</title> <link>/posts/Syntax-for-building-rose-tree.html</link> <pubDate>2014-05-23</pubDate> <author>8c6794b6</author> <guid isPermaLink="true">/posts/Syntax-for-building-rose-tree.html</guid> <category><![CDATA[ datastructure ]]></category><category><![CDATA[ dsl ]]></category><category><![CDATA[ haskell ]]></category><category><![CDATA[ tree ]]></category> <description><![CDATA[ <h3>Introduction</h3>
+
 <p>Suppose that, we want to write contents of following rose tree, by hand:</p>
+
 <pre><code>0
 |
 +- 1
@@ -68,197 +472,275 @@
 |  |
 |  `- 8
 |
-`- 9</code></pre>
-<p>Using <code>Data.Tree.Tree</code> from <code>containers</code> package for our purpose, the definition is:</p>
+`- 9
+</code></pre>
+
+<p>Using <code>Data.Tree.Tree</code> from <code>containers</code> package for our purpose, the
+definition is:</p>
+
 <pre><code>data Tree a = Node { rootLabel :: a
                    , subForest :: Forest a }
 
-type Forest a = [Tree a]</code></pre>
-<p>This document explores couple alternative ways to write rose tree data structure, mainly focusing on situations when writing by hand.</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE FlexibleContexts #-}</span>
-<span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE FlexibleInstances #-}</span>
-<span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE FunctionalDependencies #-}</span>
-<span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span>
-<span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE MultiParamTypeClasses #-}</span>
-<span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE TypeFamilies #-}</span>
-<span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE UndecidableInstances #-}</span>
-<span class="ot">&gt;</span> <span class="kw">module</span> <span class="dt">Main</span> <span class="kw">where</span>
-<span class="ot">&gt;</span> 
-<span class="ot">&gt;</span> <span class="kw">import</span> Data.Tree
-<span class="ot">&gt;</span> <span class="kw">import</span> Control.Monad.Writer</code></pre>
+type Forest a = [Tree a]
+</code></pre>
+
+<p>This document explores couple alternative ways to write rose tree data
+structure, mainly focusing on situations when writing by hand.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="comment">{-# LANGUAGE FlexibleContexts #-}</span>
+<span class="atom">&gt;</span> <span class="comment">{-# LANGUAGE FlexibleInstances #-}</span>
+<span class="atom">&gt;</span> <span class="comment">{-# LANGUAGE FunctionalDependencies #-}</span>
+<span class="atom">&gt;</span> <span class="comment">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span>
+<span class="atom">&gt;</span> <span class="comment">{-# LANGUAGE MultiParamTypeClasses #-}</span>
+<span class="atom">&gt;</span> <span class="comment">{-# LANGUAGE TypeFamilies #-}</span>
+<span class="atom">&gt;</span> <span class="comment">{-# LANGUAGE UndecidableInstances #-}</span>
+<span class="atom">&gt;</span> <span class="keyword">module</span> <span class="variable">Main</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Data</span><span class="atom">.</span><span class="variable">Tree</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Control</span><span class="atom">.</span><span class="variable">Monad</span><span class="atom">.</span><span class="variable">Writer</span></span></code></pre>
+
 <p>It could be nice if we can write the rose tree in single line like:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; t3&#39; ::</span> <span class="dt">Tree</span> <span class="dt">Int</span>
-<span class="ot">&gt;</span> t3&#39; <span class="fu">=</span> buildBranch <span class="fu">$</span> pnode <span class="dv">0</span> (pnode <span class="dv">1</span> <span class="dv">2</span>) <span class="dv">3</span> (pnode <span class="dv">4</span> (pnode <span class="dv">5</span> <span class="dv">6</span> <span class="dv">7</span>) <span class="dv">8</span>) <span class="dv">9</span></code></pre>
-<p>Here, <code>pnode</code> is a polyvariadic function, treating the first argument as element in itself, and rest as leaves. The code used for writing <code>t3'</code> is shown in Take 3.</p>
-<p><strong>Take 1: <em>The Straightforward Way</em></strong></p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> t3' <span class="keyword">::</span> <span class="variable">Tree</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> t3' <span class="keyword">=</span> buildBranch <span class="atom">$</span> pnode 0 <span class="paren1">(<span class="code">pnode 1 2</span>)</span> 3 <span class="paren1">(<span class="code">pnode 4 <span class="paren2">(<span class="code">pnode 5 6 7</span>)</span> 8</span>)</span> 9</span></code></pre>
+
+<p>Here, <code>pnode</code> is a polyvariadic function, treating the first argument as
+element in itself, and rest as leaves. The code used for writing <code>t3'</code>
+is shown in Take 3.</p>
+
+<h3>Take 1: The Straightforward Way</h3>
+
 <p>In straightforward way, sample tree may written like below:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; t0 ::</span> <span class="dt">Tree</span> <span class="dt">Int</span>
-<span class="ot">&gt;</span> t0 <span class="fu">=</span>
-<span class="ot">&gt;</span>     <span class="dt">Node</span> <span class="dv">0</span>
-<span class="ot">&gt;</span>     [ <span class="dt">Node</span> <span class="dv">1</span>
-<span class="ot">&gt;</span>       [ <span class="dt">Node</span> <span class="dv">2</span> [] ]
-<span class="ot">&gt;</span>     , <span class="dt">Node</span> <span class="dv">3</span> []
-<span class="ot">&gt;</span>     , <span class="dt">Node</span> <span class="dv">4</span>
-<span class="ot">&gt;</span>       [ <span class="dt">Node</span> <span class="dv">5</span>
-<span class="ot">&gt;</span>         [ <span class="dt">Node</span> <span class="dv">6</span> [], <span class="dt">Node</span> <span class="dv">7</span> []]
-<span class="ot">&gt;</span>       , <span class="dt">Node</span> <span class="dv">8</span> [] ]
-<span class="ot">&gt;</span>     , <span class="dt">Node</span> <span class="dv">9</span> [] ]</code></pre>
-<p>The sample tree containing 10 nodes already looks a bit cumbersome to write by hand. From my point of view, things making the typing hard were:</p>
-<ol type="1">
-<li>Use of CAPITAL LETTERS: In general typing lower case letters are easier than typing capital letters.</li>
-<li>Use of brackets and commas: I realised that when typing numbers and commas, my fingers are making quite a large movements on the keyboard. This coulbe be a problem arise when typing numbers only. Say, if <code>Char</code> was used instead of <code>Int</code>, may not be a problem.</li>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> t0 <span class="keyword">::</span> <span class="variable">Tree</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> t0 <span class="keyword">=</span>
+<span class="atom">&gt;</span>     <span class="variable">Node</span> 0
+<span class="atom">&gt;</span>     <span class="paren1">[<span class="code"> <span class="variable">Node</span> 1
+<span class="atom">&gt;</span>       <span class="paren2">[<span class="code"> <span class="variable">Node</span> 2 <span class="paren3">[<span class="code"></span>]</span> </span>]</span>
+<span class="atom">&gt;</span>     , <span class="variable">Node</span> 3 <span class="paren2">[<span class="code"></span>]</span>
+<span class="atom">&gt;</span>     , <span class="variable">Node</span> 4
+<span class="atom">&gt;</span>       <span class="paren2">[<span class="code"> <span class="variable">Node</span> 5
+<span class="atom">&gt;</span>         <span class="paren3">[<span class="code"> <span class="variable">Node</span> 6 <span class="paren4">[<span class="code"></span>]</span>, <span class="variable">Node</span> 7 <span class="paren4">[<span class="code"></span>]</span></span>]</span>
+<span class="atom">&gt;</span>       , <span class="variable">Node</span> 8 <span class="paren3">[<span class="code"></span>]</span> </span>]</span>
+<span class="atom">&gt;</span>     , <span class="variable">Node</span> 9 <span class="paren2">[<span class="code"></span>]</span> </span>]</span></span></code></pre>
+
+<p>The sample tree containing 10 nodes already looks a bit cumbersome to
+write by hand. From my point of view, things making the typing hard
+were:</p>
+
+<ol>
+<li>Use of CAPITAL LETTERS: In general typing lower case letters are
+easier than typing capital letters.</li>
+<li>Use of brackets and commas: I realised that when typing numbers and
+commas, my fingers are making quite a large movements on the
+keyboard. This coulbe be a problem arise when typing numbers only.
+Say, if <code>Char</code> was used instead of <code>Int</code>, may not be a problem.</li>
 </ol>
-<p><strong>Take 2: <em>Slightly Less Straightforward Way</em></strong></p>
-<p>Pretty simple replacement of type constructors with functions with lower case letters. Also using variant of <code>node</code> function named <code>leaf</code> which takes empty list as second argument of <code>Node</code>. The sample tree looks like below:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; t1 ::</span> <span class="dt">Tree</span> <span class="dt">Int</span>
-<span class="ot">&gt;</span> t1 <span class="fu">=</span>
-<span class="ot">&gt;</span>     node <span class="dv">0</span>
-<span class="ot">&gt;</span>     [ node <span class="dv">1</span>
-<span class="ot">&gt;</span>       [ leaf <span class="dv">2</span> ]
-<span class="ot">&gt;</span>     , leaf <span class="dv">3</span>
-<span class="ot">&gt;</span>     , node <span class="dv">4</span>
-<span class="ot">&gt;</span>       [ node <span class="dv">5</span>
-<span class="ot">&gt;</span>         [leaf <span class="dv">6</span>, leaf <span class="dv">7</span>]
-<span class="ot">&gt;</span>       , leaf <span class="dv">8</span> ]
-<span class="ot">&gt;</span>     , leaf <span class="dv">9</span> ]
-<span class="ot">&gt;</span> 
-<span class="ot">&gt; node ::</span> a <span class="ot">-&gt;</span> [<span class="dt">Tree</span> a] <span class="ot">-&gt;</span> <span class="dt">Tree</span> a
-<span class="ot">&gt;</span> node a fs <span class="fu">=</span> <span class="dt">Node</span> a fs
-<span class="ot">&gt;</span> 
-<span class="ot">&gt; leaf ::</span> a <span class="ot">-&gt;</span> <span class="dt">Tree</span> a
-<span class="ot">&gt;</span> leaf a <span class="fu">=</span> <span class="dt">Node</span> a []</code></pre>
+
+<h3>Take 2: Slightly Less Straightforward Way</h3>
+
+<p>Pretty simple replacement of type constructors with functions with lower
+case letters. Also using variant of <code>node</code> function named <code>leaf</code> which
+takes empty list as second argument of <code>Node</code>. The sample tree looks
+like below:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> t1 <span class="keyword">::</span> <span class="variable">Tree</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> t1 <span class="keyword">=</span>
+<span class="atom">&gt;</span>     node 0
+<span class="atom">&gt;</span>     <span class="paren1">[<span class="code"> node 1
+<span class="atom">&gt;</span>       <span class="paren2">[<span class="code"> leaf 2 </span>]</span>
+<span class="atom">&gt;</span>     , leaf 3
+<span class="atom">&gt;</span>     , node 4
+<span class="atom">&gt;</span>       <span class="paren2">[<span class="code"> node 5
+<span class="atom">&gt;</span>         <span class="paren3">[<span class="code">leaf 6, leaf 7</span>]</span>
+<span class="atom">&gt;</span>       , leaf 8 </span>]</span>
+<span class="atom">&gt;</span>     , leaf 9 </span>]</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> node <span class="keyword">::</span> a <span class="keyword">-&gt;</span> <span class="paren1">[<span class="code"><span class="variable">Tree</span> a</span>]</span> <span class="keyword">-&gt;</span> <span class="variable">Tree</span> a
+<span class="atom">&gt;</span> node a fs <span class="keyword">=</span> <span class="variable">Node</span> a fs
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> leaf <span class="keyword">::</span> a <span class="keyword">-&gt;</span> <span class="variable">Tree</span> a
+<span class="atom">&gt;</span> leaf a <span class="keyword">=</span> <span class="variable">Node</span> a <span class="paren1">[<span class="code"></span>]</span></span></code></pre>
+
 <p>Confirm that the two trees are identical:</p>
+
 <pre><code>ghci&gt; t1 == t0
-True</code></pre>
-<p>Now <code>t1</code> does not contain capital letters in its body, though nested lists might still look clumsy.</p>
-<p><strong>Take 3: <em>Reducing Commas And Brackets</em></strong></p>
-<p>Avoid typing commas and brackets (<code>,</code>, <code>[</code>, and <code>]</code>), let the <code>do notation</code> to take care of node grouping. The sample tree looks like below:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; t2 ::</span> <span class="dt">Tree</span> <span class="dt">Int</span>
-<span class="ot">&gt;</span> t2 <span class="fu">=</span> buildTree <span class="fu">$</span> <span class="kw">do</span>
-<span class="ot">&gt;</span>     mnode <span class="dv">0</span> <span class="fu">$</span> <span class="kw">do</span>
-<span class="ot">&gt;</span>         mnode <span class="dv">1</span> <span class="fu">$</span> <span class="kw">do</span>
-<span class="ot">&gt;</span>             mleaf <span class="dv">2</span>
-<span class="ot">&gt;</span>         mleaf <span class="dv">3</span>
-<span class="ot">&gt;</span>         mnode <span class="dv">4</span> <span class="fu">$</span> <span class="kw">do</span>
-<span class="ot">&gt;</span>             mnode <span class="dv">5</span> <span class="fu">$</span> <span class="kw">do</span>
-<span class="ot">&gt;</span>                 mleaf <span class="dv">6</span> <span class="fu">&gt;&gt;</span> mleaf <span class="dv">7</span>
-<span class="ot">&gt;</span>             mleaf <span class="dv">8</span>
-<span class="ot">&gt;</span>         mleaf <span class="dv">9</span></code></pre>
+True
+</code></pre>
+
+<p>Now <code>t1</code> does not contain capital letters in its body, though nested
+lists might still look clumsy.</p>
+
+<h3>Take 3: Reducing Commas And Brackets</h3>
+
+<p>Avoid typing commas and brackets (<code>,</code>, <code>[</code>, and <code>]</code>), let the
+<code>do notation</code> to take care of node grouping. The sample tree looks like
+below:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> t2 <span class="keyword">::</span> <span class="variable">Tree</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> t2 <span class="keyword">=</span> buildTree <span class="atom">$</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>     mnode 0 <span class="atom">$</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>         mnode 1 <span class="atom">$</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>             mleaf 2
+<span class="atom">&gt;</span>         mleaf 3
+<span class="atom">&gt;</span>         mnode 4 <span class="atom">$</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>             mnode 5 <span class="atom">$</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>                 mleaf 6 <span class="atom">&gt;&gt;</span> mleaf 7
+<span class="atom">&gt;</span>             mleaf 8
+<span class="atom">&gt;</span>         mleaf 9</span></code></pre>
+
 <p>Implementation is done with <code>Writer</code> monad with simple <code>DiffList</code>:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">newtype</span> <span class="dt">DiffList</span> a <span class="fu">=</span> <span class="dt">DiffList</span> ([a] <span class="ot">-&gt;</span> [a])
-<span class="ot">&gt;</span>     <span class="kw">deriving</span> (<span class="dt">Monoid</span>)
-<span class="ot">&gt;</span> 
-<span class="ot">&gt;</span> <span class="kw">instance</span> <span class="dt">Show</span> a <span class="ot">=&gt;</span> <span class="dt">Show</span> (<span class="dt">DiffList</span> a) <span class="kw">where</span>
-<span class="ot">&gt;</span>     show (<span class="dt">DiffList</span> f) <span class="fu">=</span> show (f [])
-<span class="ot">&gt;</span> 
-<span class="ot">&gt;</span> <span class="kw">type</span> <span class="dt">TreeBuilder</span> a <span class="fu">=</span> <span class="dt">Writer</span> (<span class="dt">DiffList</span> a) ()
-<span class="ot">&gt;</span> 
-<span class="ot">&gt; snoc ::</span> a <span class="ot">-&gt;</span> <span class="dt">DiffList</span> a
-<span class="ot">&gt;</span> snoc x <span class="fu">=</span> <span class="dt">DiffList</span> (x<span class="fu">:</span>)
-<span class="ot">&gt;</span> 
-<span class="ot">&gt; runTreeBuilder ::</span> <span class="dt">TreeBuilder</span> (<span class="dt">Tree</span> a) <span class="ot">-&gt;</span> [<span class="dt">Tree</span> a]
-<span class="ot">&gt;</span> runTreeBuilder builder <span class="fu">=</span> <span class="kw">case</span> runWriter builder <span class="kw">of</span> (_,<span class="dt">DiffList</span> f) <span class="ot">-&gt;</span> f []
-<span class="ot">&gt;</span> 
-<span class="ot">&gt; buildTree ::</span> <span class="dt">TreeBuilder</span> (<span class="dt">Tree</span> a) <span class="ot">-&gt;</span> <span class="dt">Tree</span> a
-<span class="ot">&gt;</span> buildTree builder <span class="fu">=</span> <span class="kw">case</span> runTreeBuilder builder <span class="kw">of</span>
-<span class="ot">&gt;</span>     []  <span class="ot">-&gt;</span> error <span class="st">&quot;buildTree: empty tree&quot;</span>
-<span class="ot">&gt;</span>     t<span class="fu">:</span>_ <span class="ot">-&gt;</span> t
-<span class="ot">&gt;</span> 
-<span class="ot">&gt; mnode ::</span> a <span class="ot">-&gt;</span> <span class="dt">TreeBuilder</span> (<span class="dt">Tree</span> a) <span class="ot">-&gt;</span> <span class="dt">TreeBuilder</span> (<span class="dt">Tree</span> a)
-<span class="ot">&gt;</span> mnode x builder <span class="fu">=</span> tell (snoc (<span class="dt">Node</span> x (runTreeBuilder builder)))
-<span class="ot">&gt;</span> 
-<span class="ot">&gt; mleaf ::</span> a <span class="ot">-&gt;</span> <span class="dt">TreeBuilder</span> (<span class="dt">Tree</span> a)
-<span class="ot">&gt;</span> mleaf x <span class="fu">=</span> tell (snoc (<span class="dt">Node</span> x []))</code></pre>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">newtype</span> <span class="variable">DiffList</span> a <span class="keyword">=</span> <span class="variable">DiffList</span> <span class="paren1">(<span class="code"><span class="paren2">[<span class="code">a</span>]</span> <span class="keyword">-&gt;</span> <span class="paren2">[<span class="code">a</span>]</span></span>)</span>
+<span class="atom">&gt;</span>     <span class="keyword">deriving</span> <span class="paren1">(<span class="code"><span class="variable">Monoid</span></span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">instance</span> <span class="variable">Show</span> a <span class="atom">=&gt;</span> <span class="variable">Show</span> <span class="paren1">(<span class="code"><span class="variable">DiffList</span> a</span>)</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>     show <span class="paren1">(<span class="code"><span class="variable">DiffList</span> f</span>)</span> <span class="keyword">=</span> show <span class="paren1">(<span class="code">f <span class="paren2">[<span class="code"></span>]</span></span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">type</span> <span class="variable">TreeBuilder</span> a <span class="keyword">=</span> <span class="variable">Writer</span> <span class="paren1">(<span class="code"><span class="variable">DiffList</span> a</span>)</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> snoc <span class="keyword">::</span> a <span class="keyword">-&gt;</span> <span class="variable">DiffList</span> a
+<span class="atom">&gt;</span> snoc x <span class="keyword">=</span> <span class="variable">DiffList</span> <span class="paren1">(<span class="code">x<span class="variable">:</span></span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> runTreeBuilder <span class="keyword">::</span> <span class="variable">TreeBuilder</span> <span class="paren1">(<span class="code"><span class="variable">Tree</span> a</span>)</span> <span class="keyword">-&gt;</span> <span class="paren1">[<span class="code"><span class="variable">Tree</span> a</span>]</span>
+<span class="atom">&gt;</span> runTreeBuilder builder <span class="keyword">=</span> <span class="keyword">case</span> runWriter builder <span class="keyword">of</span> <span class="paren1">(<span class="code">_,DiffList f</span>)</span> <span class="keyword">-&gt;</span> f <span class="paren1">[<span class="code"></span>]</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> buildTree <span class="keyword">::</span> <span class="variable">TreeBuilder</span> <span class="paren1">(<span class="code"><span class="variable">Tree</span> a</span>)</span> <span class="keyword">-&gt;</span> <span class="variable">Tree</span> a
+<span class="atom">&gt;</span> buildTree builder <span class="keyword">=</span> <span class="keyword">case</span> runTreeBuilder builder <span class="keyword">of</span>
+<span class="atom">&gt;</span>     <span class="paren1">[<span class="code"></span>]</span>  <span class="keyword">-&gt;</span> error <span class="string">"buildTree: empty tree"</span>
+<span class="atom">&gt;</span>     t<span class="variable">:</span>_ <span class="keyword">-&gt;</span> t
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> mnode <span class="keyword">::</span> a <span class="keyword">-&gt;</span> <span class="variable">TreeBuilder</span> <span class="paren1">(<span class="code"><span class="variable">Tree</span> a</span>)</span> <span class="keyword">-&gt;</span> <span class="variable">TreeBuilder</span> <span class="paren1">(<span class="code"><span class="variable">Tree</span> a</span>)</span>
+<span class="atom">&gt;</span> mnode x builder <span class="keyword">=</span> tell <span class="paren1">(<span class="code">snoc <span class="paren2">(<span class="code"><span class="variable">Node</span> x <span class="paren3">(<span class="code">runTreeBuilder builder</span>)</span></span>)</span></span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> mleaf <span class="keyword">::</span> a <span class="keyword">-&gt;</span> <span class="variable">TreeBuilder</span> <span class="paren1">(<span class="code"><span class="variable">Tree</span> a</span>)</span>
+<span class="atom">&gt;</span> mleaf x <span class="keyword">=</span> tell <span class="paren1">(<span class="code">snoc <span class="paren2">(<span class="code"><span class="variable">Node</span> x <span class="paren3">[<span class="code"></span>]</span></span>)</span></span>)</span></span></code></pre>
+
 <p>Checking whether that <code>t2</code> is identical to <code>t0</code>:</p>
+
 <pre><code>ghci&gt; t2 == t0
-True</code></pre>
-<p><strong>Take 4: <em>Removing Do Notation</em></strong></p>
-<p>Use of <code>do notation</code> has freed us from using commans and brackets, though introduced redundancy with <code>do</code>s. Introducing <code>Monoid</code> wrapper newtype and polyvariadic function to remove <code>do</code>s. Sample tree may looks like below:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; t3 ::</span> <span class="dt">Tree</span> <span class="dt">Int</span>
-<span class="ot">&gt;</span> t3 <span class="fu">=</span> buildBranch <span class="fu">$</span>
-<span class="ot">&gt;</span>     pnode <span class="dv">0</span>
-<span class="ot">&gt;</span>     (pnode <span class="dv">1</span>
-<span class="ot">&gt;</span>      (pleaf <span class="dv">2</span>))
-<span class="ot">&gt;</span>     (pleaf <span class="dv">3</span>)
-<span class="ot">&gt;</span>     (pnode <span class="dv">4</span>
-<span class="ot">&gt;</span>      (pnode <span class="dv">5</span>
-<span class="ot">&gt;</span>       (pleaf <span class="dv">6</span>) (pleaf <span class="dv">7</span>))
-<span class="ot">&gt;</span>      (pleaf <span class="dv">8</span>))
-<span class="ot">&gt;</span>     (pleaf <span class="dv">9</span>)</code></pre>
-<p>Now <code>do</code>s are removed, thought increase of parenthesis is making the code quite <em>lisp</em>y. Implementation is heavily inspired by <a href="http://okmij.org/ftp/Scheme/xml.html#typed-SXML">HSXML</a>.</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">newtype</span> <span class="dt">Branch</span> a <span class="fu">=</span> <span class="dt">Branch</span> (<span class="dt">DiffList</span> (<span class="dt">Tree</span> a))
-<span class="ot">&gt;</span>     <span class="kw">deriving</span> (<span class="dt">Show</span>, <span class="dt">Monoid</span>)
-<span class="ot">&gt;</span> 
-<span class="ot">&gt;</span> <span class="kw">class</span> <span class="dt">Monoid</span> acc <span class="ot">=&gt;</span> <span class="dt">BuildTree</span> acc out ret <span class="fu">|</span> ret <span class="ot">-&gt;</span> out <span class="kw">where</span>
-<span class="ot">&gt;     build ::</span> (acc<span class="ot">-&gt;</span>out) <span class="ot">-&gt;</span> acc <span class="ot">-&gt;</span> ret
-<span class="ot">&gt;</span> 
-<span class="ot">&gt;</span> <span class="kw">instance</span> <span class="dt">Monoid</span> acc <span class="ot">=&gt;</span> <span class="dt">BuildTree</span> acc (<span class="dt">Branch</span> a) (<span class="dt">Branch</span> a) <span class="kw">where</span>
-<span class="ot">&gt;</span>     build f acc <span class="fu">=</span> f acc
-<span class="ot">&gt;</span> 
-<span class="ot">&gt;</span> <span class="kw">instance</span> (<span class="dt">BuildTree</span> acc out ret, e <span class="fu">~</span> acc) <span class="ot">=&gt;</span> <span class="dt">BuildTree</span> acc out (e<span class="ot">-&gt;</span>ret) <span class="kw">where</span>
-<span class="ot">&gt;</span>     build f acc <span class="fu">=</span> \t <span class="ot">-&gt;</span> build f (acc <span class="fu">&lt;&gt;</span> t)
-<span class="ot">&gt;</span> 
-<span class="ot">&gt; pnode ::</span> <span class="dt">BuildTree</span> (<span class="dt">Branch</span> a) (<span class="dt">Branch</span> a) ret <span class="ot">=&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">Branch</span> a <span class="ot">-&gt;</span> ret
-<span class="ot">&gt;</span> pnode x <span class="fu">=</span> build (\(<span class="dt">Branch</span> (<span class="dt">DiffList</span> b)) <span class="ot">-&gt;</span> <span class="dt">Branch</span> (snoc (<span class="dt">Node</span> x (b []))))
-<span class="ot">&gt;</span> 
-<span class="ot">&gt; pleaf ::</span> a <span class="ot">-&gt;</span> <span class="dt">Branch</span> a
-<span class="ot">&gt;</span> pleaf x <span class="fu">=</span> <span class="dt">Branch</span> (snoc (<span class="dt">Node</span> x mempty))
-<span class="ot">&gt;</span> 
-<span class="ot">&gt; buildBranch ::</span> <span class="dt">Branch</span> a <span class="ot">-&gt;</span> <span class="dt">Tree</span> a
-<span class="ot">&gt;</span> buildBranch (<span class="dt">Branch</span> (<span class="dt">DiffList</span> ts)) <span class="fu">=</span> <span class="kw">case</span> ts [] <span class="kw">of</span>
-<span class="ot">&gt;</span>     []  <span class="ot">-&gt;</span> error <span class="st">&quot;buildBranch: empty branch&quot;</span>
-<span class="ot">&gt;</span>     t<span class="fu">:</span>_ <span class="ot">-&gt;</span> t</code></pre>
+True
+</code></pre>
+
+<h3>Take 4: Removing Do Notation</h3>
+
+<p>Use of <code>do notation</code> has freed us from using commans and brackets,
+though introduced redundancy with <code>do</code>s. Introducing <code>Monoid</code> wrapper
+newtype and polyvariadic function to remove <code>do</code>s. Sample tree may looks
+like below:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> t3 <span class="keyword">::</span> <span class="variable">Tree</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> t3 <span class="keyword">=</span> buildBranch <span class="atom">$</span>
+<span class="atom">&gt;</span>     pnode 0
+<span class="atom">&gt;</span>     <span class="paren1">(<span class="code">pnode 1
+<span class="atom">&gt;</span>      <span class="paren2">(<span class="code">pleaf 2</span>)</span></span>)</span>
+<span class="atom">&gt;</span>     <span class="paren1">(<span class="code">pleaf 3</span>)</span>
+<span class="atom">&gt;</span>     <span class="paren1">(<span class="code">pnode 4
+<span class="atom">&gt;</span>      <span class="paren2">(<span class="code">pnode 5
+<span class="atom">&gt;</span>       <span class="paren3">(<span class="code">pleaf 6</span>)</span> <span class="paren3">(<span class="code">pleaf 7</span>)</span></span>)</span>
+<span class="atom">&gt;</span>      <span class="paren2">(<span class="code">pleaf 8</span>)</span></span>)</span>
+<span class="atom">&gt;</span>     <span class="paren1">(<span class="code">pleaf 9</span>)</span></span></code></pre>
+
+<p>Now <code>do</code>s are removed, thought increase of parenthesis is making the
+code quite _lisp_y. Implementation is heavily inspired by
+<a href="http://okmij.org/ftp/Scheme/xml.html#typed-SXML" >HSXML</a>.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">newtype</span> <span class="variable">Branch</span> a <span class="keyword">=</span> <span class="variable">Branch</span> <span class="paren1">(<span class="code"><span class="variable">DiffList</span> <span class="paren2">(<span class="code"><span class="variable">Tree</span> a</span>)</span></span>)</span>
+<span class="atom">&gt;</span>     <span class="keyword">deriving</span> <span class="paren1">(<span class="code"><span class="variable">Show,</span> <span class="variable">Monoid</span></span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">class</span> <span class="variable">Monoid</span> acc <span class="atom">=&gt;</span> <span class="variable">BuildTree</span> acc out ret <span class="keyword">|</span> ret <span class="keyword">-&gt;</span> out <span class="keyword">where</span>
+<span class="atom">&gt;</span>     build <span class="keyword">::</span> <span class="paren1">(<span class="code">acc<span class="keyword">-&gt;</span>out</span>)</span> <span class="keyword">-&gt;</span> acc <span class="keyword">-&gt;</span> ret
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">instance</span> <span class="variable">Monoid</span> acc <span class="atom">=&gt;</span> <span class="variable">BuildTree</span> acc <span class="paren1">(<span class="code"><span class="variable">Branch</span> a</span>)</span> <span class="paren1">(<span class="code"><span class="variable">Branch</span> a</span>)</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>     build f acc <span class="keyword">=</span> f acc
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">instance</span> <span class="paren1">(<span class="code"><span class="variable">BuildTree</span> acc out ret, e <span class="keyword">~</span> acc</span>)</span> <span class="atom">=&gt;</span> <span class="variable">BuildTree</span> acc out <span class="paren1">(<span class="code">e<span class="keyword">-&gt;</span>ret</span>)</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>     build f acc <span class="keyword">=</span> <span class="keyword">\</span>t <span class="keyword">-&gt;</span> build f <span class="paren1">(<span class="code">acc <span class="atom">&lt;&gt;</span> t</span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> pnode <span class="keyword">::</span> <span class="variable">BuildTree</span> <span class="paren1">(<span class="code"><span class="variable">Branch</span> a</span>)</span> <span class="paren1">(<span class="code"><span class="variable">Branch</span> a</span>)</span> ret <span class="atom">=&gt;</span> a <span class="keyword">-&gt;</span> <span class="variable">Branch</span> a <span class="keyword">-&gt;</span> ret
+<span class="atom">&gt;</span> pnode x <span class="keyword">=</span> build <span class="paren1">(<span class="code"><span class="keyword">\</span><span class="paren2">(<span class="code"><span class="variable">Branch</span> <span class="paren3">(<span class="code"><span class="variable">DiffList</span> b</span>)</span></span>)</span> <span class="keyword">-&gt;</span> <span class="variable">Branch</span> <span class="paren2">(<span class="code">snoc <span class="paren3">(<span class="code"><span class="variable">Node</span> x <span class="paren4">(<span class="code">b <span class="paren5">[<span class="code"></span>]</span></span>)</span></span>)</span></span>)</span></span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> pleaf <span class="keyword">::</span> a <span class="keyword">-&gt;</span> <span class="variable">Branch</span> a
+<span class="atom">&gt;</span> pleaf x <span class="keyword">=</span> <span class="variable">Branch</span> <span class="paren1">(<span class="code">snoc <span class="paren2">(<span class="code"><span class="variable">Node</span> x mempty</span>)</span></span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> buildBranch <span class="keyword">::</span> <span class="variable">Branch</span> a <span class="keyword">-&gt;</span> <span class="variable">Tree</span> a
+<span class="atom">&gt;</span> buildBranch <span class="paren1">(<span class="code"><span class="variable">Branch</span> <span class="paren2">(<span class="code"><span class="variable">DiffList</span> ts</span>)</span></span>)</span> <span class="keyword">=</span> <span class="keyword">case</span> ts <span class="paren1">[<span class="code"></span>]</span> <span class="keyword">of</span>
+<span class="atom">&gt;</span>     <span class="paren1">[<span class="code"></span>]</span>  <span class="keyword">-&gt;</span> error <span class="string">"buildBranch: empty branch"</span>
+<span class="atom">&gt;</span>     t<span class="variable">:</span>_ <span class="keyword">-&gt;</span> t</span></code></pre>
+
 <p>Checking again:</p>
+
 <pre><code>ghci&gt; t3 == t0
-True</code></pre>
-<p><strong><em>Some Thoughts</em></strong></p>
-<p>Other data type than <code>Data.Tree.Tree</code> could be used, though haven’t explored.</p>
-<p>In take 2, monadic approach may easy to combine with other monads with <code>mtl</code>. For instance, use <code>State</code> monad and count the number of leaves while traversing.</p>
-<p>In take 3, by defining <code>Branch</code> as instance of <code>Num class</code>, <code>t3</code> could rewritten in single line, which is shown as <code>t3'</code> at the beginning of this document:</p>
-<pre><code>t3&#39; = buildBranch $ pnode 0 (pnode 1 2) 3 (pnode 4 (pnode 5 6 7) 8) 9</code></pre>
+True
+</code></pre>
+
+<h3>Some Thoughts</h3>
+
+<p>Other data type than <code>Data.Tree.Tree</code> could be used, though haven't
+explored.</p>
+
+<p>In take 2, monadic approach may easy to combine with other monads with
+<code>mtl</code>. For instance, use <code>State</code> monad and count the number of leaves
+while traversing.</p>
+
+<p>In take 3, by defining <code>Branch</code> as instance of <code>Num class</code>, <code>t3</code> could
+rewritten in single line, which is shown as <code>t3'</code> at the beginning of
+this document:</p>
+
+<pre><code>t3' = buildBranch $ pnode 0 (pnode 1 2) 3 (pnode 4 (pnode 5 6 7) 8) 9
+</code></pre>
+
 <p>Checking:</p>
-<pre><code>ghci&gt; t3&#39; == t0
-True</code></pre>
-<p>Purpose of making as <code>Num</code> instance is merely for helping syntax. Other functions than <code>fromInteger</code> may left <code>undefined</code>:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">instance</span> <span class="dt">Num</span> a <span class="ot">=&gt;</span> <span class="dt">Num</span> (<span class="dt">Branch</span> a) <span class="kw">where</span>
-<span class="ot">&gt;</span>     (<span class="fu">+</span>)         <span class="fu">=</span> undefined
-<span class="ot">&gt;</span>     (<span class="fu">*</span>)         <span class="fu">=</span> undefined
-<span class="ot">&gt;</span>     negate      <span class="fu">=</span> undefined
-<span class="ot">&gt;</span>     abs         <span class="fu">=</span> undefined
-<span class="ot">&gt;</span>     signum      <span class="fu">=</span> undefined
-<span class="ot">&gt;</span>     fromInteger <span class="fu">=</span> pleaf <span class="fu">.</span> fromInteger</code></pre>
-<p>GHC has restriction in context reduction stack, as of ghc-7.8.2, default size is 21. Polyvariadic function taking more than 22 arguments needs <code>-fcontext-stack=N</code> option and increase the context stack with using large context stack size <em>N</em>.</p>
-  <div class="post_tags">
-    <strong>Tags: </strong><a href="/tags/datastructure.html">datastructure</a>, <a href="/tags/dsl.html">dsl</a>, <a href="/tags/haskell.html">haskell</a>, <a href="/tags/tree.html">tree</a>
-  </div>
-</div>
-]]></description>
-    <pubDate>Fri, 23 May 2014 00:00:00 UT</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2014-05-23-syntax-for-building-rose-trees.html</guid>
-</item>
-<item>
-    <title>French input methods and œ</title>
-    <link>http://8c6794b6.github.com/posts/2013-11-28-french-input-methods-and-oe.html</link>
-    <description><![CDATA[<h2>French input methods and œ</h2>
-<div id="post_date">
-  <strong>November 28, 2013</strong>
-</div>
-<div id="post_body">
-  <p>Notes about typing français in emacs with English keyboard.</p>
-<p>Change input method with <code>C-x RET C-\</code> or <code>M-x set-input-method</code>. There are three french input methods for English keyboard: <code>french-prefix</code>, <code>french-postfix</code>, and <code>french-alt-postfix</code>. <code>french-prefix</code> input method will let the accent to be typed before alphabets, e.g: to type <code>ç</code>, type <code>,c</code>. In <code>french-postfix</code> input method, type <code>c,</code>. Help of <code>french-prefix</code> input method, which shown with <code>C-h I</code> or <code>M-x describe-input-method</code>, had a nice table:</p>
+
+<pre><code>ghci&gt; t3' == t0
+True
+</code></pre>
+
+<p>Purpose of making as <code>Num</code> instance is merely for helping syntax. Other
+functions than <code>fromInteger</code> may left <code>undefined</code>:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">instance</span> <span class="variable">Num</span> a <span class="atom">=&gt;</span> <span class="variable">Num</span> <span class="paren1">(<span class="code"><span class="variable">Branch</span> a</span>)</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>     <span class="paren1">(<span class="code"><span class="atom">+</span></span>)</span>         <span class="keyword">=</span> undefined
+<span class="atom">&gt;</span>     <span class="paren1">(<span class="code"><span class="atom">*</span></span>)</span>         <span class="keyword">=</span> undefined
+<span class="atom">&gt;</span>     negate      <span class="keyword">=</span> undefined
+<span class="atom">&gt;</span>     abs         <span class="keyword">=</span> undefined
+<span class="atom">&gt;</span>     signum      <span class="keyword">=</span> undefined
+<span class="atom">&gt;</span>     fromInteger <span class="keyword">=</span> pleaf <span class="atom">.</span> fromInteger</span></code></pre>
+
+<p>GHC has restriction in context reduction stack, as of ghc-7.8.2, default
+size is 21. Polyvariadic function taking more than 22 arguments needs
+<code>-fcontext-stack=N</code> option and increase the context stack with using
+large context stack size <em>N</em>.</p>
+ ]]></description> </item><item> <title>French input methods and œ</title> <link>/posts/French-input-methods-and-œ.html</link> <pubDate>2013-11-28</pubDate> <author>8c6794b6</author> <guid isPermaLink="true">/posts/French-input-methods-and-œ.html</guid> <category><![CDATA[ emacs ]]></category><category><![CDATA[ french ]]></category> <description><![CDATA[ <p>Notes about typing français in emacs with English keyboard.</p>
+
+<p>Change input method with <code>C-x RET C-\</code> or <code>M-x set-input-method</code>. There are
+three french input methods for English keyboard: <code>french-prefix</code>,
+<code>french-postfix</code>, and <code>french-alt-postfix</code>. <code>french-prefix</code> input method will
+let the accent to be typed before alphabets, e.g: to type <code>ç</code>, type <code>,c</code>. In
+<code>french-postfix</code> input method, type <code>c,</code>. Help of <code>french-prefix</code> input method,
+which shown with <code>C-h I</code> or <code>M-x describe-input-method</code>, had a nice table:</p>
+
 <pre><code>Input method: french-prefix (mode line indicator:FR&gt;)
 
 French (Français) input method with prefix modifiers
 
     effect   | prefix | examples
  ------------+--------+----------
-    acute    |   &#39;    | &#39;e -&gt; é
+    acute    |   '    | 'e -&gt; é
     grave    |   `    | `a -&gt; à
   circumflex |   ^    | ^a -&gt; â
   diaeresis  |   &quot;    | &quot;i -&gt; ï
    cedilla   | ~ or , | ~c -&gt; ç   ,c -&gt; ç
-   symbol    |   ~    | ~&gt; -&gt; »   ~&lt; -&gt; «</code></pre>
-<p>Characters with accents were able to type with these two modes, though the character <code>œ</code> was not. Found an entry in emacs-devel thread posted in 2008 which mentioning <a href="http://lists.gnu.org/archive/html/emacs-devel/2008-10/msg00760.html">french ç and œ</a>. To type in œ, use <code>latin-postfix</code> or <code>latin-prefix</code> input method, the key sequence to type <code>œ</code> is <code>o/2</code> and <code>/o2</code>, respectively. <code>latin-prefix</code> and <code>latin-postfix</code> input methods contains those characters typed in with french input methods:</p>
+   symbol    |   ~    | ~&gt; -&gt; »   ~&lt; -&gt; «
+</code></pre>
+
+<p>Characters with accents were able to type with these two modes, though the
+character <code>œ</code> was not. Found an entry in emacs-devel thread posted in 2008 which
+mentioning <a href="http://lists.gnu.org/archive/html/emacs-devel/2008-10/msg00760.html" >french ç and œ</a>. To type in œ, use <code>latin-postfix</code> or
+<code>latin-prefix</code> input method, the key sequence to type <code>œ</code> is <code>o/2</code> and <code>/o2</code>,
+respectively. <code>latin-prefix</code> and <code>latin-postfix</code> input methods contains those
+characters typed in with french input methods:</p>
+
 <pre><code>Input method: latin-postfix (mode line indicator:L&lt;)
 
 Latin character input method with postfix modifiers.
@@ -267,7 +749,7 @@ of characters from a single Latin-N charset.
 
              | postfix | examples
  ------------+---------+----------
-  acute      |    &#39;    | a&#39; -&gt; á
+  acute      |    '    | a' -&gt; á
   grave      |    `    | a` -&gt; à
   circumflex |    ^    | a^ -&gt; â
   diaeresis  |    &quot;    | a&quot; -&gt; ä
@@ -284,322 +766,402 @@ of characters from a single Latin-N charset.
   others     |    /    | s/ -&gt; ß   ?/ -&gt; ¿   !/ -&gt; ¡   // -&gt; °
              | various | &lt;&lt; -&gt; «   &gt;&gt; -&gt; »   o_ -&gt; º   a_ -&gt; ª
 
-Doubling the postfix separates the letter and postfix: e.g. a&#39;&#39; -&gt; a&#39;</code></pre>
-  <div class="post_tags">
-    <strong>Tags: </strong><a href="/tags/emacs.html">emacs</a>, <a href="/tags/french.html">french</a>
-  </div>
-</div>
-]]></description>
-    <pubDate>Thu, 28 Nov 2013 00:00:00 UT</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2013-11-28-french-input-methods-and-oe.html</guid>
-</item>
-<item>
-    <title>Notes about travis and ghc</title>
-    <link>http://8c6794b6.github.com/posts/2013-11-21-notes-about-travis-and-ghc.html</link>
-    <description><![CDATA[<h2>Notes about travis and ghc</h2>
-<div id="post_date">
-  <strong>November 21, 2013</strong>
-</div>
-<div id="post_body">
-  <p>Brief note about current status of ghc and <a href="http://travis-ci.org">travis-ci</a>.</p>
-<p>Recently made a build hook for continuous integration with travis, in one of the repository I have in github, by following <a href="http://about.travis-ci.org/docs/user/getting-started/">getting started guide</a>. The package is requiring <code>base &gt;= 4.6.0</code>, which is from <code>ghc-7.6.*</code>, though the version used in travis build was <code>base &gt;= 4.5.*</code>, which is from <code>ghc-7.4.1</code>. There is <a href="https://github.com/travis-ci/travis-ci/issues/882">an issue in github</a> mentioning ghc version used by travis builds.</p>
-<p>It is still possible to use <code>CPP</code>, <code>#ifdef</code>s and choose the appropriate dependency package version. Might be an opportunity to do this, though I’m not sure the package worth for having that much maintenance efforts.</p>
-  <div class="post_tags">
-    <strong>Tags: </strong><a href="/tags/ci.html">ci</a>, <a href="/tags/ghc.html">ghc</a>, <a href="/tags/git.html">git</a>, <a href="/tags/travis.html">travis</a>
-  </div>
-</div>
-]]></description>
-    <pubDate>Thu, 21 Nov 2013 00:00:00 UT</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2013-11-21-notes-about-travis-and-ghc.html</guid>
-</item>
-<item>
-    <title>Updating gh-pages</title>
-    <link>http://8c6794b6.github.com/posts/2013-11-19-updating-gh-pages.html</link>
-    <description><![CDATA[<h2>Updating gh-pages</h2>
-<div id="post_date">
-  <strong>November 19, 2013</strong>
-</div>
-<div id="post_body">
-  <p>Made couple updates to this gh-pages.</p>
-<p>Migrated to hakyll 4. Had a thought for doing this but haven’t done for … perhaps more than a year. As <a href="http://jaspervdj.be/hakyll/tutorials/hakyll-3-to-hakyll4-migration-guide.html">already</a> <a href="http://blog.clement.delafargue.name/posts/2013-01-17-hakyll-4.html">mentioned</a>, <code>Compiler</code> is not an instance of <code>Arrow</code>, instead an instance of <code>Monad</code>, <code>Page</code> and MetaCompilers have been removed, and couple more changes.</p>
-<p>Replaced “8c6794b6.github.com” to “8c6794b6.github.io”, since URLs for gh-pages have changed. According to <a href="https://help.github.com/articles/user-organization-and-project-pages">User, Organization and Project Pages</a> from GitHub Help, repository with <code>*.github.io</code> is the latest naming scheme.</p>
-<p>Update <a href="/404.html">404 page</a>, showing bigger lambda face now.</p>
-  <div class="post_tags">
-    <strong>Tags: </strong><a href="/tags/git.html">git</a>, <a href="/tags/hakyll.html">hakyll</a>, <a href="/tags/haskell.html">haskell</a>, <a href="/tags/web.html">web</a>
-  </div>
-</div>
-]]></description>
-    <pubDate>Tue, 19 Nov 2013 00:00:00 UT</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2013-11-19-updating-gh-pages.html</guid>
-</item>
-<item>
-    <title>Benchmarking insert and member with AVL tree</title>
-    <link>http://8c6794b6.github.com/posts/2012-12-17-benchmarking-insertion-with-avl-tree.html</link>
-    <description><![CDATA[<h2>Benchmarking insert and member with AVL tree</h2>
-<div id="post_date">
-  <strong>December 17, 2012</strong>
-</div>
-<div id="post_body">
-  <p>While I was reading <a href="https://en.wikipedia.org/wiki/AVL_tree">AVL Tree</a> page on wikipedia, it motivated me enough to write the implementation in Haskell.</p>
-<p>There are couple AVL Tree implementations already exist: <a href="http://hackage.haskell.org/package/AvlTree">a package uploaded to hackage</a>, <a href="https://gist.github.com/109729">gist snippet</a>, and <a href="http://www.okmij.org/ftp/Haskell/types.html#stanamic-AVL">polymorphic stanamically balanced AVL tree</a>. As for classic data structure and algorithm exercise, decided to write a simple implementation.</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE BangPatterns #-}</span>
-<span class="ot">&gt;</span> <span class="kw">module</span> <span class="dt">AVL</span> <span class="kw">where</span></code></pre>
-<p>For taking benchmarks and comparison with <code>Data.Map</code> from container package. None of these modules are used in code implementing AVL.</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">import</span> Control.DeepSeq (NFData(..), deepseq)
-<span class="ot">&gt;</span> <span class="kw">import</span> Criterion.Main
-<span class="ot">&gt;</span> <span class="kw">import</span> System.Random
-<span class="ot">&gt;</span> <span class="kw">import</span> <span class="kw">qualified</span> Data.Map <span class="kw">as</span> M</code></pre>
-<p>Like other binary trees, AVL tree has leaf constructor and node constructor with right and left branch, with a field to hold height of the node:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">data</span> <span class="dt">AVL</span> a
-<span class="ot">&gt;</span>   <span class="fu">=</span> <span class="dt">Node</span> <span class="ot">{-# UNPACK #-}</span> <span class="fu">!</span><span class="dt">Int</span> <span class="fu">!</span>(<span class="dt">AVL</span> a) <span class="fu">!</span>a <span class="fu">!</span>(<span class="dt">AVL</span> a)
-<span class="ot">&gt;</span>   <span class="fu">|</span> <span class="dt">Leaf</span>
-<span class="ot">&gt;</span>   <span class="kw">deriving</span> (<span class="dt">Eq</span>, <span class="dt">Show</span>)</code></pre>
-<p>There was a note about order of constructors written in comments of <a href="http://www.haskell.org/ghc/docs/latest/html/libraries/containers/src/Data-Map-Base.html">Data.Map.Base</a>:</p>
+Doubling the postfix separates the letter and postfix: e.g. a'' -&gt; a'
+</code></pre>
+ ]]></description> </item><item> <title>Notes about travis and ghc</title> <link>/posts/Notes-about-travis-and-ghc.html</link> <pubDate>2013-11-21</pubDate> <author>8c6794b6</author> <guid isPermaLink="true">/posts/Notes-about-travis-and-ghc.html</guid> <category><![CDATA[ ci ]]></category><category><![CDATA[ ghc ]]></category><category><![CDATA[ git ]]></category><category><![CDATA[ travis ]]></category> <description><![CDATA[ <p>Brief note about current status of ghc and <a href="http://travis-ci.org" >travis-ci</a>.</p>
+
+<p>Recently made a build hook for continuous integration with travis, in one of the
+repository I have in github, by following
+<a href="http://about.travis-ci.org/docs/user/getting-started/" >getting started guide</a>.
+The package is requiring <code>base &gt;= 4.6.0</code>, which is from <code>ghc-7.6.*</code>, though the
+version used in travis build was <code>base &gt;= 4.5.*</code>, which is from <code>ghc-7.4.1</code>.
+There is <a href="https://github.com/travis-ci/travis-ci/issues/882" >an issue in github</a>
+mentioning ghc version used by travis builds.</p>
+
+<p>It is still possible to use <code>CPP</code>, <code>#ifdef</code>s and choose the appropriate
+dependency package version. Might be an opportunity to do this, though I'm not
+sure the package worth for having that much maintenance efforts.</p>
+ ]]></description> </item><item> <title>Updating gh-pages</title> <link>/posts/Updating-gh-pages.html</link> <pubDate>2013-11-19</pubDate> <author>8c6794b6</author> <guid isPermaLink="true">/posts/Updating-gh-pages.html</guid> <category><![CDATA[ git ]]></category><category><![CDATA[ hakyll ]]></category><category><![CDATA[ haskell ]]></category><category><![CDATA[ web ]]></category> <description><![CDATA[ <p>Made couple updates to this gh-pages.</p>
+
+<p>Migrated to hakyll 4. Had a thought for doing this but haven't done for
+... perhaps more than a year. As
+<a href="http://jaspervdj.be/hakyll/tutorials/hakyll-3-to-hakyll4-migration-guide.html" >already</a>
+<a href="http://blog.clement.delafargue.name/posts/2013-01-17-hakyll-4.html" >mentioned</a>,
+<code>Compiler</code> is not an instance of <code>Arrow</code>, instead an instance of <code>Monad</code>, <code>Page</code>
+and MetaCompilers have been removed, and couple more changes.</p>
+
+<p>Replaced &quot;8c6794b6.github.com&quot; to &quot;8c6794b6.github.io&quot;, since URLs for gh-pages
+have changed. According to
+<a href="https://help.github.com/articles/user-organization-and-project-pages" >User, Organization and Project Pages</a>
+from GitHub Help, repository with <code>*.github.io</code> is the latest naming scheme.</p>
+
+<p>Update <a href="/404.html" >404 page</a>, showing bigger lambda face now.</p>
+ ]]></description> </item><item> <title>Benchmarking insert and member with AVL tree</title> <link>/posts/Benchmarking-insert-and-member-with-AVL-tree.html</link> <pubDate>2012-12-17</pubDate> <author>8c6794b6</author> <guid isPermaLink="true">/posts/Benchmarking-insert-and-member-with-AVL-tree.html</guid> <category><![CDATA[ haskell ]]></category><category><![CDATA[ tree ]]></category><category><![CDATA[ datastructure ]]></category><category><![CDATA[ algorithm ]]></category> <description><![CDATA[ <p>While I was reading <a href="https://en.wikipedia.org/wiki/AVL_tree" >AVL Tree</a>
+page on wikipedia, it motivated me enough to write the implementation in
+Haskell.</p>
+
+<p>There are several AVL Tree implementations already exist: <a href="http://hackage.haskell.org/package/AvlTree" >a package
+uploaded to hackage</a>, <a href="https://gist.github.com/109729" >gist
+snippet</a>, and <a href="http://www.okmij.org/ftp/Haskell/types.html#stanamic-AVL" >polymorphic stanamically
+balanced AVL
+tree</a>. As for
+classic data structure and algorithm exercise, decided to write a simple
+implementation.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="comment">{-# LANGUAGE BangPatterns #-}</span>
+<span class="atom">&gt;</span> <span class="keyword">module</span> <span class="variable">AVL</span> <span class="keyword">where</span></span></code></pre>
+
+<p>For taking benchmarks and comparison with <code>Data.Map</code> from container
+package. None of these modules are used in code implementing AVL.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Control</span><span class="atom">.</span><span class="variable">DeepSeq</span> <span class="paren1">(<span class="code"><span class="variable">NFData</span><span class="paren2">(<span class="code"><span class="keyword">..</span></span>)</span>, deepseq</span>)</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Criterion</span><span class="atom">.</span><span class="variable">Main</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">System</span><span class="atom">.</span><span class="variable">Random</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> qualified <span class="variable">Data</span><span class="atom">.</span><span class="variable">Map</span> as <span class="variable">M</span></span></code></pre>
+
+<p>Like other binary trees, AVL tree has leaf constructor and node
+constructor with right and left branch, with a field to hold height of
+the node:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">data</span> <span class="variable">AVL</span> a
+<span class="atom">&gt;</span>   <span class="keyword">=</span> <span class="variable">Node</span> <span class="comment">{-# UNPACK #-}</span> <span class="atom">!</span><span class="variable">Int</span> <span class="atom">!</span><span class="paren1">(<span class="code"><span class="variable">AVL</span> a</span>)</span> <span class="atom">!</span>a <span class="atom">!</span><span class="paren1">(<span class="code"><span class="variable">AVL</span> a</span>)</span>
+<span class="atom">&gt;</span>   <span class="keyword">|</span> <span class="variable">Leaf</span>
+<span class="atom">&gt;</span>   <span class="keyword">deriving</span> <span class="paren1">(<span class="code"><span class="variable">Eq,</span> <span class="variable">Show</span></span>)</span></span></code></pre>
+
+<p>There was a note about order of constructors written in comments of
+<a href="http://www.haskell.org/ghc/docs/latest/html/libraries/containers/src/Data-Map-Base.html" >Data.Map.Base</a>:</p>
+
 <pre><code>When type has 2 constructors, a forward conditional jump is made
-when successfully matching second constructor, in GHC 7.0.</code></pre>
-<p>This was still true in GHC 7.6.1, the version used at the time of writing. This is the reason why <code>Node</code> constructor came before the <code>Leaf</code> constructor.</p>
+when successfully matching second constructor, in GHC 7.0.
+</code></pre>
+
+<p>This was still true in GHC 7.6.1, the version used at the time of
+writing. This is the reason why <code>Node</code> constructor came before the
+<code>Leaf</code> constructor.</p>
+
 <p>An alias for leaf node:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; empty ::</span> <span class="dt">AVL</span> a
-<span class="ot">&gt;</span> empty <span class="fu">=</span> <span class="dt">Leaf</span>
-<span class="ot">&gt;</span> <span class="ot">{-# INLINEABLE empty #-}</span></code></pre>
-<p>Height of tree. Defining height of <code>Leaf</code> node as ‘0’.</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; height ::</span> <span class="dt">AVL</span> a <span class="ot">-&gt;</span> <span class="dt">Int</span>
-<span class="ot">&gt;</span> height t <span class="fu">=</span> <span class="kw">case</span> t <span class="kw">of</span>
-<span class="ot">&gt;</span>   <span class="dt">Leaf</span>          <span class="ot">-&gt;</span> <span class="dv">0</span>
-<span class="ot">&gt;</span>   <span class="dt">Node</span> <span class="fu">!</span>n _ _ _ <span class="ot">-&gt;</span> n
-<span class="ot">&gt;</span> <span class="ot">{-# INLINE height #-}</span></code></pre>
-<p>Insert element to AVL tree. This function calls <code>rebalance</code> after inserting new element. Also, new element is strictly evaluated inside the local function <code>go</code>.</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; insert ::</span> <span class="dt">Ord</span> a <span class="ot">=&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">AVL</span> a <span class="ot">-&gt;</span> <span class="dt">AVL</span> a
-<span class="ot">&gt;</span> insert <span class="fu">=</span> go <span class="kw">where</span>
-<span class="ot">&gt;   go ::</span> <span class="dt">Ord</span> a <span class="ot">=&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">AVL</span> a <span class="ot">-&gt;</span> <span class="dt">AVL</span> a
-<span class="ot">&gt;</span>   go <span class="fu">!</span>n <span class="dt">Leaf</span>             <span class="fu">=</span> <span class="dt">Node</span> <span class="dv">1</span> <span class="dt">Leaf</span> n <span class="dt">Leaf</span>
-<span class="ot">&gt;</span>   go <span class="fu">!</span>n (<span class="dt">Node</span> h l <span class="fu">!</span>n&#39; r) <span class="fu">=</span> <span class="kw">case</span> compare n&#39; n <span class="kw">of</span>
-<span class="ot">&gt;</span>     <span class="dt">LT</span> <span class="ot">-&gt;</span> rebalance <span class="fu">$</span> <span class="dt">Node</span> h l n&#39; (insert n r)
-<span class="ot">&gt;</span>     _  <span class="ot">-&gt;</span> rebalance <span class="fu">$</span> <span class="dt">Node</span> h (insert n l) n&#39; r
-<span class="ot">&gt;</span> <span class="ot">{-# INLINEABLE insert #-}</span></code></pre>
-<p>A function to check whether given element is a member of tree or not. Given element and element of pattern matched node are, again strictly evaluated.</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; member ::</span> (<span class="dt">Ord</span> a, <span class="dt">Eq</span> a) <span class="ot">=&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">AVL</span> a <span class="ot">-&gt;</span> <span class="dt">Bool</span>
-<span class="ot">&gt;</span> member _  <span class="dt">Leaf</span>           <span class="fu">=</span> <span class="dt">False</span>
-<span class="ot">&gt;</span> member <span class="fu">!</span>x (<span class="dt">Node</span> _ l <span class="fu">!</span>y r) <span class="fu">=</span> <span class="kw">case</span> compare x y <span class="kw">of</span>
-<span class="ot">&gt;</span>   <span class="dt">LT</span> <span class="ot">-&gt;</span> member x l
-<span class="ot">&gt;</span>   <span class="dt">GT</span> <span class="ot">-&gt;</span> member x r
-<span class="ot">&gt;</span>   <span class="dt">EQ</span> <span class="ot">-&gt;</span> <span class="dt">True</span>
-<span class="ot">&gt;</span> <span class="ot">{-# INLINEABLE member #-}</span></code></pre>
-<p>There could be more functions, delete, merge, etc. But I’m little bit lazy to write them in this post.</p>
-<p>Here comes the balancing function. It rebalances tree, four cases are considered: <em>right-right</em>, <em>right-left</em>, <em>left-left</em>, and <em>left-right</em>.</p>
-<p>Firstly, comparing with <code>Leaf</code> node, which is not needed to rebalance any more. Then the height from left node and right node are compared, leading to next case.</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; rebalance ::</span> <span class="dt">AVL</span> a <span class="ot">-&gt;</span> <span class="dt">AVL</span> a
-<span class="ot">&gt;</span> rebalance <span class="dt">Leaf</span>                 <span class="fu">=</span> <span class="dt">Leaf</span>
-<span class="ot">&gt;</span> rebalance n1<span class="fu">@</span>(<span class="dt">Node</span> _ l1 x1 r1) <span class="fu">=</span> <span class="kw">case</span> compare hL1 hR1 <span class="kw">of</span>
-<span class="ot">&gt;</span>   <span class="dt">LT</span> <span class="ot">-&gt;</span> rightIsHeavy
-<span class="ot">&gt;</span>   <span class="dt">GT</span> <span class="ot">-&gt;</span> leftIsHeavy
-<span class="ot">&gt;</span>   <span class="dt">EQ</span> <span class="ot">-&gt;</span> updateHeight n1
-<span class="ot">&gt;</span>   <span class="kw">where</span>
-<span class="ot">&gt;</span>     hL1 <span class="fu">=</span> height l1
-<span class="ot">&gt;</span>     hR1 <span class="fu">=</span> height r1</code></pre>
-<p>When right node is heavy, we compare the left node and right node again, and perform the rotations.</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span>     rightIsHeavy <span class="fu">=</span> <span class="kw">case</span> r1 <span class="kw">of</span>
-<span class="ot">&gt;</span>       <span class="dt">Leaf</span>            <span class="ot">-&gt;</span> n1
-<span class="ot">&gt;</span>       <span class="dt">Node</span> _ l2 x2 r2 <span class="ot">-&gt;</span>
-<span class="ot">&gt;</span>         <span class="kw">case</span> compare (height l2) (height r2) <span class="kw">of</span></code></pre>
-<p>The right-right case, single rotation swapping the node in the middle to top and top node to left:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span>           <span class="dt">LT</span> <span class="ot">-&gt;</span> <span class="dt">Node</span> (hL1<span class="fu">+</span><span class="dv">2</span>) (<span class="dt">Node</span> (hL1<span class="fu">+</span><span class="dv">1</span>) l1 x1 l2) x2 r2</code></pre>
-<p>The right-left case, bringing the bottom element to top, top element to left, and middle element to right, with reordering each hanging nodes appropriately.</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span>           <span class="dt">GT</span> <span class="ot">-&gt;</span> <span class="kw">case</span> l2 <span class="kw">of</span>
-<span class="ot">&gt;</span>             <span class="dt">Leaf</span>             <span class="ot">-&gt;</span> n1
-<span class="ot">&gt;</span>             <span class="dt">Node</span> h3 l3 x3 r3 <span class="ot">-&gt;</span>
-<span class="ot">&gt;</span>               <span class="dt">Node</span> (h3<span class="fu">+</span><span class="dv">1</span>) (<span class="dt">Node</span> h3 l1 x1 l3) x3 (<span class="dt">Node</span> h3 r3 x2 r2)</code></pre>
-<p>Nothing left to do when nodes already has same height, merely returning the given node itself.</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span>           <span class="dt">EQ</span> <span class="ot">-&gt;</span> n1</code></pre>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> empty <span class="keyword">::</span> <span class="variable">AVL</span> a
+<span class="atom">&gt;</span> empty <span class="keyword">=</span> <span class="variable">Leaf</span>
+<span class="atom">&gt;</span> <span class="comment">{-# INLINEABLE empty #-}</span></span></code></pre>
+
+<p>Height of tree. Defining height of <code>Leaf</code> node as '0'.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> height <span class="keyword">::</span> <span class="variable">AVL</span> a <span class="keyword">-&gt;</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> height t <span class="keyword">=</span> <span class="keyword">case</span> t <span class="keyword">of</span>
+<span class="atom">&gt;</span>   <span class="variable">Leaf</span>          <span class="keyword">-&gt;</span> 0
+<span class="atom">&gt;</span>   <span class="variable">Node</span> <span class="atom">!</span>n _ _ _ <span class="keyword">-&gt;</span> n
+<span class="atom">&gt;</span> <span class="comment">{-# INLINE height #-}</span></span></code></pre>
+
+<p>Insert element to AVL tree. This function calls <code>rebalance</code> after
+inserting new element. Also, new element is strictly evaluated inside
+the local function <code>go</code>.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> insert <span class="keyword">::</span> <span class="variable">Ord</span> a <span class="atom">=&gt;</span> a <span class="keyword">-&gt;</span> <span class="variable">AVL</span> a <span class="keyword">-&gt;</span> <span class="variable">AVL</span> a
+<span class="atom">&gt;</span> insert <span class="keyword">=</span> go <span class="keyword">where</span>
+<span class="atom">&gt;</span>   go <span class="keyword">::</span> <span class="variable">Ord</span> a <span class="atom">=&gt;</span> a <span class="keyword">-&gt;</span> <span class="variable">AVL</span> a <span class="keyword">-&gt;</span> <span class="variable">AVL</span> a
+<span class="atom">&gt;</span>   go <span class="atom">!</span>n <span class="variable">Leaf</span>             <span class="keyword">=</span> <span class="variable">Node</span> 1 <span class="variable">Leaf</span> n <span class="variable">Leaf</span>
+<span class="atom">&gt;</span>   go <span class="atom">!</span>n <span class="paren1">(<span class="code"><span class="variable">Node</span> h l <span class="atom">!</span>n' r</span>)</span> <span class="keyword">=</span> <span class="keyword">case</span> compare n' n <span class="keyword">of</span>
+<span class="atom">&gt;</span>     <span class="variable">LT</span> <span class="keyword">-&gt;</span> rebalance <span class="atom">$</span> <span class="variable">Node</span> h l n' <span class="paren1">(<span class="code">insert n r</span>)</span>
+<span class="atom">&gt;</span>     _  <span class="keyword">-&gt;</span> rebalance <span class="atom">$</span> <span class="variable">Node</span> h <span class="paren1">(<span class="code">insert n l</span>)</span> n' r
+<span class="atom">&gt;</span> <span class="comment">{-# INLINEABLE insert #-}</span></span></code></pre>
+
+<p>A function to check whether given element is a member of tree or not.
+Given element and element of pattern matched node are, again strictly
+evaluated.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> member <span class="keyword">::</span> <span class="paren1">(<span class="code"><span class="variable">Ord</span> a, <span class="variable">Eq</span> a</span>)</span> <span class="atom">=&gt;</span> a <span class="keyword">-&gt;</span> <span class="variable">AVL</span> a <span class="keyword">-&gt;</span> <span class="variable">Bool</span>
+<span class="atom">&gt;</span> member _  <span class="variable">Leaf</span>           <span class="keyword">=</span> <span class="variable">False</span>
+<span class="atom">&gt;</span> member <span class="atom">!</span>x <span class="paren1">(<span class="code"><span class="variable">Node</span> _ l <span class="atom">!</span>y r</span>)</span> <span class="keyword">=</span> <span class="keyword">case</span> compare x y <span class="keyword">of</span>
+<span class="atom">&gt;</span>   <span class="variable">LT</span> <span class="keyword">-&gt;</span> member x l
+<span class="atom">&gt;</span>   <span class="variable">GT</span> <span class="keyword">-&gt;</span> member x r
+<span class="atom">&gt;</span>   <span class="variable">EQ</span> <span class="keyword">-&gt;</span> <span class="variable">True</span>
+<span class="atom">&gt;</span> <span class="comment">{-# INLINEABLE member #-}</span></span></code></pre>
+
+<p>There could be more functions, delete, merge, etc. But I'm little bit
+lazy to write them in this post.</p>
+
+<p>Here comes the balancing function. It rebalances tree, four cases are
+considered: <em>right-right</em>, <em>right-left</em>, <em>left-left</em>, and <em>left-right</em>.</p>
+
+<p>Firstly, comparing with <code>Leaf</code> node, which is not needed to rebalance
+any more. Then the height from left node and right node are compared,
+leading to next case.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> rebalance <span class="keyword">::</span> <span class="variable">AVL</span> a <span class="keyword">-&gt;</span> <span class="variable">AVL</span> a
+<span class="atom">&gt;</span> rebalance <span class="variable">Leaf</span>                 <span class="keyword">=</span> <span class="variable">Leaf</span>
+<span class="atom">&gt;</span> rebalance n1<span class="keyword">@</span><span class="paren1">(<span class="code"><span class="variable">Node</span> _ l1 x1 r1</span>)</span> <span class="keyword">=</span> <span class="keyword">case</span> compare hL1 hR1 <span class="keyword">of</span>
+<span class="atom">&gt;</span>   <span class="variable">LT</span> <span class="keyword">-&gt;</span> rightIsHeavy
+<span class="atom">&gt;</span>   <span class="variable">GT</span> <span class="keyword">-&gt;</span> leftIsHeavy
+<span class="atom">&gt;</span>   <span class="variable">EQ</span> <span class="keyword">-&gt;</span> updateHeight n1
+<span class="atom">&gt;</span>   <span class="keyword">where</span>
+<span class="atom">&gt;</span>     hL1 <span class="keyword">=</span> height l1
+<span class="atom">&gt;</span>     hR1 <span class="keyword">=</span> height r1</span></code></pre>
+
+<p>When right node is heavy, we compare the left node and right node again,
+and perform the rotations.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span>     rightIsHeavy <span class="keyword">=</span> <span class="keyword">case</span> r1 <span class="keyword">of</span>
+<span class="atom">&gt;</span>       <span class="variable">Leaf</span>            <span class="keyword">-&gt;</span> n1
+<span class="atom">&gt;</span>       <span class="variable">Node</span> _ l2 x2 r2 <span class="keyword">-&gt;</span>
+<span class="atom">&gt;</span>         <span class="keyword">case</span> compare <span class="paren1">(<span class="code">height l2</span>)</span> <span class="paren1">(<span class="code">height r2</span>)</span> <span class="keyword">of</span></span></code></pre>
+
+<p>The right-right case, single rotation swapping the node in the middle to
+top and top node to left:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span>           <span class="variable">LT</span> <span class="keyword">-&gt;</span> <span class="variable">Node</span> <span class="paren1">(<span class="code">hL1<span class="atom">+</span>2</span>)</span> <span class="paren1">(<span class="code"><span class="variable">Node</span> <span class="paren2">(<span class="code">hL1<span class="atom">+</span>1</span>)</span> l1 x1 l2</span>)</span> x2 r2</span></code></pre>
+
+<p>The right-left case, bringing the bottom element to top, top element to
+left, and middle element to right, with reordering each hanging nodes
+appropriately.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span>           <span class="variable">GT</span> <span class="keyword">-&gt;</span> <span class="keyword">case</span> l2 <span class="keyword">of</span>
+<span class="atom">&gt;</span>             <span class="variable">Leaf</span>             <span class="keyword">-&gt;</span> n1
+<span class="atom">&gt;</span>             <span class="variable">Node</span> h3 l3 x3 r3 <span class="keyword">-&gt;</span>
+<span class="atom">&gt;</span>               <span class="variable">Node</span> <span class="paren1">(<span class="code">h3<span class="atom">+</span>1</span>)</span> <span class="paren1">(<span class="code"><span class="variable">Node</span> h3 l1 x1 l3</span>)</span> x3 <span class="paren1">(<span class="code"><span class="variable">Node</span> h3 r3 x2 r2</span>)</span></span></code></pre>
+
+<p>Nothing left to do when nodes already has same height, merely returning
+the given node itself.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span>          <span class="variable">EQ</span> <span class="keyword">-&gt;</span> n1</span></code></pre>
+
 <p>Left-left case and left-right cases are symmetrical to above:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span>     leftIsHeavy <span class="fu">=</span> <span class="kw">case</span> l1 <span class="kw">of</span>
-<span class="ot">&gt;</span>       <span class="dt">Leaf</span>            <span class="ot">-&gt;</span> n1
-<span class="ot">&gt;</span>       <span class="dt">Node</span> _ l2 x2 r2 <span class="ot">-&gt;</span>
-<span class="ot">&gt;</span>         <span class="kw">case</span> compare (height l2) (height r2) <span class="kw">of</span>
-<span class="ot">&gt;</span>           <span class="dt">LT</span> <span class="ot">-&gt;</span> <span class="kw">case</span> r2 <span class="kw">of</span>
-<span class="ot">&gt;</span>             <span class="dt">Leaf</span>             <span class="ot">-&gt;</span> n1
-<span class="ot">&gt;</span>             <span class="dt">Node</span> h3 l3 x3 r3 <span class="ot">-&gt;</span>
-<span class="ot">&gt;</span>               <span class="dt">Node</span> (h3<span class="fu">+</span><span class="dv">1</span>) (<span class="dt">Node</span> h3 l2 x2 l3) x3 (<span class="dt">Node</span> h3 r3 x1 r1)
-<span class="ot">&gt;</span>           <span class="dt">GT</span> <span class="ot">-&gt;</span> <span class="dt">Node</span> (hR1<span class="fu">+</span><span class="dv">2</span>) l2 x2 (<span class="dt">Node</span> (hR1<span class="fu">+</span><span class="dv">1</span>) r2 x1 r1)
-<span class="ot">&gt;</span>           <span class="dt">EQ</span> <span class="ot">-&gt;</span> n1
-<span class="ot">&gt;</span> <span class="ot">{-# INLINE rebalance #-}</span></code></pre>
-<p>Non-recursive height updating function, used in <code>EQ</code> case of <code>rebalance</code>:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; updateHeight ::</span> <span class="dt">AVL</span> a <span class="ot">-&gt;</span> <span class="dt">AVL</span> a
-<span class="ot">&gt;</span> updateHeight t <span class="fu">=</span> <span class="kw">case</span> t <span class="kw">of</span>
-<span class="ot">&gt;</span>   <span class="dt">Leaf</span>                                         <span class="ot">-&gt;</span> <span class="dt">Leaf</span>
-<span class="ot">&gt;</span>   <span class="dt">Node</span> _ <span class="dt">Leaf</span> n <span class="dt">Leaf</span>                           <span class="ot">-&gt;</span> <span class="dt">Node</span> <span class="dv">1</span> <span class="dt">Leaf</span> n <span class="dt">Leaf</span>
-<span class="ot">&gt;</span>   <span class="dt">Node</span> _ l<span class="fu">@</span>(<span class="dt">Node</span> h _ _ _)  n  <span class="dt">Leaf</span>             <span class="ot">-&gt;</span> <span class="dt">Node</span> (h<span class="fu">+</span><span class="dv">1</span>) l n <span class="dt">Leaf</span>
-<span class="ot">&gt;</span>   <span class="dt">Node</span> _ <span class="dt">Leaf</span>              n r<span class="fu">@</span>(<span class="dt">Node</span> h _ _ _)  <span class="ot">-&gt;</span> <span class="dt">Node</span> (h<span class="fu">+</span><span class="dv">1</span>) <span class="dt">Leaf</span> n r
-<span class="ot">&gt;</span>   <span class="dt">Node</span> _ l<span class="fu">@</span>(<span class="dt">Node</span> hl _ _ _) n r<span class="fu">@</span>(<span class="dt">Node</span> hr _ _ _) <span class="ot">-&gt;</span> <span class="dt">Node</span> h&#39; l n r <span class="kw">where</span>
-<span class="ot">&gt;</span>     h&#39; <span class="fu">|</span> hl <span class="fu">&lt;</span> hr   <span class="fu">=</span> hr <span class="fu">+</span> <span class="dv">1</span>
-<span class="ot">&gt;</span>        <span class="fu">|</span> otherwise <span class="fu">=</span> hl <span class="fu">+</span> <span class="dv">1</span>
-<span class="ot">&gt;</span> <span class="ot">{-# INLINE updateHeight #-}</span></code></pre>
-<p>That’s all for AVL tree to have <code>insert</code> and <code>member</code> function. For testing, a function to check the balance:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; isBalanced ::</span> <span class="dt">AVL</span> a <span class="ot">-&gt;</span> <span class="dt">Bool</span>
-<span class="ot">&gt;</span> isBalanced t <span class="fu">=</span> <span class="kw">case</span> t <span class="kw">of</span>
-<span class="ot">&gt;</span>   <span class="dt">Leaf</span>         <span class="ot">-&gt;</span> <span class="dt">True</span>
-<span class="ot">&gt;</span>   <span class="dt">Node</span> h l _ r <span class="ot">-&gt;</span>
-<span class="ot">&gt;</span>     abs (h <span class="fu">-</span> height l) <span class="fu">&lt;=</span> <span class="dv">1</span> <span class="fu">&amp;&amp;</span> abs (h <span class="fu">-</span> height r) <span class="fu">&lt;=</span> <span class="dv">1</span> <span class="fu">&amp;&amp;</span>
-<span class="ot">&gt;</span>     isBalanced l <span class="fu">&amp;&amp;</span> isBalanced r
-<span class="ot">&gt;</span> <span class="ot">{-# INLINE isBalanced #-}</span></code></pre>
+
+<pre><code><span class="code"><span class="atom">&gt;</span>     leftIsHeavy <span class="keyword">=</span> <span class="keyword">case</span> l1 <span class="keyword">of</span>
+<span class="atom">&gt;</span>       <span class="variable">Leaf</span>            <span class="keyword">-&gt;</span> n1
+<span class="atom">&gt;</span>       <span class="variable">Node</span> _ l2 x2 r2 <span class="keyword">-&gt;</span>
+<span class="atom">&gt;</span>         <span class="keyword">case</span> compare <span class="paren1">(<span class="code">height l2</span>)</span> <span class="paren1">(<span class="code">height r2</span>)</span> <span class="keyword">of</span>
+<span class="atom">&gt;</span>           <span class="variable">LT</span> <span class="keyword">-&gt;</span> <span class="keyword">case</span> r2 <span class="keyword">of</span>
+<span class="atom">&gt;</span>             <span class="variable">Leaf</span>             <span class="keyword">-&gt;</span> n1
+<span class="atom">&gt;</span>             <span class="variable">Node</span> h3 l3 x3 r3 <span class="keyword">-&gt;</span>
+<span class="atom">&gt;</span>               <span class="variable">Node</span> <span class="paren1">(<span class="code">h3<span class="atom">+</span>1</span>)</span> <span class="paren1">(<span class="code"><span class="variable">Node</span> h3 l2 x2 l3</span>)</span> x3 <span class="paren1">(<span class="code"><span class="variable">Node</span> h3 r3 x1 r1</span>)</span>
+<span class="atom">&gt;</span>           <span class="variable">GT</span> <span class="keyword">-&gt;</span> <span class="variable">Node</span> <span class="paren1">(<span class="code">hR1<span class="atom">+</span>2</span>)</span> l2 x2 <span class="paren1">(<span class="code"><span class="variable">Node</span> <span class="paren2">(<span class="code">hR1<span class="atom">+</span>1</span>)</span> r2 x1 r1</span>)</span>
+<span class="atom">&gt;</span>           <span class="variable">EQ</span> <span class="keyword">-&gt;</span> n1
+<span class="atom">&gt;</span> <span class="comment">{-# INLINE rebalance #-}</span></span></code></pre>
+
+<p>Non-recursive height updating function, used in <code>EQ</code> case of
+<code>rebalance</code>:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> updateHeight <span class="keyword">::</span> <span class="variable">AVL</span> a <span class="keyword">-&gt;</span> <span class="variable">AVL</span> a
+<span class="atom">&gt;</span> updateHeight t <span class="keyword">=</span> <span class="keyword">case</span> t <span class="keyword">of</span>
+<span class="atom">&gt;</span>   <span class="variable">Leaf</span>                                         <span class="keyword">-&gt;</span> <span class="variable">Leaf</span>
+<span class="atom">&gt;</span>   <span class="variable">Node</span> _ <span class="variable">Leaf</span> n <span class="variable">Leaf</span>                           <span class="keyword">-&gt;</span> <span class="variable">Node</span> 1 <span class="variable">Leaf</span> n <span class="variable">Leaf</span>
+<span class="atom">&gt;</span>   <span class="variable">Node</span> _ l<span class="keyword">@</span><span class="paren1">(<span class="code"><span class="variable">Node</span> h _ _ _</span>)</span>  n  <span class="variable">Leaf</span>             <span class="keyword">-&gt;</span> <span class="variable">Node</span> <span class="paren1">(<span class="code">h<span class="atom">+</span>1</span>)</span> l n <span class="variable">Leaf</span>
+<span class="atom">&gt;</span>   <span class="variable">Node</span> _ <span class="variable">Leaf</span>              n r<span class="keyword">@</span><span class="paren1">(<span class="code"><span class="variable">Node</span> h _ _ _</span>)</span>  <span class="keyword">-&gt;</span> <span class="variable">Node</span> <span class="paren1">(<span class="code">h<span class="atom">+</span>1</span>)</span> <span class="variable">Leaf</span> n r
+<span class="atom">&gt;</span>   <span class="variable">Node</span> _ l<span class="keyword">@</span><span class="paren1">(<span class="code"><span class="variable">Node</span> hl _ _ _</span>)</span> n r<span class="keyword">@</span><span class="paren1">(<span class="code"><span class="variable">Node</span> hr _ _ _</span>)</span> <span class="keyword">-&gt;</span> <span class="variable">Node</span> h' l n r <span class="keyword">where</span>
+<span class="atom">&gt;</span>     h' <span class="keyword">|</span> hl <span class="atom">&lt;</span> hr   <span class="keyword">=</span> hr <span class="atom">+</span> 1
+<span class="atom">&gt;</span>        <span class="keyword">|</span> otherwise <span class="keyword">=</span> hl <span class="atom">+</span> 1
+<span class="atom">&gt;</span> <span class="comment">{-# INLINE updateHeight #-}</span></span></code></pre>
+
+<p>That's all for AVL tree to have <code>insert</code> and <code>member</code> function. For
+testing, a function to check the balance:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> isBalanced <span class="keyword">::</span> <span class="variable">AVL</span> a <span class="keyword">-&gt;</span> <span class="variable">Bool</span>
+<span class="atom">&gt;</span> isBalanced t <span class="keyword">=</span> <span class="keyword">case</span> t <span class="keyword">of</span>
+<span class="atom">&gt;</span>   <span class="variable">Leaf</span>         <span class="keyword">-&gt;</span> <span class="variable">True</span>
+<span class="atom">&gt;</span>   <span class="variable">Node</span> h l _ r <span class="keyword">-&gt;</span>
+<span class="atom">&gt;</span>     abs <span class="paren1">(<span class="code">h <span class="atom">-</span> height l</span>)</span> <span class="atom">&lt;=</span> 1 <span class="atom">&amp;&amp;</span> abs <span class="paren1">(<span class="code">h <span class="atom">-</span> height r</span>)</span> <span class="atom">&lt;=</span> 1 <span class="atom">&amp;&amp;</span>
+<span class="atom">&gt;</span>     isBalanced l <span class="atom">&amp;&amp;</span> isBalanced r
+<span class="atom">&gt;</span> <span class="comment">{-# INLINE isBalanced #-}</span></span></code></pre>
+
 <p>Simple check:</p>
+
 <pre><code>ghci&gt; isBalanced $ foldr insert empty [1..1024]
 True
 ghci&gt; isBalanced $ foldr insert empty [1024,1023..1]
-True</code></pre>
+True
+</code></pre>
+
 <p>Benchmarks:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">instance</span> <span class="dt">NFData</span> a <span class="ot">=&gt;</span> <span class="dt">NFData</span> (<span class="dt">AVL</span> a) <span class="kw">where</span>
-<span class="ot">&gt;</span>   rnf <span class="dt">Leaf</span> <span class="fu">=</span> ()
-<span class="ot">&gt;</span>   rnf (<span class="dt">Node</span> h l x r) <span class="fu">=</span> rnf h <span class="ot">`seq`</span> rnf l <span class="ot">`seq`</span> rnf x <span class="ot">`seq`</span> rnf r
-<span class="ot">&gt;</span> 
-<span class="ot">&gt; avlBenches ::</span> [<span class="dt">Benchmark</span>]
-<span class="ot">&gt;</span> avlBenches <span class="fu">=</span>
-<span class="ot">&gt;</span>   <span class="kw">let</span> tn n <span class="fu">=</span> foldr insert empty [<span class="dv">0</span><span class="fu">..</span>n<span class="fu">-</span><span class="dv">1</span><span class="ot">::</span><span class="dt">Int</span>]
-<span class="ot">&gt;</span>       insertAVL <span class="fu">!</span>k <span class="fu">=</span>
-<span class="ot">&gt;</span>         <span class="kw">let</span> <span class="fu">!</span>x <span class="fu">=</span> <span class="kw">let</span> x&#39; <span class="fu">=</span> tn k <span class="kw">in</span> x&#39; <span class="ot">`deepseq`</span> x&#39;
-<span class="ot">&gt;</span>         <span class="kw">in</span>  bench (<span class="st">&quot;n=&quot;</span> <span class="fu">++</span> show k) (whnfIO <span class="fu">$</span> insertRand x (<span class="dv">0</span>,k<span class="fu">-</span><span class="dv">1</span>))
-<span class="ot">&gt;</span>       insertRand t (a,b) <span class="fu">=</span> <span class="kw">do</span>
-<span class="ot">&gt;</span>         x <span class="ot">&lt;-</span> getStdRandom (randomR (a,b))
-<span class="ot">&gt;</span>         <span class="kw">let</span> y <span class="fu">=</span> insert x t
-<span class="ot">&gt;</span>         return <span class="fu">$!</span> y
-<span class="ot">&gt;</span>       memberAVL k <span class="fu">=</span>
-<span class="ot">&gt;</span>         <span class="kw">let</span> x <span class="fu">=</span> tn k
-<span class="ot">&gt;</span>         <span class="kw">in</span>  x <span class="ot">`deepseq`</span> bench (<span class="st">&quot;n=&quot;</span> <span class="fu">++</span> show k) (whnfIO <span class="fu">$</span> memberRand x (<span class="dv">0</span>,k<span class="fu">-</span><span class="dv">1</span>))
-<span class="ot">&gt;</span>       memberRand t (a,b) <span class="fu">=</span> <span class="kw">do</span>
-<span class="ot">&gt;</span>         x <span class="ot">&lt;-</span> getStdRandom (randomR (a,b))
-<span class="ot">&gt;</span>         <span class="kw">let</span> y <span class="fu">=</span> member x t
-<span class="ot">&gt;</span>         return <span class="fu">$!</span> y
-<span class="ot">&gt;</span>       mn n <span class="fu">=</span> <span class="kw">let</span> xs <span class="fu">=</span> [<span class="dv">0</span><span class="fu">..</span>n<span class="fu">-</span><span class="dv">1</span><span class="ot">::</span><span class="dt">Int</span>] <span class="kw">in</span> M.fromList <span class="fu">$</span> zip xs (repeat ())
-<span class="ot">&gt;</span>       insertMap <span class="fu">!</span>k <span class="fu">=</span>
-<span class="ot">&gt;</span>         <span class="kw">let</span> <span class="fu">!</span>x <span class="fu">=</span> <span class="kw">let</span> x&#39; <span class="fu">=</span> mn k <span class="kw">in</span> x&#39; <span class="ot">`deepseq`</span> x&#39;
-<span class="ot">&gt;</span>         <span class="kw">in</span>  bench (<span class="st">&quot;n=&quot;</span> <span class="fu">++</span> show k) (whnfIO <span class="fu">$</span> insertRandM x (<span class="dv">0</span>,k<span class="fu">-</span><span class="dv">1</span>))
-<span class="ot">&gt;</span>       insertRandM m (a,b) <span class="fu">=</span> <span class="kw">do</span>
-<span class="ot">&gt;</span>         x <span class="ot">&lt;-</span> getStdRandom (randomR (a,b))
-<span class="ot">&gt;</span>         <span class="kw">let</span> y <span class="fu">=</span> M.insert x () m
-<span class="ot">&gt;</span>         return <span class="fu">$!</span> y
-<span class="ot">&gt;</span>       memberMap k <span class="fu">=</span>
-<span class="ot">&gt;</span>         <span class="kw">let</span> <span class="fu">!</span>x <span class="fu">=</span> <span class="kw">let</span> x&#39; <span class="fu">=</span> mn k <span class="kw">in</span> x&#39; <span class="ot">`deepseq`</span> x&#39;
-<span class="ot">&gt;</span>         <span class="kw">in</span>  bench (<span class="st">&quot;n=&quot;</span> <span class="fu">++</span> show k) (whnfIO <span class="fu">$</span> memberRandM x (<span class="dv">0</span>,k<span class="fu">-</span><span class="dv">1</span>))
-<span class="ot">&gt;</span>       memberRandM m (a,b) <span class="fu">=</span> <span class="kw">do</span>
-<span class="ot">&gt;</span>         x <span class="ot">&lt;-</span> getStdRandom (randomR (a,b))
-<span class="ot">&gt;</span>         <span class="kw">let</span> y <span class="fu">=</span> M.member x m
-<span class="ot">&gt;</span>         return <span class="fu">$!</span> y
-<span class="ot">&gt;</span>       benchmarks <span class="fu">=</span>
-<span class="ot">&gt;</span>         [ bgroup <span class="st">&quot;AVL&quot;</span>
-<span class="ot">&gt;</span>           [ bgroup <span class="st">&quot;insert&quot;</span> [insertAVL (<span class="dv">2</span><span class="fu">^</span>k) <span class="fu">|</span> k <span class="ot">&lt;-</span> [<span class="dv">10</span><span class="fu">..</span><span class="dv">14</span><span class="ot">::</span><span class="dt">Int</span>]]
-<span class="ot">&gt;</span>           , bgroup <span class="st">&quot;member&quot;</span> [memberAVL (<span class="dv">2</span><span class="fu">^</span>k) <span class="fu">|</span> k <span class="ot">&lt;-</span> [<span class="dv">10</span><span class="fu">..</span><span class="dv">14</span><span class="ot">::</span><span class="dt">Int</span>]]
-<span class="ot">&gt;</span>           ]
-<span class="ot">&gt;</span>         , bgroup <span class="st">&quot;Data.Map&quot;</span>
-<span class="ot">&gt;</span>           [ bgroup <span class="st">&quot;insert&quot;</span> [insertMap (<span class="dv">2</span><span class="fu">^</span>k) <span class="fu">|</span> k <span class="ot">&lt;-</span> [<span class="dv">10</span><span class="fu">..</span><span class="dv">14</span><span class="ot">::</span><span class="dt">Int</span>]]
-<span class="ot">&gt;</span>           , bgroup <span class="st">&quot;member&quot;</span> [memberMap (<span class="dv">2</span><span class="fu">^</span>k) <span class="fu">|</span> k <span class="ot">&lt;-</span> [<span class="dv">10</span><span class="fu">..</span><span class="dv">14</span><span class="ot">::</span><span class="dt">Int</span>]]
-<span class="ot">&gt;</span>           ]
-<span class="ot">&gt;</span>         ]
-<span class="ot">&gt;</span>   <span class="kw">in</span>  benchmarks</code></pre>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">instance</span> <span class="variable">NFData</span> a <span class="atom">=&gt;</span> <span class="variable">NFData</span> <span class="paren1">(<span class="code"><span class="variable">AVL</span> a</span>)</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>   rnf <span class="variable">Leaf</span> <span class="keyword">=</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span>   rnf <span class="paren1">(<span class="code"><span class="variable">Node</span> h l x r</span>)</span> <span class="keyword">=</span> rnf h <span class="atom">`seq`</span> rnf l <span class="atom">`seq`</span> rnf x <span class="atom">`seq`</span> rnf r
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> avlBenches <span class="keyword">::</span> <span class="paren1">[<span class="code"><span class="variable">Benchmark</span></span>]</span>
+<span class="atom">&gt;</span> avlBenches <span class="keyword">=</span>
+<span class="atom">&gt;</span>   <span class="keyword">let</span> tn n <span class="keyword">=</span> foldr insert empty <span class="paren1">[<span class="code">0<span class="keyword">..</span>n<span class="atom">-</span>1<span class="keyword">::</span><span class="variable">Int</span></span>]</span>
+<span class="atom">&gt;</span>       insertAVL <span class="atom">!</span>k <span class="keyword">=</span>
+<span class="atom">&gt;</span>         <span class="keyword">let</span> <span class="atom">!</span>x <span class="keyword">=</span> <span class="keyword">let</span> x' <span class="keyword">=</span> tn k <span class="keyword">in</span> x' <span class="atom">`deepseq`</span> x'
+<span class="atom">&gt;</span>         <span class="keyword">in</span>  bench <span class="paren1">(<span class="code"><span class="string">"n="</span> <span class="atom">++</span> show k</span>)</span> <span class="paren1">(<span class="code">whnfIO <span class="atom">$</span> insertRand x <span class="paren2">(<span class="code">0,k<span class="atom">-</span>1</span>)</span></span>)</span>
+<span class="atom">&gt;</span>       insertRand t <span class="paren1">(<span class="code">a,b</span>)</span> <span class="keyword">=</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>         x <span class="keyword">&lt;-</span> getStdRandom <span class="paren1">(<span class="code">randomR <span class="paren2">(<span class="code">a,b</span>)</span></span>)</span>
+<span class="atom">&gt;</span>         <span class="keyword">let</span> y <span class="keyword">=</span> insert x t
+<span class="atom">&gt;</span>         return <span class="atom">$!</span> y
+<span class="atom">&gt;</span>       memberAVL k <span class="keyword">=</span>
+<span class="atom">&gt;</span>         <span class="keyword">let</span> x <span class="keyword">=</span> tn k
+<span class="atom">&gt;</span>         <span class="keyword">in</span>  x <span class="atom">`deepseq`</span> bench <span class="paren1">(<span class="code"><span class="string">"n="</span> <span class="atom">++</span> show k</span>)</span> <span class="paren1">(<span class="code">whnfIO <span class="atom">$</span> memberRand x <span class="paren2">(<span class="code">0,k<span class="atom">-</span>1</span>)</span></span>)</span>
+<span class="atom">&gt;</span>       memberRand t <span class="paren1">(<span class="code">a,b</span>)</span> <span class="keyword">=</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>         x <span class="keyword">&lt;-</span> getStdRandom <span class="paren1">(<span class="code">randomR <span class="paren2">(<span class="code">a,b</span>)</span></span>)</span>
+<span class="atom">&gt;</span>         <span class="keyword">let</span> y <span class="keyword">=</span> member x t
+<span class="atom">&gt;</span>         return <span class="atom">$!</span> y
+<span class="atom">&gt;</span>       mn n <span class="keyword">=</span> <span class="keyword">let</span> xs <span class="keyword">=</span> <span class="paren1">[<span class="code">0<span class="keyword">..</span>n<span class="atom">-</span>1<span class="keyword">::</span><span class="variable">Int</span></span>]</span> <span class="keyword">in</span> <span class="variable">M</span><span class="atom">.</span>fromList <span class="atom">$</span> zip xs <span class="paren1">(<span class="code">repeat <span class="paren2">(<span class="code"></span>)</span></span>)</span>
+<span class="atom">&gt;</span>       insertMap <span class="atom">!</span>k <span class="keyword">=</span>
+<span class="atom">&gt;</span>         <span class="keyword">let</span> <span class="atom">!</span>x <span class="keyword">=</span> <span class="keyword">let</span> x' <span class="keyword">=</span> mn k <span class="keyword">in</span> x' <span class="atom">`deepseq`</span> x'
+<span class="atom">&gt;</span>         <span class="keyword">in</span>  bench <span class="paren1">(<span class="code"><span class="string">"n="</span> <span class="atom">++</span> show k</span>)</span> <span class="paren1">(<span class="code">whnfIO <span class="atom">$</span> insertRandM x <span class="paren2">(<span class="code">0,k<span class="atom">-</span>1</span>)</span></span>)</span>
+<span class="atom">&gt;</span>       insertRandM m <span class="paren1">(<span class="code">a,b</span>)</span> <span class="keyword">=</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>         x <span class="keyword">&lt;-</span> getStdRandom <span class="paren1">(<span class="code">randomR <span class="paren2">(<span class="code">a,b</span>)</span></span>)</span>
+<span class="atom">&gt;</span>         <span class="keyword">let</span> y <span class="keyword">=</span> <span class="variable">M</span><span class="atom">.</span>insert x <span class="paren1">(<span class="code"></span>)</span> m
+<span class="atom">&gt;</span>         return <span class="atom">$!</span> y
+<span class="atom">&gt;</span>       memberMap k <span class="keyword">=</span>
+<span class="atom">&gt;</span>         <span class="keyword">let</span> <span class="atom">!</span>x <span class="keyword">=</span> <span class="keyword">let</span> x' <span class="keyword">=</span> mn k <span class="keyword">in</span> x' <span class="atom">`deepseq`</span> x'
+<span class="atom">&gt;</span>         <span class="keyword">in</span>  bench <span class="paren1">(<span class="code"><span class="string">"n="</span> <span class="atom">++</span> show k</span>)</span> <span class="paren1">(<span class="code">whnfIO <span class="atom">$</span> memberRandM x <span class="paren2">(<span class="code">0,k<span class="atom">-</span>1</span>)</span></span>)</span>
+<span class="atom">&gt;</span>       memberRandM m <span class="paren1">(<span class="code">a,b</span>)</span> <span class="keyword">=</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>         x <span class="keyword">&lt;-</span> getStdRandom <span class="paren1">(<span class="code">randomR <span class="paren2">(<span class="code">a,b</span>)</span></span>)</span>
+<span class="atom">&gt;</span>         <span class="keyword">let</span> y <span class="keyword">=</span> <span class="variable">M</span><span class="atom">.</span>member x m
+<span class="atom">&gt;</span>         return <span class="atom">$!</span> y
+<span class="atom">&gt;</span>       benchmarks <span class="keyword">=</span>
+<span class="atom">&gt;</span>         <span class="paren1">[<span class="code"> bgroup <span class="string">"AVL"</span>
+<span class="atom">&gt;</span>           <span class="paren2">[<span class="code"> bgroup <span class="string">"insert"</span> <span class="paren3">[<span class="code">insertAVL <span class="paren4">(<span class="code">2<span class="atom">^</span>k</span>)</span> <span class="keyword">|</span> k <span class="keyword">&lt;-</span> <span class="paren4">[<span class="code">10<span class="keyword">..</span>14<span class="keyword">::</span><span class="variable">Int</span></span>]</span></span>]</span>
+<span class="atom">&gt;</span>           , bgroup <span class="string">"member"</span> <span class="paren3">[<span class="code">memberAVL <span class="paren4">(<span class="code">2<span class="atom">^</span>k</span>)</span> <span class="keyword">|</span> k <span class="keyword">&lt;-</span> <span class="paren4">[<span class="code">10<span class="keyword">..</span>14<span class="keyword">::</span><span class="variable">Int</span></span>]</span></span>]</span>
+<span class="atom">&gt;</span>           </span>]</span>
+<span class="atom">&gt;</span>         , bgroup <span class="string">"Data.Map"</span>
+<span class="atom">&gt;</span>           <span class="paren2">[<span class="code"> bgroup <span class="string">"insert"</span> <span class="paren3">[<span class="code">insertMap <span class="paren4">(<span class="code">2<span class="atom">^</span>k</span>)</span> <span class="keyword">|</span> k <span class="keyword">&lt;-</span> <span class="paren4">[<span class="code">10<span class="keyword">..</span>14<span class="keyword">::</span><span class="variable">Int</span></span>]</span></span>]</span>
+<span class="atom">&gt;</span>           , bgroup <span class="string">"member"</span> <span class="paren3">[<span class="code">memberMap <span class="paren4">(<span class="code">2<span class="atom">^</span>k</span>)</span> <span class="keyword">|</span> k <span class="keyword">&lt;-</span> <span class="paren4">[<span class="code">10<span class="keyword">..</span>14<span class="keyword">::</span><span class="variable">Int</span></span>]</span></span>]</span>
+<span class="atom">&gt;</span>           </span>]</span>
+<span class="atom">&gt;</span>         </span>]</span>
+<span class="atom">&gt;</span>   <span class="keyword">in</span>  benchmarks</span></code></pre>
+
 <p>Using above benchmark as main:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; main ::</span> <span class="dt">IO</span> ()
-<span class="ot">&gt;</span> main <span class="fu">=</span> defaultMain avlBenches</code></pre>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> main <span class="keyword">::</span> <span class="variable">IO</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span> main <span class="keyword">=</span> defaultMain avlBenches</span></code></pre>
+
 <p>Compile, run the benchmark, and see the result in html report:</p>
+
 <pre><code>$ ghc -O2 -fllvm AVL.lhs -main-is AVL -o AVL
-$ ./AVL -o bench.html</code></pre>
-<p>Report is <a href="../static/bench-avl-insert-member.html">here</a>.</p>
-<p>Lessons learned: from above simple implementation, a data structure with performance close to those provided by standard package could be implemented. Benchmark show that AVL tree insertion was slightly slower than insertion in Data.Map, performance of member lookup was almost identical. Though when there is no need for making own implemntation, just use the implementation from proven package, in most case those provided data structures has more features, Data.Map.Map has useful functions like <code>insetWith</code>, <code>unionWith</code>, etc.</p>
-<p>By the way, during the benchmark I was using <code>nfIO</code> instead of <code>whnfIO</code> for a while, resulting to linearly increasing insertion time for while.</p>
-  <div class="post_tags">
-    <strong>Tags: </strong><a href="/tags/haskell.html">haskell</a>, <a href="/tags/tree.html">tree</a>, <a href="/tags/datastructure.html">datastructure</a>, <a href="/tags/algorithm.html">algorithm</a>
-  </div>
-</div>
-]]></description>
-    <pubDate>Mon, 17 Dec 2012 00:00:00 UT</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2012-12-17-benchmarking-insertion-with-avl-tree.html</guid>
-</item>
-<item>
-    <title>Tip using 'asTypeOf'</title>
-    <link>http://8c6794b6.github.com/posts/2012-10-11-asTypeOf-tip.html</link>
-    <description><![CDATA[<h2>Tip using 'asTypeOf'</h2>
-<div id="post_date">
-  <strong>October 11, 2012</strong>
-</div>
-<div id="post_body">
-  <p>I found myself an idiot for such a long time I was not aware of this use of <code>asTypeOf</code> function.</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">module</span> <span class="dt">AsTypeOf</span> <span class="kw">where</span></code></pre>
+$ ./AVL -o bench.html
+</code></pre>
+
+<p>Report is <a href="../static/bench-avl-insert-member.html" >here</a>.</p>
+
+<p>Lessons learned: from above simple implementation, a data structure with
+performance close to those provided by standard package could be
+implemented. Benchmark show that AVL tree insertion was slightly slower
+than insertion in Data.Map, performance of member lookup was almost
+identical. Though when there is no need for making own implemntation,
+just use the implementation from proven package, in most case those
+provided data structures has more features, Data.Map.Map has useful
+functions like <code>insetWith</code>, <code>unionWith</code>, etc.</p>
+
+<p>By the way, during the benchmark I was using <code>nfIO</code> instead of <code>whnfIO</code>
+for a while, resulting to linearly increasing insertion time for while.</p>
+ ]]></description> </item><item> <title>Tip using &#039;asTypeOf&#039;</title> <link>/posts/Tip-using-asTypeOf.html</link> <pubDate>2012-10-11</pubDate> <author>8c6794b6</author> <guid isPermaLink="true">/posts/Tip-using-asTypeOf.html</guid> <category><![CDATA[ haskell ]]></category><category><![CDATA[ tips ]]></category> <description><![CDATA[ <p>I found myself an idiot for such a long time I was not aware of this use
+of <code>asTypeOf</code> function.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">module</span> <span class="variable">AsTypeOf</span> <span class="keyword">where</span></span></code></pre>
+
 <p>When we have a type with multiple varialbles, e.g. <code>Either</code>:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> rightChar <span class="fu">=</span> <span class="dt">Right</span> <span class="ch">&#39;a&#39;</span></code></pre>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> rightChar <span class="keyword">=</span> <span class="variable">Right</span> <span class="character">'a'</span></span></code></pre>
+
 <p>In ghci:</p>
+
 <pre><code>ghci&gt; :t rightChar
-rightChar :: Either a Char</code></pre>
-<p>We are yet not sure for remaining type variables. In above case, we still do not have a clue to fix the type of <code>Left</code> constructor.</p>
-<p>One way to fix the type used for <code>Left</code> is wrapping multiple values in single list:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> rightCharInList <span class="fu">=</span> [rightChar, <span class="dt">Left</span> <span class="dt">True</span>]</code></pre>
+rightChar :: Either a Char
+</code></pre>
+
+<p>We are yet not sure for remaining type variables. In above case, we
+still do not have a clue to fix the type of <code>Left</code> constructor.</p>
+
+<p>One way to fix the type used for <code>Left</code> is wrapping multiple values in
+single list:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> rightCharInList <span class="keyword">=</span> <span class="paren1">[<span class="code">rightChar, <span class="variable">Left</span> <span class="variable">True</span></span>]</span></span></code></pre>
+
 <p>Showing the type:</p>
+
 <pre><code>ghci&gt; :t rightCharInList
-rightCharInList :: [Either Bool Char]</code></pre>
+rightCharInList :: [Either Bool Char]
+</code></pre>
+
 <p>Or another, using <code>asTypeOf</code> instead of list:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> rightChar&#39; <span class="fu">=</span> rightChar <span class="ot">`asTypeOf`</span> <span class="dt">Left</span> <span class="dt">True</span></code></pre>
-<p>Now the type for <code>Left</code> constructor is fixed, value is identical to <code>rightChar</code>:</p>
-<pre><code>ghci&gt; rightChar&#39;
-Right &#39;a&#39;
-ghci&gt; :t rightChar&#39;
-rightChar&#39; :: Either Bool Char</code></pre>
-  <div class="post_tags">
-    <strong>Tags: </strong><a href="/tags/haskell.html">haskell</a>, <a href="/tags/tips.html">tips</a>
-  </div>
-</div>
-]]></description>
-    <pubDate>Thu, 11 Oct 2012 00:00:00 UT</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2012-10-11-asTypeOf-tip.html</guid>
-</item>
-<item>
-    <title>Mapping 'show' to tuples with TH</title>
-    <link>http://8c6794b6.github.com/posts/2012-05-28-mapping-show-with-th.html</link>
-    <description><![CDATA[<h2>Mapping 'show' to tuples with TH</h2>
-<div id="post_date">
-  <strong>May 28, 2012</strong>
-</div>
-<div id="post_body">
-  <p>Consider:</p>
-<pre><code>&gt; mapM_ putStrLn [show 1, show (1,2), show (1,2,3), show (1,2,3,4) ...]</code></pre>
-<p>The contents of list is String, but before applying ‘show’, type of elements differ. Goal of this post is to express above with using template haskell, like:</p>
-<pre><code>&gt; mapM_ putStrLn $(tups 3)</code></pre>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> rightChar' <span class="keyword">=</span> rightChar <span class="atom">`asTypeOf`</span> <span class="variable">Left</span> <span class="variable">True</span></span></code></pre>
+
+<p>Now the type for <code>Left</code> constructor is fixed, value is identical to
+<code>rightChar</code>:</p>
+
+<pre><code>ghci&gt; rightChar'
+Right 'a'
+ghci&gt; :t rightChar'
+rightChar' :: Either Bool Char
+</code></pre>
+ ]]></description> </item><item> <title>Mapping &#039;show&#039; to tuples with TH</title> <link>/posts/Mapping-show-to-tuples-with-TH.html</link> <pubDate>2012-05-28</pubDate> <author>8c6794b6</author> <guid isPermaLink="true">/posts/Mapping-show-to-tuples-with-TH.html</guid> <category><![CDATA[ haskell ]]></category><category><![CDATA[ templatehaskell ]]></category> <description><![CDATA[ <p>Consider:</p>
+
+<pre><code>&gt; mapM_ putStrLn [show 1, show (1,2), show (1,2,3), show (1,2,3,4) ...]
+</code></pre>
+
+<p>The contents of list is String, but before applying 'show', type of
+elements differ. Goal of this post is to express above with using
+template haskell, like:</p>
+
+<pre><code>&gt; mapM_ putStrLn $(tups 3)
+</code></pre>
+
 <p>Which expands to:</p>
-<pre><code>&gt; mapM_ putStrLn [show 1, show (1,2), show (1,2,3))]</code></pre>
+
+<pre><code>&gt; mapM_ putStrLn [show 1, show (1,2), show (1,2,3))]
+</code></pre>
+
 <p>in caller module.</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE TemplateHaskell #-}</span>
-<span class="ot">&gt;</span> 
-<span class="ot">&gt;</span> <span class="kw">module</span> <span class="dt">MappingShow</span> <span class="kw">where</span>
-<span class="ot">&gt;</span> 
-<span class="ot">&gt;</span> <span class="kw">import</span> Control.Applicative
-<span class="ot">&gt;</span> <span class="kw">import</span> Control.Monad
-<span class="ot">&gt;</span> <span class="kw">import</span> Language.Haskell.TH</code></pre>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="comment">{-# LANGUAGE TemplateHaskell #-}</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">module</span> <span class="variable">MappingShow</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Control</span><span class="atom">.</span><span class="variable">Applicative</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Control</span><span class="atom">.</span><span class="variable">Monad</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Language</span><span class="atom">.</span><span class="variable">Haskell</span><span class="atom">.</span><span class="variable">TH</span></span></code></pre>
+
 <p>A pretty printer for template haskell Q monad:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; printQ ::</span> <span class="dt">Ppr</span> a <span class="ot">=&gt;</span> <span class="dt">Q</span> a <span class="ot">-&gt;</span> <span class="dt">IO</span> ()
-<span class="ot">&gt;</span> printQ q <span class="fu">=</span> print <span class="fu">.</span> ppr <span class="fu">=&lt;&lt;</span> runQ q</code></pre>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> printQ <span class="keyword">::</span> <span class="variable">Ppr</span> a <span class="atom">=&gt;</span> <span class="variable">Q</span> a <span class="keyword">-&gt;</span> <span class="variable">IO</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span> printQ q <span class="keyword">=</span> print <span class="atom">.</span> ppr <span class="atom">=&lt;&lt;</span> runQ q</span></code></pre>
+
 <p>Warming up, manually writing the tuple lists, and applying show to them:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; bTup ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">ExpQ</span>
-<span class="ot">&gt;</span> bTup n <span class="fu">=</span> tupE [litE (integerL j) <span class="fu">|</span> j <span class="ot">&lt;-</span> [<span class="dv">1</span><span class="fu">..</span>fromIntegral n]]
-<span class="ot">&gt;</span> 
-<span class="ot">&gt; take01 ::</span> <span class="dt">ExpQ</span>
-<span class="ot">&gt;</span> take01 <span class="fu">=</span>
-<span class="ot">&gt;</span>   [e<span class="fu">|</span>
-<span class="ot">&gt;</span>    mapM_ putStrLn [show <span class="fu">$</span>(bTup <span class="dv">1</span>), show <span class="fu">$</span>(bTup <span class="dv">2</span>), show <span class="fu">$</span>(bTup <span class="dv">3</span>)]
-<span class="ot">&gt;</span>     <span class="fu">|</span>]</code></pre>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> bTup <span class="keyword">::</span> <span class="variable">Int</span> <span class="keyword">-&gt;</span> <span class="variable">ExpQ</span>
+<span class="atom">&gt;</span> bTup n <span class="keyword">=</span> tupE <span class="paren1">[<span class="code">litE <span class="paren2">(<span class="code">integerL j</span>)</span> <span class="keyword">|</span> j <span class="keyword">&lt;-</span> <span class="paren2">[<span class="code">1<span class="keyword">..</span>fromIntegral n</span>]</span></span>]</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> take01 <span class="keyword">::</span> <span class="variable">ExpQ</span>
+<span class="atom">&gt;</span> take01 <span class="keyword">=</span>
+<span class="atom">&gt;</span>   <span class="paren1">[<span class="code">e<span class="keyword">|</span>
+<span class="atom">&gt;</span>    mapM_ putStrLn <span class="paren2">[<span class="code">show <span class="atom">$</span><span class="paren3">(<span class="code">bTup 1</span>)</span>, show <span class="atom">$</span><span class="paren3">(<span class="code">bTup 2</span>)</span>, show <span class="atom">$</span><span class="paren3">(<span class="code">bTup 3</span>)</span></span>]</span>
+<span class="atom">&gt;</span>     <span class="keyword">|</span></span>]</span></span></code></pre>
+
 <p>Result:</p>
+
 <pre><code>ghci&gt; printQ take01
 Control.Monad.mapM_ System.IO.putStrLn [GHC.Show.show (1),
                                         GHC.Show.show (1, 2),
-                                        GHC.Show.show (1, 2, 3)]</code></pre>
+                                        GHC.Show.show (1, 2, 3)]
+</code></pre>
+
 <p>We cannot write:</p>
-<pre><code>&gt; take02 = [e| map putStrLn [show $(bTup i) | i &lt;- [1..10]] |]</code></pre>
+
+<pre><code>&gt; take02 = [e| map putStrLn [show $(bTup i) | i &lt;- [1..10]] |]
+</code></pre>
+
 <p>staging error occurs:</p>
-<pre><code>Stage error: `i&#39; is bound at stage 2 but used at stage 1
-In the first argument of `bTup&#39;, namely `i&#39;
+
+<pre><code>Stage error: `i' is bound at stage 2 but used at stage 1
+In the first argument of `bTup', namely `i'
 In the expression: bTup i
-In the first argument of `show&#39;, namely `$(bTup i)&#39;</code></pre>
-<p>So we cannot directly build a list of tuple with passing argument, <code>i</code> in above case. Though, since ‘Q’ is a Monad, we can run it, and then rebind it:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; tups ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">ExpQ</span>
-<span class="ot">&gt;</span> tups n <span class="fu">=</span> runQ <span class="fu">$</span> <span class="kw">do</span>
-<span class="ot">&gt;</span>   ts <span class="ot">&lt;-</span> foldM (\acc i <span class="ot">-&gt;</span> (<span class="fu">:</span>acc) <span class="fu">&lt;$&gt;</span> bTup i) [] [<span class="dv">1</span><span class="fu">..</span>n]
-<span class="ot">&gt;</span>   return <span class="fu">$</span> <span class="dt">ListE</span> <span class="fu">$</span> map (<span class="dt">AppE</span> (<span class="dt">VarE</span> <span class="ch">&#39;show)) (reverse ts)</span></code></pre>
+In the first argument of `show', namely `$(bTup i)'
+</code></pre>
+
+<p>So we cannot directly build a list of tuple with passing argument, <code>i</code>
+in above case. Though, since 'Q' is a Monad, we can run it, and then
+rebind it:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> tups <span class="keyword">::</span> <span class="variable">Int</span> <span class="keyword">-&gt;</span> <span class="variable">ExpQ</span>
+<span class="atom">&gt;</span> tups n <span class="keyword">=</span> runQ <span class="atom">$</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>   ts <span class="keyword">&lt;-</span> foldM <span class="paren1">(<span class="code"><span class="keyword">\</span>acc i <span class="keyword">-&gt;</span> <span class="paren2">(<span class="code"><span class="variable">:</span>acc</span>)</span> <span class="atom">&lt;$&gt;</span> bTup i</span>)</span> <span class="paren1">[<span class="code"></span>]</span> <span class="paren1">[<span class="code">1<span class="keyword">..</span>n</span>]</span>
+<span class="atom">&gt;</span>   return <span class="atom">$</span> <span class="variable">ListE</span> <span class="atom">$</span> map <span class="paren1">(<span class="code"><span class="variable">AppE</span> <span class="paren2">(<span class="code"><span class="variable">VarE</span> <span class="character">'show)) (reverse ts)</span></span></span></span></span></span></code></pre>
+
 <p>Results:</p>
+
 <pre><code>ghci&gt; printQ $ tups 10
 [GHC.Show.show (1),
  GHC.Show.show (1, 2),
@@ -610,11 +1172,17 @@ In the first argument of `show&#39;, namely `$(bTup i)&#39;</code></pre>
  GHC.Show.show (1, 2, 3, 4, 5, 6, 7),
  GHC.Show.show (1, 2, 3, 4, 5, 6, 7, 8),
  GHC.Show.show (1, 2, 3, 4, 5, 6, 7, 8, 9),
- GHC.Show.show (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)]</code></pre>
-<p>We can build a list of String elements in caller module, or prepare a template haskell expression which does the ‘mapM_ putStrLn’:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; mapShowTuples ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">ExpQ</span>
-<span class="ot">&gt;</span> mapShowTuples n <span class="fu">=</span> (varE <span class="ch">&#39;mapM_ `appE` varE &#39;</span>putStrLn) <span class="ot">`appE`</span> tups n</code></pre>
+ GHC.Show.show (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)]
+</code></pre>
+
+<p>We can build a list of String elements in caller module, or prepare a
+template haskell expression which does the 'mapM_ putStrLn':</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> mapShowTuples <span class="keyword">::</span> <span class="variable">Int</span> <span class="keyword">-&gt;</span> <span class="variable">ExpQ</span>
+<span class="atom">&gt;</span> mapShowTuples n <span class="keyword">=</span> <span class="paren1">(<span class="code">varE <span class="character">'mapM_ `appE` varE '</span>putStrLn</span>)</span> <span class="atom">`appE`</span> tups n</span></code></pre>
+
 <p>Results:</p>
+
 <pre><code>ghci&gt; printQ $ mapShowTuples 8
 Control.Monad.mapM_ System.IO.putStrLn [GHC.Show.show (1),
                                         GHC.Show.show (1, 2),
@@ -623,8 +1191,11 @@ Control.Monad.mapM_ System.IO.putStrLn [GHC.Show.show (1),
                                         GHC.Show.show (1, 2, 3, 4, 5),
                                         GHC.Show.show (1, 2, 3, 4, 5, 6),
                                         GHC.Show.show (1, 2, 3, 4, 5, 6, 7),
-                                        GHC.Show.show (1, 2, 3, 4, 5, 6, 7, 8)]</code></pre>
+                                        GHC.Show.show (1, 2, 3, 4, 5, 6, 7, 8)]
+</code></pre>
+
 <p>Sample caller module may look like below:</p>
+
 <pre><code>{-# LANGUAGE TemplateHaskell #-}
 import MappingShow
 
@@ -638,8 +1209,11 @@ t8s_view_th :: IO ()
 t8s_view_th = $(mapShowTuples 8)
 
 main :: IO ()
-main = t8s_view &gt;&gt; t8s_view_th</code></pre>
-<p>Result of running ‘main’:</p>
+main = t8s_view &gt;&gt; t8s_view_th
+</code></pre>
+
+<p>Result of running 'main':</p>
+
 <pre><code>ghci&gt; main
 1
 (1,2)
@@ -656,364 +1230,6 @@ main = t8s_view &gt;&gt; t8s_view_th</code></pre>
 (1,2,3,4,5)
 (1,2,3,4,5,6)
 (1,2,3,4,5,6,7)
-(1,2,3,4,5,6,7,8)</code></pre>
-  <div class="post_tags">
-    <strong>Tags: </strong><a href="/tags/haskell.html">haskell</a>, <a href="/tags/templatehaskell.html">templatehaskell</a>
-  </div>
-</div>
-]]></description>
-    <pubDate>Mon, 28 May 2012 00:00:00 UT</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2012-05-28-mapping-show-with-th.html</guid>
-</item>
-<item>
-    <title>Guard, case, and pattern match</title>
-    <link>http://8c6794b6.github.com/posts/2012-05-27-guard_case_patmatch.html</link>
-    <description><![CDATA[<h2>Guard, case, and pattern match</h2>
-<div id="post_date">
-  <strong>May 27, 2012</strong>
-</div>
-<div id="post_body">
-  <p>I tend to use case with tuples when a function takes more than one arguments. Alternate to tupling, we can write with guards or, with direct pattern match in function arguments.</p>
-<p>What differences we can find in compiled result?</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE BangPatterns #-}</span>
-<span class="ot">&gt;</span> <span class="kw">module</span> <span class="dt">GuardCasePatmatch</span> <span class="kw">where</span>
-<span class="ot">&gt;</span> 
-<span class="ot">&gt;</span> <span class="kw">import</span> Criterion.Main
-<span class="ot">&gt;</span> <span class="kw">import</span> Data.Int</code></pre>
-<p>Target function is, naive power function. First, with guard:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; pow_guard ::</span> <span class="dt">Int64</span> <span class="ot">-&gt;</span> <span class="dt">Int64</span> <span class="ot">-&gt;</span> <span class="dt">Int64</span>
-<span class="ot">&gt;</span> pow_guard <span class="fu">!</span>a <span class="fu">!</span>b
-<span class="ot">&gt;</span>   <span class="fu">|</span> b <span class="fu">==</span> <span class="dv">0</span>    <span class="fu">=</span> <span class="dv">1</span>
-<span class="ot">&gt;</span>   <span class="fu">|</span> otherwise <span class="fu">=</span> a <span class="fu">*</span> pow_guard a (b<span class="fu">-</span><span class="dv">1</span>)</code></pre>
-<p>Next, tupled case:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; pow_case ::</span> <span class="dt">Int64</span> <span class="ot">-&gt;</span> <span class="dt">Int64</span> <span class="ot">-&gt;</span> <span class="dt">Int64</span>
-<span class="ot">&gt;</span> pow_case <span class="fu">!</span>a <span class="fu">!</span>b <span class="fu">=</span> <span class="kw">case</span> (a,b) <span class="kw">of</span>
-<span class="ot">&gt;</span>   (_,<span class="dv">0</span>) <span class="ot">-&gt;</span> <span class="dv">1</span>
-<span class="ot">&gt;</span>   _     <span class="ot">-&gt;</span> a <span class="fu">*</span> pow_case a (b<span class="fu">-</span><span class="dv">1</span>)</code></pre>
-<p>Last, pattern match</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; pow_patmatch ::</span> <span class="dt">Int64</span> <span class="ot">-&gt;</span> <span class="dt">Int64</span> <span class="ot">-&gt;</span> <span class="dt">Int64</span>
-<span class="ot">&gt;</span> pow_patmatch <span class="fu">!</span>a <span class="dv">0</span> <span class="fu">=</span> <span class="dv">1</span>
-<span class="ot">&gt;</span> pow_patmatch <span class="fu">!</span>a <span class="fu">!</span>b <span class="fu">=</span> a <span class="fu">*</span> pow_patmatch a (b<span class="fu">-</span><span class="dv">1</span>)</code></pre>
-<p>Testing that all three give same result:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; test ::</span> <span class="dt">Bool</span>
-<span class="ot">&gt;</span> test <span class="fu">=</span> all id [f x y <span class="fu">|</span> x <span class="ot">&lt;-</span> [<span class="dv">1</span><span class="fu">..</span><span class="dv">32</span>], y <span class="ot">&lt;-</span> [<span class="dv">1</span><span class="fu">..</span><span class="dv">32</span>]] <span class="kw">where</span>
-<span class="ot">&gt;</span>   f a b <span class="fu">=</span>
-<span class="ot">&gt;</span>     <span class="kw">let</span> pc <span class="fu">=</span> pow_case a b
-<span class="ot">&gt;</span>         pg <span class="fu">=</span> pow_guard a b
-<span class="ot">&gt;</span>         pp <span class="fu">=</span> pow_patmatch a b
-<span class="ot">&gt;</span>     <span class="kw">in</span>  pc <span class="fu">==</span> pg <span class="fu">&amp;&amp;</span> pg <span class="fu">==</span> pp</code></pre>
-<p>Result:</p>
-<pre><code>ghci&gt; test
-True</code></pre>
-<p>Seems fine. Now benchmarking:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; main ::</span> <span class="dt">IO</span> ()
-<span class="ot">&gt;</span> main <span class="fu">=</span> defaultMain
-<span class="ot">&gt;</span>  [ bench <span class="st">&quot;guard&quot;</span> (nf (pow_guard <span class="dv">2</span>) <span class="dv">64</span>)
-<span class="ot">&gt;</span>  , bench <span class="st">&quot;case&quot;</span> (nf (pow_case <span class="dv">2</span>) <span class="dv">64</span>)
-<span class="ot">&gt;</span>  , bench <span class="st">&quot;patmatch&quot;</span> (nf (pow_patmatch <span class="dv">2</span>) <span class="dv">64</span>)
-<span class="ot">&gt;</span>  ]</code></pre>
-<p>Compile and run:</p>
-<pre><code>$ ghc --numeric-version
-7.4.1
-$ ghc -fllvm -optl-O3 -O3 -o a.out -main-is GuardCasePatmatch gcp.lhs</code></pre>
-<p>Result:</p>
-<pre><code>benchmarking guard
-mean: 386.1059 ns, lb 385.6170 ns, ub 386.6460 ns, ci 0.950
-std dev: 2.640960 ns, lb 2.261563 ns, ub 3.111325 ns, ci 0.950
-
-benchmarking case
-mean: 382.4345 ns, lb 382.0820 ns, ub 382.8864 ns, ci 0.950
-std dev: 2.030602 ns, lb 1.667205 ns, ub 2.567343 ns, ci 0.950
-
-benchmarking patmatch
-mean: 385.1643 ns, lb 384.6979 ns, ub 385.7441 ns, ci 0.950
-std dev: 2.657997 ns, lb 2.163594 ns, ub 3.363755 ns, ci 0.950</code></pre>
-<p>Almost same. How about dumped core?</p>
-<p>Exerpt of dumped core of <code>power_guard</code> looks like this:</p>
-<pre><code>Rec {
-GuardCasePatmatch.$wpow_guard [Occ=LoopBreaker]
-  :: GHC.Prim.Int# -&gt; GHC.Prim.Int# -&gt; GHC.Prim.Int#
-[GblId, Arity=2, Caf=NoCafRefs, Str=DmdType LL]
-GuardCasePatmatch.$wpow_guard =
-  \ (ww_s2qq :: GHC.Prim.Int#) (ww1_s2qu :: GHC.Prim.Int#) -&gt;
-    case ww1_s2qu of wild_X1r {
-      __DEFAULT -&gt;
-        case GuardCasePatmatch.$wpow_guard ww_s2qq (GHC.Prim.-# wild_X1r 1)
-        of ww2_s2qy { __DEFAULT -&gt;
-        GHC.Prim.*# ww_s2qq ww2_s2qy
-        };
-      0 -&gt; 1
-    }
-end Rec }
-
-...
-
-GuardCasePatmatch.pow_guard =
-  \ (w_s2qo :: GHC.Int.Int64) (w1_s2qs :: GHC.Int.Int64) -&gt;
-    case w_s2qo of _ { GHC.Int.I64# ww_s2qq -&gt;
-    case w1_s2qs of _ { GHC.Int.I64# ww1_s2qu -&gt;
-    case GuardCasePatmatch.$wpow_guard ww_s2qq ww1_s2qu
-    of ww2_s2qy { __DEFAULT -&gt;
-    GHC.Int.I64# ww2_s2qy
-    }
-    }
-    }</code></pre>
-<p>Dumped core of <code>power_case</code>:</p>
-<pre><code>Rec {
-GuardCasePatmatch.$wpow_case [Occ=LoopBreaker]
-  :: GHC.Prim.Int# -&gt; GHC.Prim.Int# -&gt; GHC.Prim.Int#
-[GblId, Arity=2, Caf=NoCafRefs, Str=DmdType LL]
-GuardCasePatmatch.$wpow_case =
-  \ (ww_s2qc :: GHC.Prim.Int#) (ww1_s2qg :: GHC.Prim.Int#) -&gt;
-    case ww1_s2qg of wild_X1n {
-      __DEFAULT -&gt;
-        case GuardCasePatmatch.$wpow_case ww_s2qc (GHC.Prim.-# wild_X1n 1)
-        of ww2_s2qk { __DEFAULT -&gt;
-        GHC.Prim.*# ww_s2qc ww2_s2qk
-        };
-      0 -&gt; 1
-    }
-end Rec }
-
-...
-
-GuardCasePatmatch.pow_case =
-  \ (w_s2qa :: GHC.Int.Int64) (w1_s2qe :: GHC.Int.Int64) -&gt;
-    case w_s2qa of _ { GHC.Int.I64# ww_s2qc -&gt;
-    case w1_s2qe of _ { GHC.Int.I64# ww1_s2qg -&gt;
-    case GuardCasePatmatch.$wpow_case ww_s2qc ww1_s2qg
-    of ww2_s2qk { __DEFAULT -&gt;
-    GHC.Int.I64# ww2_s2qk
-    }
-    }
-    }</code></pre>
-<p>And dumped core of <code>pow_patmatch</code>:</p>
-<pre><code>Rec {
-GuardCasePatmatch.$wpow_patmatch [Occ=LoopBreaker]
-  :: GHC.Prim.Int# -&gt; GHC.Prim.Int# -&gt; GHC.Prim.Int#
-[GblId, Arity=2, Caf=NoCafRefs, Str=DmdType LL]
-GuardCasePatmatch.$wpow_patmatch =
-  \ (ww_s2qE :: GHC.Prim.Int#) (ww1_s2qI :: GHC.Prim.Int#) -&gt;
-    case ww1_s2qI of wild_X1t {
-      __DEFAULT -&gt;
-        case GuardCasePatmatch.$wpow_patmatch
-               ww_s2qE (GHC.Prim.-# wild_X1t 1)
-        of ww2_s2qM { __DEFAULT -&gt;
-        GHC.Prim.*# ww_s2qE ww2_s2qM
-        };
-      0 -&gt; 1
-    }
-end Rec }
-
-...
-
-GuardCasePatmatch.pow_patmatch =
-  \ (w_s2qC :: GHC.Int.Int64) (w1_s2qG :: GHC.Int.Int64) -&gt;
-    case w_s2qC of _ { GHC.Int.I64# ww_s2qE -&gt;
-    case w1_s2qG of _ { GHC.Int.I64# ww1_s2qI -&gt;
-    case GuardCasePatmatch.$wpow_patmatch ww_s2qE ww1_s2qI
-    of ww2_s2qM { __DEFAULT -&gt;
-    GHC.Int.I64# ww2_s2qM
-    }
-    }
-    }</code></pre>
-<p>No difference other than bounded names.</p>
-  <div class="post_tags">
-    <strong>Tags: </strong><a href="/tags/haskell.html">haskell</a>, <a href="/tags/performance.html">performance</a>, <a href="/tags/ghc.html">ghc</a>
-  </div>
-</div>
-]]></description>
-    <pubDate>Sun, 27 May 2012 00:00:00 UT</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2012-05-27-guard_case_patmatch.html</guid>
-</item>
-<item>
-    <title>Cause of 3 nano seconds difference</title>
-    <link>http://8c6794b6.github.com/posts/2012-04-22_cause_of_3_nano_seconds.html</link>
-    <description><![CDATA[<h2>Cause of 3 nano seconds difference</h2>
-<div id="post_date">
-  <strong>April 22, 2012</strong>
-</div>
-<div id="post_body">
-  <p><code>Unboxed Vector</code>, in <a href="http://hackage.haskell.org/package/vector">vector</a> package is efficient data structure. Iterating over unboxed value is pretty fast.</p>
-<p>Is there any faster way to iterate than unboxed vector?</p>
-<p>Interest of comparision here is <em>efficiency of iteration</em>. Not the body contents of work in each iteration, but overhead we get from the loop.</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="ot">{-# LANGUAGE BangPatterns #-}</span>
-<span class="ot">&gt;</span> <span class="kw">module</span> <span class="dt">Main</span> <span class="kw">where</span>
-<span class="ot">&gt;</span> 
-<span class="ot">&gt;</span> <span class="kw">import</span> Criterion.Main (bench, defaultMain, nf)
-<span class="ot">&gt;</span> <span class="kw">import</span> <span class="kw">qualified</span> Data.Vector.Unboxed <span class="kw">as</span> U</code></pre>
-<p>Couple type synonyms, and body function to apply inside the loop.</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">type</span> <span class="dt">Updater</span> a <span class="fu">=</span> a <span class="ot">-&gt;</span> a
-<span class="ot">&gt;</span> <span class="kw">type</span> <span class="dt">Work</span> a <span class="fu">=</span> <span class="dt">Updater</span> a <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> a
-<span class="ot">&gt;</span> 
-<span class="ot">&gt; add1 ::</span> <span class="dt">Updater</span> <span class="dt">Int</span>
-<span class="ot">&gt;</span> add1 <span class="fu">=</span> (<span class="fu">+</span><span class="dv">1</span>)</code></pre>
-<p>Using unboxed vector to loop for given time. Using <code>foldl'</code> and <code>replicate</code>.</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; work01 ::</span> <span class="dt">Work</span> <span class="dt">Int</span>
-<span class="ot">&gt;</span> work01 f n m <span class="fu">=</span> U.foldl&#39; (\x _ <span class="ot">-&gt;</span> f x) n (U.replicate m ())</code></pre>
-<p>Invoking <code>work01</code> with <code>add1</code>. Below will apply <code>add1</code> to 0 for 100 times.</p>
-<pre><code>ghci&gt; work01 add1 0 100
-100</code></pre>
-<p>Manual recursive loop function with wrapper strict data type.</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt;</span> <span class="kw">data</span> <span class="dt">P</span> <span class="fu">=</span> <span class="dt">P</span> <span class="ot">{-# UNPACK #-} !Int {-# UNPACK #-}</span> <span class="fu">!</span><span class="dt">Int</span>
-<span class="ot">&gt;</span> 
-<span class="ot">&gt; work02 ::</span> <span class="dt">Work</span> <span class="dt">Int</span>
-<span class="ot">&gt;</span> work02 f n0 m <span class="fu">=</span> go (<span class="dt">P</span> <span class="dv">0</span> n0) <span class="kw">where</span>
-<span class="ot">&gt;</span>   <span class="ot">{-# INLINE go #-}</span>
-<span class="ot">&gt;</span>   go <span class="fu">!</span>(<span class="dt">P</span> i n) <span class="fu">|</span> i <span class="fu">==</span> m    <span class="fu">=</span> n
-<span class="ot">&gt;</span>               <span class="fu">|</span> otherwise <span class="fu">=</span> go (<span class="dt">P</span> (i<span class="fu">+</span><span class="dv">1</span>) (f n))</code></pre>
-<p>Again, applying <code>add1</code> to 0 for 100 times.</p>
-<pre><code>ghci&gt; work02 add1 0 100
-100</code></pre>
-<p>Main for taking benchmark looks like below.</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; main_one ::</span> <span class="dt">IO</span> ()
-<span class="ot">&gt;</span> main_one <span class="fu">=</span> <span class="kw">do</span>
-<span class="ot">&gt;</span>   <span class="kw">let</span> k <span class="fu">=</span> <span class="dv">2</span> <span class="fu">^</span> <span class="dv">10</span>
-<span class="ot">&gt;</span>   defaultMain
-<span class="ot">&gt;</span>     [ bench <span class="st">&quot;unboxed vector&quot;</span> (nf (work01 add1 <span class="dv">0</span>) k)
-<span class="ot">&gt;</span>     , bench <span class="st">&quot;hand written recursion&quot;</span> (nf (work02 add1 <span class="dv">0</span>) k)
-<span class="ot">&gt;</span>     ]</code></pre>
-<p>Compiling with couple optimization options:</p>
-<pre><code>$ ghc -O3 -fllvm -optl-O3 -main-is main_one -o a.out loop.lhs</code></pre>
-<p>The benchmark result:</p>
-<pre><code>benchmarking unboxed vector
-mean: 52.56010 ns, lb 52.49446 ns, ub 52.64269 ns, ci 0.950
-std dev: 376.4229 ps, lb 310.1393 ps, ub 458.0804 ps, ci 0.950
-
-benchmarking hand written recursion
-mean: 55.53802 ns, lb 55.51631 ns, ub 55.56074 ns, ci 0.950
-std dev: 113.1906 ps, lb 103.0162 ps, ub 125.4034 ps, ci 0.950</code></pre>
-<p>In this micro benchmark, looping with unboxed vector was about 3 nano seconds faster than manual strict recursion.</p>
-<p>What is the cause of this 3 nano seconds difference? Seems like it’s a goot time to have a look at GHC core. Dumped core of <code>work01</code> looks like below:</p>
-<pre><code>Main.work01 :: Main.Work GHC.Types.Int
-[GblId,
- Arity=3,
- Caf=NoCafRefs,
- Str=DmdType LS(A)U(L)m,
- Unf=Unf{Src=InlineStable, TopLvl=True, Arity=0, Value=True,
-         ConLike=True, Cheap=True, Expandable=True,
-         Guidance=ALWAYS_IF(unsat_ok=True,boring_ok=True)
-         Tmpl= Main.work1
-               `cast` (&lt;Main.Updater GHC.Types.Int&gt;
-                       -&gt; &lt;GHC.Types.Int&gt;
-                       -&gt; &lt;GHC.Types.Int&gt;
-                       -&gt; Data.Vector.Fusion.Util.NTCo:Id &lt;GHC.Types.Int&gt;
-                       :: (Main.Updater GHC.Types.Int
-                           -&gt; GHC.Types.Int
-                           -&gt; GHC.Types.Int
-                           -&gt; Data.Vector.Fusion.Util.Id GHC.Types.Int)
-                            ~#
-                          (Main.Updater GHC.Types.Int
-                           -&gt; GHC.Types.Int -&gt; GHC.Types.Int -&gt; GHC.Types.Int))}]
-Main.work01 =
-  Main.work1
-  `cast` (&lt;Main.Updater GHC.Types.Int&gt;
-          -&gt; &lt;GHC.Types.Int&gt;
-          -&gt; &lt;GHC.Types.Int&gt;
-          -&gt; Data.Vector.Fusion.Util.NTCo:Id &lt;GHC.Types.Int&gt;
-          :: (Main.Updater GHC.Types.Int
-              -&gt; GHC.Types.Int
-              -&gt; GHC.Types.Int
-              -&gt; Data.Vector.Fusion.Util.Id GHC.Types.Int)
-               ~#
-             (Main.Updater GHC.Types.Int
-              -&gt; GHC.Types.Int -&gt; GHC.Types.Int -&gt; GHC.Types.Int))</code></pre>
-<p>We don’t find the actual work in <code>Main.work01</code> from dumped result. It’s function body shows that <code>work01</code> is calling <code>cast</code> with <code>Main.work1</code>, which should doing the actual work.</p>
-<p>The dumped core of <code>work02</code> looks like this</p>
-<pre><code>Main.work02 [InlPrag=INLINE[0]] :: Main.Work GHC.Types.Int
-[GblId,
- Arity=3,
- Caf=NoCafRefs,
- Str=DmdType LU(L)U(L)m,
- Unf=Unf{Src=Worker=Main.$wwork02, TopLvl=True, Arity=3, Value=True,
-         ConLike=True, Cheap=True, Expandable=True,
-         Guidance=ALWAYS_IF(unsat_ok=True,boring_ok=False)
-         Tmpl= \ (w_s2Uw [Occ=Once] :: Main.Updater GHC.Types.Int)
-                 (w1_s2Ux [Occ=Once!] :: GHC.Types.Int)
-                 (w2_s2UB [Occ=Once!] :: GHC.Types.Int) -&gt;
-                 case w1_s2Ux of _ { GHC.Types.I# ww_s2Uz [Occ=Once] -&gt;
-                 case w2_s2UB of _ { GHC.Types.I# ww1_s2UD [Occ=Once] -&gt;
-                 case Main.$wwork02 w_s2Uw ww_s2Uz ww1_s2UD
-                 of ww2_s2UH { __DEFAULT -&gt;
-                 GHC.Types.I# ww2_s2UH
-                 }
-                 }
-                 }}]
-Main.work02 =
-  \ (w_s2Uw :: Main.Updater GHC.Types.Int)
-    (w1_s2Ux :: GHC.Types.Int)
-    (w2_s2UB :: GHC.Types.Int) -&gt;
-    case w1_s2Ux of _ { GHC.Types.I# ww_s2Uz -&gt;
-    case w2_s2UB of _ { GHC.Types.I# ww1_s2UD -&gt;
-    case Main.$wwork02 w_s2Uw ww_s2Uz ww1_s2UD
-    of ww2_s2UH { __DEFAULT -&gt;
-    GHC.Types.I# ww2_s2UH
-    }
-    }
-    }
-
-Main.$wwork02
-  :: Main.Updater GHC.Types.Int
-     -&gt; GHC.Prim.Int# -&gt; GHC.Prim.Int# -&gt; GHC.Prim.Int#
-[GblId,
- Arity=3,
- Caf=NoCafRefs,
- Str=DmdType LLL,
- Unf=Unf{Src=&lt;vanilla&gt;, TopLvl=True, Arity=3, Value=True,
-         ConLike=True, Cheap=True, Expandable=True,
-         Guidance=IF_ARGS [60 0 0] 152 0}]
-Main.$wwork02 =
-  \ (w_s2VX :: Main.Updater GHC.Types.Int)
-    (ww_s2W0 :: GHC.Prim.Int#)
-    (ww1_s2W4 :: GHC.Prim.Int#) -&gt;
-    letrec {
-      $wgo1_s2Xg [Occ=LoopBreaker]
-        :: GHC.Prim.Int# -&gt; GHC.Prim.Int# -&gt; GHC.Prim.Int#
-      [LclId, Arity=2, Str=DmdType LL]
-      $wgo1_s2Xg =
-        \ (ww2_s2VN :: GHC.Prim.Int#) (ww3_s2VO :: GHC.Prim.Int#) -&gt;
-          case GHC.Prim.==# ww2_s2VN ww1_s2W4 of _ {
-            GHC.Types.False -&gt;
-              case w_s2VX (GHC.Types.I# ww3_s2VO) of _ { GHC.Types.I# tpl1_B6 -&gt;
-              $wgo1_s2Xg (GHC.Prim.+# ww2_s2VN 1) tpl1_B6
-              };
-            GHC.Types.True -&gt; ww3_s2VO
-          }; } in
-    $wgo1_s2Xg 0 ww_s2W0</code></pre>
-<p>After taking a closer look, I realised that <code>i == m</code> in guard of <code>work02</code> is carrying <code>m</code>, which is passed through the inner functions found in the core. This lead <code>$wwork02</code> to compare <code>ww2_s2VN</code> and <code>ww1_s2w4</code>, which both of them passed from argument in <code>work02</code>.</p>
-<p>Rewriting the guard to compare with constant <code>0</code> instead of <code>m</code>:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; work03 ::</span> <span class="dt">Work</span> <span class="dt">Int</span>
-<span class="ot">&gt;</span> work03 f n0 m <span class="fu">=</span> go (<span class="dt">P</span> m n0) <span class="kw">where</span>
-<span class="ot">&gt;</span>   <span class="ot">{-# INLINE go #-}</span>
-<span class="ot">&gt;</span>   go <span class="fu">!</span>(<span class="dt">P</span> i n) <span class="fu">|</span> i <span class="fu">==</span> <span class="dv">0</span>    <span class="fu">=</span> n
-<span class="ot">&gt;</span>               <span class="fu">|</span> otherwise <span class="fu">=</span> go (<span class="dt">P</span> (i<span class="fu">-</span><span class="dv">1</span>) (f n))</code></pre>
-<p>New main for taking benchmark:</p>
-<pre class="sourceCode literate literatehaskell"><code class="sourceCode literatehaskell"><span class="ot">&gt; main_two ::</span> <span class="dt">IO</span> ()
-<span class="ot">&gt;</span> main_two <span class="fu">=</span> <span class="kw">do</span>
-<span class="ot">&gt;</span>   <span class="kw">let</span> k <span class="fu">=</span> <span class="dv">2</span> <span class="fu">^</span> <span class="dv">10</span>
-<span class="ot">&gt;</span>   defaultMain
-<span class="ot">&gt;</span>     [ bench <span class="st">&quot;unboxed vector&quot;</span> (nf (work01 add1 <span class="dv">0</span>) k)
-<span class="ot">&gt;</span>     , bench <span class="st">&quot;hand written recursion, take 2&quot;</span> (nf (work03 add1 <span class="dv">0</span>) k)
-<span class="ot">&gt;</span>     ]</code></pre>
-<p>Compiling:</p>
-<pre><code>$ ghc -O3 -fllvm -optl-O3 -main-is main_two -o b.out loop.lhs</code></pre>
-<p>And running the benchmark:</p>
-<pre><code>benchmarking unboxed vector
-mean: 49.86483 ns, lb 49.84522 ns, ub 49.88565 ns, ci 0.950
-std dev: 103.5967 ps, lb 91.78539 ps, ub 117.8307 ps, ci 0.950
-
-benchmarking hand written recursion, take 2
-mean: 48.45895 ns, lb 48.37886 ns, ub 48.61787 ns, ci 0.950
-std dev: 554.6886 ps, lb 337.5092 ps, ub 946.0307 ps, ci 0.950</code></pre>
-<p>Now the hand written recursion performs about 1.4 nano second faster than unboxed vector. Whenever possible, compare with constant in guards. And, if few nano seconds does not matter, just use unboxed vector.</p>
-  <div class="post_tags">
-    <strong>Tags: </strong><a href="/tags/haskell.html">haskell</a>, <a href="/tags/performance.html">performance</a>
-  </div>
-</div>
-]]></description>
-    <pubDate>Sun, 22 Apr 2012 00:00:00 UT</pubDate>
-    <guid>http://8c6794b6.github.com/posts/2012-04-22_cause_of_3_nano_seconds.html</guid>
-</item>
-
-    </channel> 
-</rss>
+(1,2,3,4,5,6,7,8)
+</code></pre>
+ ]]></description> </item> </channel> </rss>

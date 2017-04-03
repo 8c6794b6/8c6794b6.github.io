@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=defice-width, initial-scale=1"> <title>8c6794b6.github.io</title> <link href="/css/style.css" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=Noto+Serif" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=PT+Serif" rel="stylesheet" type="text/css" /> <link rel="icon" type="image/png" href="/static/favicon.png"/>  </head> <body> <header> <h1><a href="/index.html">8c6794b6.github.io</a></h1> <nav> <a href="/index.html">HOME</a> • <a href="/about.html">ABOUT</a> • <a href="/archive.html">ARCHIVE</a> • <a href="/rss.xml">RSS</a> </nav> </header> <div class="contents"> <div class="post-title"> <h2>French input methods and œ</h2> <em class="post-date">2013-11-28</em> </div> <div class="post"> <p>Notes about typing français in emacs with English keyboard.</p>
+
+<p>Change input method with <code>C-x RET C-\</code> or <code>M-x set-input-method</code>. There are
+three french input methods for English keyboard: <code>french-prefix</code>,
+<code>french-postfix</code>, and <code>french-alt-postfix</code>. <code>french-prefix</code> input method will
+let the accent to be typed before alphabets, e.g: to type <code>ç</code>, type <code>,c</code>. In
+<code>french-postfix</code> input method, type <code>c,</code>. Help of <code>french-prefix</code> input method,
+which shown with <code>C-h I</code> or <code>M-x describe-input-method</code>, had a nice table:</p>
+
+<pre><code>Input method: french-prefix (mode line indicator:FR&gt;)
+
+French (Français) input method with prefix modifiers
+
+    effect   | prefix | examples
+ ------------+--------+----------
+    acute    |   '    | 'e -&gt; é
+    grave    |   `    | `a -&gt; à
+  circumflex |   ^    | ^a -&gt; â
+  diaeresis  |   &quot;    | &quot;i -&gt; ï
+   cedilla   | ~ or , | ~c -&gt; ç   ,c -&gt; ç
+   symbol    |   ~    | ~&gt; -&gt; »   ~&lt; -&gt; «
+</code></pre>
+
+<p>Characters with accents were able to type with these two modes, though the
+character <code>œ</code> was not. Found an entry in emacs-devel thread posted in 2008 which
+mentioning <a href="http://lists.gnu.org/archive/html/emacs-devel/2008-10/msg00760.html" >french ç and œ</a>. To type in œ, use <code>latin-postfix</code> or
+<code>latin-prefix</code> input method, the key sequence to type <code>œ</code> is <code>o/2</code> and <code>/o2</code>,
+respectively. <code>latin-prefix</code> and <code>latin-postfix</code> input methods contains those
+characters typed in with french input methods:</p>
+
+<pre><code>Input method: latin-postfix (mode line indicator:L&lt;)
+
+Latin character input method with postfix modifiers.
+This is the union of various input methods originally made for input
+of characters from a single Latin-N charset.
+
+             | postfix | examples
+ ------------+---------+----------
+  acute      |    '    | a' -&gt; á
+  grave      |    `    | a` -&gt; à
+  circumflex |    ^    | a^ -&gt; â
+  diaeresis  |    &quot;    | a&quot; -&gt; ä
+  tilde      |    ~    | a~ -&gt; ã
+  cedilla    |    ,    | c, -&gt; ç
+  ogonek     |    ,    | a, -&gt; ą
+  breve      |    ~    | a~ -&gt; ă
+  caron      |    ~    | c~ -&gt; č
+  dbl. acute |    :    | o: -&gt; ő
+  ring       |    .    | u. -&gt; ů
+  dot        |    .    | z. -&gt; ż
+  stroke     |    /    | d/ -&gt; đ
+  nordic     |    /    | d/ -&gt; ð   t/ -&gt; þ   a/ -&gt; å   e/ -&gt; æ   o/ -&gt; ø
+  others     |    /    | s/ -&gt; ß   ?/ -&gt; ¿   !/ -&gt; ¡   // -&gt; °
+             | various | &lt;&lt; -&gt; «   &gt;&gt; -&gt; »   o_ -&gt; º   a_ -&gt; ª
+
+Doubling the postfix separates the letter and postfix: e.g. a'' -&gt; a'
+</code></pre>
+ </div> <div class="post-tags"> TAGGED: <a href="/tag/emacs.html">emacs</a>, <a href="/tag/french.html">french</a> </div> <div class="prev-post-link"> Prev: <a href="/posts/Notes-about-travis-and-ghc.html">Notes about travis and ghc</a> </div> <div class="next-post-link"> Next: <a href="/posts/Syntax-for-building-rose-tree.html">Syntax for building rose tree</a> </div> </div> <footer> <section class="tags"> <h3>Tags</h3> <a href="/tag/algorithm.html">algorithm</a> • <a href="/tag/arc.html">arc</a> • <a href="/tag/arrow.html">arrow</a> • <a href="/tag/cabal.html">cabal</a> • <a href="/tag/ci.html">ci</a> • <a href="/tag/coleslaw.html">coleslaw</a> • <a href="/tag/commonlisp.html">commonlisp</a> • <a href="/tag/continuation.html">continuation</a> • <a href="/tag/datastructure.html">datastructure</a> • <a href="/tag/delimited.html">delimited</a> • <a href="/tag/dph.html">dph</a> • <a href="/tag/dsl.html">dsl</a> • <a href="/tag/emacs.html">emacs</a> • <a href="/tag/french.html">french</a> • <a href="/tag/functionaldependency.html">functionaldependency</a> • <a href="/tag/generic.html">generic</a> • <a href="/tag/ghc.html">ghc</a> • <a href="/tag/ghci.html">ghci</a> • <a href="/tag/git.html">git</a> • <a href="/tag/hakyll.html">hakyll</a> • <a href="/tag/haskell.html">haskell</a> • <a href="/tag/heroku.html">heroku</a> • <a href="/tag/image.html">image</a> • <a href="/tag/linux.html">linux</a> • <a href="/tag/lisp.html">lisp</a> • <a href="/tag/monad.html">monad</a> • <a href="/tag/package.html">package</a> • <a href="/tag/pdf.html">pdf</a> • <a href="/tag/performance.html">performance</a> • <a href="/tag/ps.html">ps</a> • <a href="/tag/repa.html">repa</a> • <a href="/tag/sound.html">sound</a> • <a href="/tag/supercollider.html">supercollider</a> • <a href="/tag/templatehaskell.html">templatehaskell</a> • <a href="/tag/tips.html">tips</a> • <a href="/tag/travis.html">travis</a> • <a href="/tag/tree.html">tree</a> • <a href="/tag/typefamily.html">typefamily</a> • <a href="/tag/utf-8.html">utf-8</a> • <a href="/tag/web.html">web</a> </section> Copyright © 2011-2017 8c6794b6; Unless otherwise noted, site contents licensed under <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"> CC-by-SA</a>. </footer> </body> </html>

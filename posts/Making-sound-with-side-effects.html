@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=defice-width, initial-scale=1"> <title>8c6794b6.github.io</title> <link href="/css/style.css" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=Noto+Serif" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=PT+Serif" rel="stylesheet" type="text/css" /> <link rel="icon" type="image/png" href="/static/favicon.png"/>  </head> <body> <header> <h1><a href="/index.html">8c6794b6.github.io</a></h1> <nav> <a href="/index.html">HOME</a> • <a href="/about.html">ABOUT</a> • <a href="/archive.html">ARCHIVE</a> • <a href="/rss.xml">RSS</a> </nav> </header> <div class="contents"> <div class="post-title"> <h2>Making sound with side effects</h2> <em class="post-date">2011-11-13</em> </div> <div class="post"> <p>This post is a scratchy idea for making sound with side effects. Sample
+recording created with side effects from fibonacci sequence sounds like
+this <a href="/audio/fib.ogg" >ogg</a> file.</p>
+
+<p>During debug, we print out intermediate data, as side effects. Like
+this, can we make sounds from those intermediate data, as side effects?</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="comment">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span>
+<span class="atom">&gt;</span> <span class="keyword">module</span> <span class="variable">SideEffectSound</span> <span class="keyword">where</span></span></code></pre>
+
+<p>We will use <code>scsynth</code> as sound synthesis engine.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Control</span><span class="atom">.</span><span class="variable">Concurrent</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Control</span><span class="atom">.</span><span class="variable">Monad</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Control</span><span class="atom">.</span><span class="variable">Monad</span><span class="atom">.</span><span class="variable">Reader</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Control</span><span class="atom">.</span><span class="variable">Monad</span><span class="atom">.</span><span class="variable">State</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Control</span><span class="atom">.</span><span class="variable">Monad</span><span class="atom">.</span><span class="variable">Writer</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Data</span><span class="atom">.</span><span class="variable">Word</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Sound</span><span class="atom">.</span><span class="variable">OpenSoundControl</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Sound</span><span class="atom">.</span><span class="variable">SC3</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Sound</span><span class="atom">.</span><span class="variable">SC3</span><span class="atom">.</span><span class="variable">ID</span></span></code></pre>
+
+<p>As an action to get side effect, using fibonacci sequence here. We will
+not use memoizatoin nor any other method to achive efficiency, since our
+concern resides in those side effects.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> fib_visible <span class="keyword">::</span> <span class="variable">Int</span> <span class="keyword">-&gt;</span> <span class="variable">IO</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> fib_visible n
+<span class="atom">&gt;</span>   <span class="keyword">|</span> n <span class="atom">==</span> 0    <span class="keyword">=</span> putStr <span class="string">"0"</span> <span class="atom">&gt;&gt;</span> return 1
+<span class="atom">&gt;</span>   <span class="keyword">|</span> n <span class="atom">==</span> 1    <span class="keyword">=</span> putStr <span class="string">"1"</span> <span class="atom">&gt;&gt;</span> return 1
+<span class="atom">&gt;</span>   <span class="keyword">|</span> otherwise <span class="keyword">=</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>       putStr <span class="paren1">(<span class="code">show n</span>)</span>
+<span class="atom">&gt;</span>       a <span class="keyword">&lt;-</span> fib_visible <span class="paren1">(<span class="code">n<span class="atom">-</span>1</span>)</span>
+<span class="atom">&gt;</span>       b <span class="keyword">&lt;-</span> fib_visible <span class="paren1">(<span class="code">n<span class="atom">-</span>2</span>)</span>
+<span class="atom">&gt;</span>       return <span class="atom">$</span> a <span class="atom">+</span> b</span></code></pre>
+
+<p>Sample output:</p>
+
+<pre><code>| ghci&gt; fib_visible 5
+| 5432101210321018
+</code></pre>
+
+<p>Like above, we will make sound from side effect with fibonacci sequence.
+Using a newtype wrapper for sending OSC message to default scsynth,
+running in UDP port 57110 of localhost (assuming that scsynth is running
+with this default settings).</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">newtype</span> <span class="variable">Sound</span> a <span class="keyword">=</span> <span class="variable">Sound</span> <span class="paren1">{<span class="code">unSound <span class="keyword">::</span> <span class="variable">ReaderT</span> <span class="variable">UDP</span> <span class="variable">IO</span> a</span>}</span>
+<span class="atom">&gt;</span>   <span class="keyword">deriving</span> <span class="paren1">(<span class="code"><span class="variable">Functor,</span> <span class="variable">Monad,</span> <span class="variable">MonadReader</span> <span class="variable">UDP,</span> <span class="variable">MonadIO</span></span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> runSound <span class="keyword">::</span> <span class="variable">Sound</span> a <span class="keyword">-&gt;</span> <span class="variable">IO</span> a
+<span class="atom">&gt;</span> runSound <span class="keyword">=</span> withSC3 <span class="atom">.</span> runReaderT <span class="atom">.</span> unSound</span></code></pre>
+
+<p>With using <code>Sound</code> wrapper, we can write audible fibonacci sequence with
+side effect pretty much resembling to its visible variant. The only
+difference we see in the body of code is use of <code>mkSound</code> instead of
+<code>putStr</code>.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> fib_audible <span class="keyword">::</span> <span class="variable">Int</span> <span class="keyword">-&gt;</span> <span class="variable">Sound</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> fib_audible n
+<span class="atom">&gt;</span>   <span class="keyword">|</span> n <span class="atom">==</span> 0    <span class="keyword">=</span> mkSound 0 <span class="atom">&gt;&gt;</span> return 1
+<span class="atom">&gt;</span>   <span class="keyword">|</span> n <span class="atom">==</span> 1    <span class="keyword">=</span> mkSound 1 <span class="atom">&gt;&gt;</span> return 1
+<span class="atom">&gt;</span>   <span class="keyword">|</span> otherwise <span class="keyword">=</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>       mkSound n
+<span class="atom">&gt;</span>       a <span class="keyword">&lt;-</span> fib_audible <span class="paren1">(<span class="code">n<span class="atom">-</span>1</span>)</span>
+<span class="atom">&gt;</span>       b <span class="keyword">&lt;-</span> fib_audible <span class="paren1">(<span class="code">n<span class="atom">-</span>2</span>)</span>
+<span class="atom">&gt;</span>       return <span class="atom">$</span> a <span class="atom">+</span> b</span></code></pre>
+
+<p>We could write <code>fib_audible</code> and <code>fib_visible</code> with using <code>mkFib</code>.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> mkFib <span class="keyword">::</span> <span class="variable">Monad</span> m <span class="atom">=&gt;</span> <span class="paren1">(<span class="code"><span class="variable">Int</span> <span class="keyword">-&gt;</span> m <span class="paren2">(<span class="code"></span>)</span></span>)</span> <span class="keyword">-&gt;</span> <span class="variable">Int</span> <span class="keyword">-&gt;</span> m <span class="variable">Int</span>
+<span class="atom">&gt;</span> mkFib act n
+<span class="atom">&gt;</span>   <span class="keyword">|</span> n <span class="atom">==</span> 0    <span class="keyword">=</span> act 0 <span class="atom">&gt;&gt;</span> return 1
+<span class="atom">&gt;</span>   <span class="keyword">|</span> n <span class="atom">==</span> 1    <span class="keyword">=</span> act 1 <span class="atom">&gt;&gt;</span> return 1
+<span class="atom">&gt;</span>   <span class="keyword">|</span> otherwise <span class="keyword">=</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>       act n
+<span class="atom">&gt;</span>       a <span class="keyword">&lt;-</span> mkFib act <span class="paren1">(<span class="code">n<span class="atom">-</span>1</span>)</span>
+<span class="atom">&gt;</span>       b <span class="keyword">&lt;-</span> mkFib act <span class="paren1">(<span class="code">n<span class="atom">-</span>2</span>)</span>
+<span class="atom">&gt;</span>       return <span class="atom">$</span> a <span class="atom">+</span> b
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> fib_visible' <span class="keyword">=</span> mkFib <span class="paren1">(<span class="code">putStr <span class="atom">.</span> show</span>)</span>
+<span class="atom">&gt;</span> fib_audible' <span class="keyword">=</span> mkFib mkSound</span></code></pre>
+
+<p>The sound maker. Sends OSC message to scsynth and pause. Will not make
+sound when n is 0.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> mkSound <span class="keyword">::</span> <span class="variable">Int</span> <span class="keyword">-&gt;</span> <span class="variable">Sound</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span> mkSound n
+<span class="atom">&gt;</span>   <span class="keyword">|</span> n <span class="atom">==</span> 0    <span class="keyword">=</span> liftIO <span class="atom">$</span> threadDelay timeUnit
+<span class="atom">&gt;</span>   <span class="keyword">|</span> otherwise <span class="keyword">=</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>     fd <span class="keyword">&lt;-</span> ask
+<span class="atom">&gt;</span>     <span class="keyword">let</span> n' <span class="keyword">=</span> fromIntegral n
+<span class="atom">&gt;</span>     liftIO <span class="atom">$</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>       send fd <span class="atom">$</span> s_new <span class="string">"fibdef"</span> <span class="paren1">(<span class="code"><span class="atom">-</span>1</span>)</span> <span class="variable">AddToHead</span> 1
+<span class="atom">&gt;</span>         <span class="paren1">[<span class="code"> <span class="paren2">(<span class="code"><span class="string">"freq"</span>, n' <span class="atom">*</span> 220</span>)</span>
+<span class="atom">&gt;</span>         , <span class="paren2">(<span class="code"><span class="string">"amp"</span>, 0<span class="atom">.</span>05 <span class="atom">+</span> <span class="paren3">(<span class="code">0<span class="atom">.</span>01 <span class="atom">*</span> n'</span>)</span></span>)</span>
+<span class="atom">&gt;</span>         , <span class="paren2">(<span class="code"><span class="string">"pan"</span>, <span class="paren3">(<span class="code"><span class="atom">-</span>1</span>)</span> <span class="atom">+</span> <span class="paren3">(<span class="code">2<span class="atom">/</span>3</span>)</span> <span class="atom">*</span> fromIntegral <span class="paren3">(<span class="code">n <span class="atom">`mod`</span> 4</span>)</span></span>)</span>
+<span class="atom">&gt;</span>         , <span class="paren2">(<span class="code"><span class="string">"decay"</span>, 0<span class="atom">.</span>1 <span class="atom">+</span> <span class="paren3">(<span class="code">n' <span class="atom">*</span> 0<span class="atom">.</span>175</span>)</span></span>)</span> </span>]</span>
+<span class="atom">&gt;</span>       threadDelay timeUnit</span></code></pre>
+
+<p>Time interval used for pausing.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> timeUnit <span class="keyword">::</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> timeUnit <span class="keyword">=</span> 12800</span></code></pre>
+
+<p>Synthdefs used in this piece. Simple synthdef taking <code>freq</code>, <code>pan</code> and
+<code>amp</code> parameter.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> fibdef <span class="keyword">::</span> <span class="variable">UGen</span>
+<span class="atom">&gt;</span> fibdef <span class="keyword">=</span>
+<span class="atom">&gt;</span>   <span class="keyword">let</span> sig <span class="keyword">=</span> sinOsc <span class="variable">AR</span> frq 0 <span class="atom">*</span> e <span class="atom">*</span> amp
+<span class="atom">&gt;</span>       frq <span class="keyword">=</span> control <span class="variable">KR</span> <span class="string">"freq"</span> 440
+<span class="atom">&gt;</span>       amp <span class="keyword">=</span> control <span class="variable">KR</span> <span class="string">"amp"</span> 0<span class="atom">.</span>1
+<span class="atom">&gt;</span>       e   <span class="keyword">=</span> envGen <span class="variable">KR</span> 1 1 0 1 <span class="variable">RemoveSynth</span> shp
+<span class="atom">&gt;</span>       shp <span class="keyword">=</span> envPerc 1e<span class="atom">-</span>4 dcy
+<span class="atom">&gt;</span>       pan <span class="keyword">=</span> control <span class="variable">KR</span> <span class="string">"pan"</span> 0
+<span class="atom">&gt;</span>       dcy <span class="keyword">=</span> control <span class="variable">KR</span> <span class="string">"decay"</span> 0<span class="atom">.</span>5
+<span class="atom">&gt;</span>   <span class="keyword">in</span>  out 0 <span class="paren1">(<span class="code">pan2 sig pan 1</span>)</span></span></code></pre>
+
+<p>Send the synthdef to scsynth.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> setup_fib <span class="keyword">::</span> <span class="variable">Transport</span> t <span class="atom">=&gt;</span> t <span class="keyword">-&gt;</span> <span class="variable">IO</span> <span class="variable">OSC</span>
+<span class="atom">&gt;</span> setup_fib fd <span class="keyword">=</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>   async fd <span class="atom">$</span> bundle immediately
+<span class="atom">&gt;</span>     <span class="paren1">[<span class="code"> d_recv <span class="atom">$</span> synthdef <span class="string">"fibdef"</span> fibdef </span>]</span></span></code></pre>
+
+<p>Now its ready to hear the sound.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> play_fib_sound <span class="keyword">::</span> <span class="variable">IO</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> play_fib_sound <span class="keyword">=</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>   withSC3 <span class="atom">$</span> <span class="keyword">\</span>fd <span class="keyword">-&gt;</span> reset fd <span class="atom">&gt;&gt;</span> setup_fib fd
+<span class="atom">&gt;</span>   runSound <span class="atom">$</span> fib_audible 17</span></code></pre>
+
+<p>In some case, Instead of listening sound in real time, we might want to
+write score and render the result in batch command. Below newtype
+<code>Score</code> will do this job. <code>Score</code> is a combination of Reader, Writer,
+and State monad, it takes delta time as Reader monad's environment
+value, used to increment current time in score file. Writer accumulate
+the OSC list written to score file, and State monad hold the current
+time in the score. Alternatively, it could be written with RWS monad, or
+single State monad. The use of newtype wrapper with
+<code>GeneralizedNewtypeDeriving</code> here is, I suppose, just a matter of taste.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">newtype</span> <span class="variable">Score</span> a <span class="keyword">=</span>
+<span class="atom">&gt;</span>   <span class="variable">Score</span> <span class="paren1">{<span class="code">unScore <span class="keyword">::</span> <span class="variable">ReaderT</span> <span class="variable">Word64</span> <span class="paren2">(<span class="code"><span class="variable">WriterT</span> <span class="paren3">[<span class="code"><span class="variable">OSC</span></span>]</span> <span class="paren3">(<span class="code"><span class="variable">State</span> <span class="variable">Word64</span></span>)</span></span>)</span> a</span>}</span> <span class="keyword">deriving</span>
+<span class="atom">&gt;</span>   <span class="paren1">(<span class="code"><span class="variable">Functor,</span> <span class="variable">Monad,</span> <span class="variable">MonadState</span> <span class="variable">Word64,</span> <span class="variable">MonadWriter</span> <span class="paren2">[<span class="code"><span class="variable">OSC</span></span>]</span>, <span class="variable">MonadReader</span> <span class="variable">Word64</span></span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> runScore <span class="keyword">::</span> <span class="variable">Score</span> a <span class="keyword">-&gt;</span> <span class="variable">Word64</span> <span class="keyword">-&gt;</span> <span class="paren1">[<span class="code"><span class="variable">OSC</span></span>]</span>
+<span class="atom">&gt;</span> runScore m delta <span class="keyword">=</span>
+<span class="atom">&gt;</span>   evalState <span class="paren1">(<span class="code">execWriterT <span class="paren2">(<span class="code">runReaderT <span class="paren3">(<span class="code">unScore m</span>)</span> delta</span>)</span></span>)</span> 0</span></code></pre>
+
+<p>Action to make score from each data passed in fibonacci, and fibonacci
+score writer monad. We can use <code>mkFib</code> to make a new action to write
+score from side effects generated from fibonacci action.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> mkScore <span class="keyword">::</span> <span class="variable">Int</span> <span class="keyword">-&gt;</span> <span class="variable">Score</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span> mkScore n <span class="keyword">=</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>   delta <span class="keyword">&lt;-</span> ask
+<span class="atom">&gt;</span>   t0 <span class="keyword">&lt;-</span> get
+<span class="atom">&gt;</span>   <span class="keyword">let</span> n' <span class="keyword">=</span> fromIntegral n
+<span class="atom">&gt;</span>   tell <span class="atom">$</span> <span class="paren1">[<span class="code"> bundle <span class="paren2">(<span class="code"><span class="variable">NTPi</span> t0</span>)</span>
+<span class="atom">&gt;</span>     <span class="paren2">[<span class="code"> s_new <span class="string">"fibdef"</span> <span class="paren3">(<span class="code"><span class="atom">-</span>1</span>)</span> <span class="variable">AddToTail</span> 1
+<span class="atom">&gt;</span>       <span class="paren3">[<span class="code"> <span class="paren4">(<span class="code"><span class="string">"freq"</span>, n' <span class="atom">*</span> 220</span>)</span>
+<span class="atom">&gt;</span>       , <span class="paren4">(<span class="code"><span class="string">"amp"</span>,  0<span class="atom">.</span>05 <span class="atom">+</span> <span class="paren5">(<span class="code">n' <span class="atom">*</span> 0<span class="atom">.</span>02</span>)</span></span>)</span>
+<span class="atom">&gt;</span>       , <span class="paren4">(<span class="code"><span class="string">"pan"</span>, <span class="paren5">(<span class="code"><span class="atom">-</span>1</span>)</span> <span class="atom">+</span> <span class="paren5">(<span class="code">2<span class="atom">/</span>3</span>)</span> <span class="atom">*</span> fromIntegral <span class="paren5">(<span class="code">n <span class="atom">`mod`</span> 4</span>)</span></span>)</span>
+<span class="atom">&gt;</span>       , <span class="paren4">(<span class="code"><span class="string">"decay"</span>, 0<span class="atom">.</span>1 <span class="atom">+</span> <span class="paren5">(<span class="code">n' <span class="atom">*</span> 0<span class="atom">.</span>25</span>)</span></span>)</span> </span>]</span></span>]</span></span>]</span>
+<span class="atom">&gt;</span>   put <span class="paren1">(<span class="code">t0 <span class="atom">+</span> delta</span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> fib_score <span class="keyword">::</span> <span class="variable">Int</span> <span class="keyword">-&gt;</span> <span class="variable">Score</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> fib_score <span class="keyword">=</span> mkFib mkScore</span></code></pre>
+
+<p>Function to write score file, with initial OSC message to send synthdef
+and add default group to scsynth.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> write_fib_score <span class="keyword">::</span> <span class="variable">FilePath</span> <span class="keyword">-&gt;</span> <span class="variable">Score</span> a <span class="keyword">-&gt;</span> <span class="variable">IO</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span> write_fib_score path m <span class="keyword">=</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>   <span class="keyword">let</span> iosc <span class="keyword">=</span> bundle <span class="paren1">(<span class="code"><span class="variable">NTPi</span> 0</span>)</span>
+<span class="atom">&gt;</span>         <span class="paren1">[<span class="code"> g_new <span class="paren2">[<span class="code"><span class="paren3">(<span class="code">1,AddToTail,0</span>)</span></span>]</span>
+<span class="atom">&gt;</span>         , d_recv <span class="atom">$</span> synthdef <span class="string">"fibdef"</span> fibdef </span>]</span>
+<span class="atom">&gt;</span>   writeNRT path <span class="paren1">(<span class="code">iosc <span class="variable">:</span> runScore m <span class="paren2">(<span class="code">fromIntegral timeUnit <span class="atom">*</span> 10000</span>)</span></span>)</span></span></code></pre>
+
+<p>Test it.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> test_fib_score <span class="keyword">::</span> <span class="variable">IO</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span> test_fib_score <span class="keyword">=</span> write_fib_score <span class="string">"/tmp/fib.osc"</span> <span class="paren1">(<span class="code">fib_score 12</span>)</span></span></code></pre>
+
+<p>Attached recording in the beginning of this post was created from
+<code>fib.osc</code>, fed to scsynth in non-realtime mode.</p>
+
+<pre><code>| $ scsynth -o 2 -N /tmp/fib.osc _ out.wav 48000 WAVE float
+</code></pre>
+ </div> <div class="post-tags"> TAGGED: <a href="/tag/haskell.html">haskell</a>, <a href="/tag/supercollider.html">supercollider</a>, <a href="/tag/sound.html">sound</a> </div> <div class="prev-post-link"> Prev: <a href="/posts/A-situation-when-type-families-does-not-work-but-functional-dependencies-does.html">A situation when type families does not work, but functional dependencies does</a> </div> <div class="next-post-link"> Next: <a href="/posts/Benchmarking-arrow-syntax.html">Benchmarking arrow syntax</a> </div> </div> <footer> <section class="tags"> <h3>Tags</h3> <a href="/tag/algorithm.html">algorithm</a> • <a href="/tag/arc.html">arc</a> • <a href="/tag/arrow.html">arrow</a> • <a href="/tag/cabal.html">cabal</a> • <a href="/tag/ci.html">ci</a> • <a href="/tag/coleslaw.html">coleslaw</a> • <a href="/tag/commonlisp.html">commonlisp</a> • <a href="/tag/continuation.html">continuation</a> • <a href="/tag/datastructure.html">datastructure</a> • <a href="/tag/delimited.html">delimited</a> • <a href="/tag/dph.html">dph</a> • <a href="/tag/dsl.html">dsl</a> • <a href="/tag/emacs.html">emacs</a> • <a href="/tag/french.html">french</a> • <a href="/tag/functionaldependency.html">functionaldependency</a> • <a href="/tag/generic.html">generic</a> • <a href="/tag/ghc.html">ghc</a> • <a href="/tag/ghci.html">ghci</a> • <a href="/tag/git.html">git</a> • <a href="/tag/hakyll.html">hakyll</a> • <a href="/tag/haskell.html">haskell</a> • <a href="/tag/heroku.html">heroku</a> • <a href="/tag/image.html">image</a> • <a href="/tag/linux.html">linux</a> • <a href="/tag/lisp.html">lisp</a> • <a href="/tag/monad.html">monad</a> • <a href="/tag/package.html">package</a> • <a href="/tag/pdf.html">pdf</a> • <a href="/tag/performance.html">performance</a> • <a href="/tag/ps.html">ps</a> • <a href="/tag/repa.html">repa</a> • <a href="/tag/sound.html">sound</a> • <a href="/tag/supercollider.html">supercollider</a> • <a href="/tag/templatehaskell.html">templatehaskell</a> • <a href="/tag/tips.html">tips</a> • <a href="/tag/travis.html">travis</a> • <a href="/tag/tree.html">tree</a> • <a href="/tag/typefamily.html">typefamily</a> • <a href="/tag/utf-8.html">utf-8</a> • <a href="/tag/web.html">web</a> </section> Copyright © 2011-2017 8c6794b6; Unless otherwise noted, site contents licensed under <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"> CC-by-SA</a>. </footer> </body> </html>

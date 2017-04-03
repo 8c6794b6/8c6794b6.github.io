@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=defice-width, initial-scale=1"> <title>8c6794b6.github.io</title> <link href="/css/style.css" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=Noto+Serif" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=PT+Serif" rel="stylesheet" type="text/css" /> <link rel="icon" type="image/png" href="/static/favicon.png"/>  </head> <body> <header> <h1><a href="/index.html">8c6794b6.github.io</a></h1> <nav> <a href="/index.html">HOME</a> • <a href="/about.html">ABOUT</a> • <a href="/archive.html">ARCHIVE</a> • <a href="/rss.xml">RSS</a> </nav> </header> <div class="contents"> <div class="post-title"> <h2>How to manage this site</h2> <em class="post-date">2012-04-21</em> </div> <div class="post"> <p>I sometime forget how to manage this site.</p>
+
+<p>This site is managed with <a href="http://jaspervdj.be/hakyll/" >hakyll</a>, a package to
+manage static html contents written in haskell. The contents of html is in a
+git repository hosted in <a href="http://github.com" >github</a>, served as html with
+<a href="http://pages.github.com" >github pages</a>.</p>
+
+<p>The contents of hakyll codes, css, template used to generate the site resides
+in <a href="https://github.com/8c6794b6/gh-pages-8c6794b6" >gh-pages-8c6794b6</a>, and
+the git repository for generated contents is in
+<a href="https://github.com/8c6794b6/8c6794b6.github.com" >8c6794b6.github.com</a>
+repository.</p>
+
+<p>When writing a new post, I start writing a new file under <code>posts/</code> directory in
+<code>gh-pages-8c6794b6</code> repository, and generate the html:</p>
+
+<pre><code>[~/repos/gh-pages-8c6794b6] $ emacs posts/new_post.mkd
+... edit the post
+[~/repos/gh-pages-8c6794b6] $ ./hakyll build
+</code></pre>
+
+<p>The generated output will be created under <code>_site</code> directory. The <code>_site</code>
+directory is a <a href="http://book.git-scm.com/5_submodules.html" >git submodule</a> of
+<code>gh-pages-8c6794b6</code> repository. When finished generating the html files,
+commit the contents of <code>_site</code>:</p>
+
+<pre><code>[~/repos/gh-pages-8c6794b6] $ cd _site
+[~/repos/gh-pages-8c6794b6/_site] $ git add -i
+... add new post, new tags, update archives, rss, tags, etc ...
+[~/repos/gh-pages-8c6794b6/_site] $ git commit -m &quot;Add new post&quot;
+[~/repos/gh-pages-8c6794b6/_site] $ git push origin master
+</code></pre>
+
+<p>Now add the updated submodule to <code>gh-pages-8c6794b6</code> repository:</p>
+
+<pre><code>[~/repos/gh-pages-8c6794b6/_site] $ cd ../
+[~/repos/gh-pages-8c6794b6] $ git add -i
+... add submodule, new post, etc ...
+[~/repos/gh-pages-8c6794b6] $ git commit -m &quot;Add new post&quot;
+[~/repos/gh-pages-8c6794b6] $ git push origin master
+</code></pre>
+
+<p>And the new post is published.</p>
+ </div> <div class="post-tags"> TAGGED: <a href="/tag/git.html">git</a>, <a href="/tag/hakyll.html">hakyll</a>, <a href="/tag/haskell.html">haskell</a>, <a href="/tag/web.html">web</a> </div> <div class="prev-post-link"> Prev: <a href="/posts/Calling-itself-as-a-dependency-in-cabal-package.html">Calling itself as a dependency in cabal package</a> </div> <div class="next-post-link"> Next: <a href="/posts/Cause-of-3-nano-seconds-difference.html">Cause of 3 nano seconds difference</a> </div> </div> <footer> <section class="tags"> <h3>Tags</h3> <a href="/tag/algorithm.html">algorithm</a> • <a href="/tag/arc.html">arc</a> • <a href="/tag/arrow.html">arrow</a> • <a href="/tag/cabal.html">cabal</a> • <a href="/tag/ci.html">ci</a> • <a href="/tag/coleslaw.html">coleslaw</a> • <a href="/tag/commonlisp.html">commonlisp</a> • <a href="/tag/continuation.html">continuation</a> • <a href="/tag/datastructure.html">datastructure</a> • <a href="/tag/delimited.html">delimited</a> • <a href="/tag/dph.html">dph</a> • <a href="/tag/dsl.html">dsl</a> • <a href="/tag/emacs.html">emacs</a> • <a href="/tag/french.html">french</a> • <a href="/tag/functionaldependency.html">functionaldependency</a> • <a href="/tag/generic.html">generic</a> • <a href="/tag/ghc.html">ghc</a> • <a href="/tag/ghci.html">ghci</a> • <a href="/tag/git.html">git</a> • <a href="/tag/hakyll.html">hakyll</a> • <a href="/tag/haskell.html">haskell</a> • <a href="/tag/heroku.html">heroku</a> • <a href="/tag/image.html">image</a> • <a href="/tag/linux.html">linux</a> • <a href="/tag/lisp.html">lisp</a> • <a href="/tag/monad.html">monad</a> • <a href="/tag/package.html">package</a> • <a href="/tag/pdf.html">pdf</a> • <a href="/tag/performance.html">performance</a> • <a href="/tag/ps.html">ps</a> • <a href="/tag/repa.html">repa</a> • <a href="/tag/sound.html">sound</a> • <a href="/tag/supercollider.html">supercollider</a> • <a href="/tag/templatehaskell.html">templatehaskell</a> • <a href="/tag/tips.html">tips</a> • <a href="/tag/travis.html">travis</a> • <a href="/tag/tree.html">tree</a> • <a href="/tag/typefamily.html">typefamily</a> • <a href="/tag/utf-8.html">utf-8</a> • <a href="/tag/web.html">web</a> </section> Copyright © 2011-2017 8c6794b6; Unless otherwise noted, site contents licensed under <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"> CC-by-SA</a>. </footer> </body> </html>

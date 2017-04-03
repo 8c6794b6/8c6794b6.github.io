@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=defice-width, initial-scale=1"> <title>8c6794b6.github.io</title> <link href="/css/style.css" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=Noto+Serif" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=PT+Serif" rel="stylesheet" type="text/css" /> <link rel="icon" type="image/png" href="/static/favicon.png"/>  </head> <body> <header> <h1><a href="/index.html">8c6794b6.github.io</a></h1> <nav> <a href="/index.html">HOME</a> • <a href="/about.html">ABOUT</a> • <a href="/archive.html">ARCHIVE</a> • <a href="/rss.xml">RSS</a> </nav> </header> <div class="contents"> <div class="post-title"> <h2>Mapping &#039;show&#039; to tuples with TH</h2> <em class="post-date">2012-05-28</em> </div> <div class="post"> <p>Consider:</p>
+
+<pre><code>&gt; mapM_ putStrLn [show 1, show (1,2), show (1,2,3), show (1,2,3,4) ...]
+</code></pre>
+
+<p>The contents of list is String, but before applying 'show', type of
+elements differ. Goal of this post is to express above with using
+template haskell, like:</p>
+
+<pre><code>&gt; mapM_ putStrLn $(tups 3)
+</code></pre>
+
+<p>Which expands to:</p>
+
+<pre><code>&gt; mapM_ putStrLn [show 1, show (1,2), show (1,2,3))]
+</code></pre>
+
+<p>in caller module.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="comment">{-# LANGUAGE TemplateHaskell #-}</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">module</span> <span class="variable">MappingShow</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Control</span><span class="atom">.</span><span class="variable">Applicative</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Control</span><span class="atom">.</span><span class="variable">Monad</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Language</span><span class="atom">.</span><span class="variable">Haskell</span><span class="atom">.</span><span class="variable">TH</span></span></code></pre>
+
+<p>A pretty printer for template haskell Q monad:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> printQ <span class="keyword">::</span> <span class="variable">Ppr</span> a <span class="atom">=&gt;</span> <span class="variable">Q</span> a <span class="keyword">-&gt;</span> <span class="variable">IO</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span> printQ q <span class="keyword">=</span> print <span class="atom">.</span> ppr <span class="atom">=&lt;&lt;</span> runQ q</span></code></pre>
+
+<p>Warming up, manually writing the tuple lists, and applying show to them:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> bTup <span class="keyword">::</span> <span class="variable">Int</span> <span class="keyword">-&gt;</span> <span class="variable">ExpQ</span>
+<span class="atom">&gt;</span> bTup n <span class="keyword">=</span> tupE <span class="paren1">[<span class="code">litE <span class="paren2">(<span class="code">integerL j</span>)</span> <span class="keyword">|</span> j <span class="keyword">&lt;-</span> <span class="paren2">[<span class="code">1<span class="keyword">..</span>fromIntegral n</span>]</span></span>]</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> take01 <span class="keyword">::</span> <span class="variable">ExpQ</span>
+<span class="atom">&gt;</span> take01 <span class="keyword">=</span>
+<span class="atom">&gt;</span>   <span class="paren1">[<span class="code">e<span class="keyword">|</span>
+<span class="atom">&gt;</span>    mapM_ putStrLn <span class="paren2">[<span class="code">show <span class="atom">$</span><span class="paren3">(<span class="code">bTup 1</span>)</span>, show <span class="atom">$</span><span class="paren3">(<span class="code">bTup 2</span>)</span>, show <span class="atom">$</span><span class="paren3">(<span class="code">bTup 3</span>)</span></span>]</span>
+<span class="atom">&gt;</span>     <span class="keyword">|</span></span>]</span></span></code></pre>
+
+<p>Result:</p>
+
+<pre><code>ghci&gt; printQ take01
+Control.Monad.mapM_ System.IO.putStrLn [GHC.Show.show (1),
+                                        GHC.Show.show (1, 2),
+                                        GHC.Show.show (1, 2, 3)]
+</code></pre>
+
+<p>We cannot write:</p>
+
+<pre><code>&gt; take02 = [e| map putStrLn [show $(bTup i) | i &lt;- [1..10]] |]
+</code></pre>
+
+<p>staging error occurs:</p>
+
+<pre><code>Stage error: `i' is bound at stage 2 but used at stage 1
+In the first argument of `bTup', namely `i'
+In the expression: bTup i
+In the first argument of `show', namely `$(bTup i)'
+</code></pre>
+
+<p>So we cannot directly build a list of tuple with passing argument, <code>i</code>
+in above case. Though, since 'Q' is a Monad, we can run it, and then
+rebind it:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> tups <span class="keyword">::</span> <span class="variable">Int</span> <span class="keyword">-&gt;</span> <span class="variable">ExpQ</span>
+<span class="atom">&gt;</span> tups n <span class="keyword">=</span> runQ <span class="atom">$</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>   ts <span class="keyword">&lt;-</span> foldM <span class="paren1">(<span class="code"><span class="keyword">\</span>acc i <span class="keyword">-&gt;</span> <span class="paren2">(<span class="code"><span class="variable">:</span>acc</span>)</span> <span class="atom">&lt;$&gt;</span> bTup i</span>)</span> <span class="paren1">[<span class="code"></span>]</span> <span class="paren1">[<span class="code">1<span class="keyword">..</span>n</span>]</span>
+<span class="atom">&gt;</span>   return <span class="atom">$</span> <span class="variable">ListE</span> <span class="atom">$</span> map <span class="paren1">(<span class="code"><span class="variable">AppE</span> <span class="paren2">(<span class="code"><span class="variable">VarE</span> <span class="character">'show)) (reverse ts)</span></span></span></span></span></span></code></pre>
+
+<p>Results:</p>
+
+<pre><code>ghci&gt; printQ $ tups 10
+[GHC.Show.show (1),
+ GHC.Show.show (1, 2),
+ GHC.Show.show (1, 2, 3),
+ GHC.Show.show (1, 2, 3, 4),
+ GHC.Show.show (1, 2, 3, 4, 5),
+ GHC.Show.show (1, 2, 3, 4, 5, 6),
+ GHC.Show.show (1, 2, 3, 4, 5, 6, 7),
+ GHC.Show.show (1, 2, 3, 4, 5, 6, 7, 8),
+ GHC.Show.show (1, 2, 3, 4, 5, 6, 7, 8, 9),
+ GHC.Show.show (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)]
+</code></pre>
+
+<p>We can build a list of String elements in caller module, or prepare a
+template haskell expression which does the 'mapM_ putStrLn':</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> mapShowTuples <span class="keyword">::</span> <span class="variable">Int</span> <span class="keyword">-&gt;</span> <span class="variable">ExpQ</span>
+<span class="atom">&gt;</span> mapShowTuples n <span class="keyword">=</span> <span class="paren1">(<span class="code">varE <span class="character">'mapM_ `appE` varE '</span>putStrLn</span>)</span> <span class="atom">`appE`</span> tups n</span></code></pre>
+
+<p>Results:</p>
+
+<pre><code>ghci&gt; printQ $ mapShowTuples 8
+Control.Monad.mapM_ System.IO.putStrLn [GHC.Show.show (1),
+                                        GHC.Show.show (1, 2),
+                                        GHC.Show.show (1, 2, 3),
+                                        GHC.Show.show (1, 2, 3, 4),
+                                        GHC.Show.show (1, 2, 3, 4, 5),
+                                        GHC.Show.show (1, 2, 3, 4, 5, 6),
+                                        GHC.Show.show (1, 2, 3, 4, 5, 6, 7),
+                                        GHC.Show.show (1, 2, 3, 4, 5, 6, 7, 8)]
+</code></pre>
+
+<p>Sample caller module may look like below:</p>
+
+<pre><code>{-# LANGUAGE TemplateHaskell #-}
+import MappingShow
+
+t8s :: [String]
+t8s = $(tups 8)
+
+t8s_view :: IO ()
+t8s_view = mapM_ putStrLn t8s
+
+t8s_view_th :: IO ()
+t8s_view_th = $(mapShowTuples 8)
+
+main :: IO ()
+main = t8s_view &gt;&gt; t8s_view_th
+</code></pre>
+
+<p>Result of running 'main':</p>
+
+<pre><code>ghci&gt; main
+1
+(1,2)
+(1,2,3)
+(1,2,3,4)
+(1,2,3,4,5)
+(1,2,3,4,5,6)
+(1,2,3,4,5,6,7)
+(1,2,3,4,5,6,7,8)
+1
+(1,2)
+(1,2,3)
+(1,2,3,4)
+(1,2,3,4,5)
+(1,2,3,4,5,6)
+(1,2,3,4,5,6,7)
+(1,2,3,4,5,6,7,8)
+</code></pre>
+ </div> <div class="post-tags"> TAGGED: <a href="/tag/haskell.html">haskell</a>, <a href="/tag/templatehaskell.html">templatehaskell</a> </div> <div class="prev-post-link"> Prev: <a href="/posts/Guard-case-and-pattern-match.html">Guard, case, and pattern match</a> </div> <div class="next-post-link"> Next: <a href="/posts/Tip-using-asTypeOf.html">Tip using &#039;asTypeOf&#039;</a> </div> </div> <footer> <section class="tags"> <h3>Tags</h3> <a href="/tag/algorithm.html">algorithm</a> • <a href="/tag/arc.html">arc</a> • <a href="/tag/arrow.html">arrow</a> • <a href="/tag/cabal.html">cabal</a> • <a href="/tag/ci.html">ci</a> • <a href="/tag/coleslaw.html">coleslaw</a> • <a href="/tag/commonlisp.html">commonlisp</a> • <a href="/tag/continuation.html">continuation</a> • <a href="/tag/datastructure.html">datastructure</a> • <a href="/tag/delimited.html">delimited</a> • <a href="/tag/dph.html">dph</a> • <a href="/tag/dsl.html">dsl</a> • <a href="/tag/emacs.html">emacs</a> • <a href="/tag/french.html">french</a> • <a href="/tag/functionaldependency.html">functionaldependency</a> • <a href="/tag/generic.html">generic</a> • <a href="/tag/ghc.html">ghc</a> • <a href="/tag/ghci.html">ghci</a> • <a href="/tag/git.html">git</a> • <a href="/tag/hakyll.html">hakyll</a> • <a href="/tag/haskell.html">haskell</a> • <a href="/tag/heroku.html">heroku</a> • <a href="/tag/image.html">image</a> • <a href="/tag/linux.html">linux</a> • <a href="/tag/lisp.html">lisp</a> • <a href="/tag/monad.html">monad</a> • <a href="/tag/package.html">package</a> • <a href="/tag/pdf.html">pdf</a> • <a href="/tag/performance.html">performance</a> • <a href="/tag/ps.html">ps</a> • <a href="/tag/repa.html">repa</a> • <a href="/tag/sound.html">sound</a> • <a href="/tag/supercollider.html">supercollider</a> • <a href="/tag/templatehaskell.html">templatehaskell</a> • <a href="/tag/tips.html">tips</a> • <a href="/tag/travis.html">travis</a> • <a href="/tag/tree.html">tree</a> • <a href="/tag/typefamily.html">typefamily</a> • <a href="/tag/utf-8.html">utf-8</a> • <a href="/tag/web.html">web</a> </section> Copyright © 2011-2017 8c6794b6; Unless otherwise noted, site contents licensed under <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"> CC-by-SA</a>. </footer> </body> </html>

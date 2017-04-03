@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=defice-width, initial-scale=1"> <title>8c6794b6.github.io</title> <link href="/css/style.css" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=Noto+Serif" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=PT+Serif" rel="stylesheet" type="text/css" /> <link rel="icon" type="image/png" href="/static/favicon.png"/>  </head> <body> <header> <h1><a href="/index.html">8c6794b6.github.io</a></h1> <nav> <a href="/index.html">HOME</a> • <a href="/about.html">ABOUT</a> • <a href="/archive.html">ARCHIVE</a> • <a href="/rss.xml">RSS</a> </nav> </header> <div class="contents"> <div class="post-title"> <h2>Serialization in a hurry</h2> <em class="post-date">2012-02-18</em> </div> <div class="post"> <p>I need to serialize below data in 5 minutes:</p>
+
+<pre><code>| data Foo = Foo
+|  { one   :: Int
+|  , two   :: (Maybe Double, String)
+|  , three :: Vector Double
+|  }
+</code></pre>
+
+<p>Requires ghc-7.2.2 or above, and
+<a href="http://hackage.haskell.org/package/cereal" >cereal</a> package.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="comment">{-# LANGUAGE DeriveGeneric #-}</span>
+<span class="atom">&gt;</span> <span class="keyword">module</span> <span class="variable">SerializationInAHurry</span> <span class="keyword">where</span></span></code></pre>
+
+<p>We are using <code>DeriveGeneric</code> language pragma.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">GHC</span><span class="atom">.</span><span class="variable">Generics</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Data</span><span class="atom">.</span><span class="variable">Serialize</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Data</span><span class="atom">.</span><span class="variable">Vector</span> <span class="paren1">(<span class="code"><span class="variable">Vector</span><span class="paren2">(<span class="code"><span class="keyword">..</span></span>)</span></span>)</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> qualified <span class="variable">Data</span><span class="atom">.</span><span class="variable">ByteString</span> as <span class="variable">B</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> qualified <span class="variable">Data</span><span class="atom">.</span><span class="variable">Vector</span> as <span class="variable">V</span></span></code></pre>
+
+<p>The target data type to serialize.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">data</span> <span class="variable">Foo</span> <span class="keyword">=</span> <span class="variable">Foo</span>
+<span class="atom">&gt;</span>  <span class="paren1">{<span class="code"> one   <span class="keyword">::</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span>  , two   <span class="keyword">::</span> <span class="paren2">(<span class="code"><span class="variable">Maybe</span> <span class="variable">Double,</span> <span class="variable">String</span></span>)</span>
+<span class="atom">&gt;</span>  , three <span class="keyword">::</span> <span class="variable">Vector</span> <span class="variable">Double</span>
+<span class="atom">&gt;</span>  </span>}</span> <span class="keyword">deriving</span> <span class="paren1">(<span class="code"><span class="variable">Generic,</span> <span class="variable">Show,</span> <span class="variable">Eq</span></span>)</span></span></code></pre>
+
+<p>And sample data with target data type.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> foo1 <span class="keyword">::</span> <span class="variable">Foo</span>
+<span class="atom">&gt;</span> foo1 <span class="keyword">=</span> <span class="variable">Foo</span>
+<span class="atom">&gt;</span>   <span class="paren1">{<span class="code"> one   <span class="keyword">=</span> 100
+<span class="atom">&gt;</span>   , two   <span class="keyword">=</span> <span class="paren2">(<span class="code"><span class="variable">Just</span> 8<span class="atom">.</span>5, <span class="string">"eight point five"</span></span>)</span>
+<span class="atom">&gt;</span>   , three <span class="keyword">=</span> <span class="variable">V</span><span class="atom">.</span>fromList <span class="paren2">[<span class="code">11,13<span class="keyword">..</span>21</span>]</span>
+<span class="atom">&gt;</span>   </span>}</span></span></code></pre>
+
+<p>As haddock document in cereal package notes, when the target data type
+has <code>Generic</code> instance, <code>Serialize</code> class will use it. What we need is
+to make instance of <code>Serialize</code> with empty body.</p>
+
+<p><code>Data.Generics.Generic</code> class has couple instances already defined.</p>
+
+<pre><code>| instance Generic [a] -- Defined in `GHC.Generics'
+| instance Generic Ordering -- Defined in `GHC.Generics'
+| instance Generic Int -- Defined in `GHC.Generics'
+| instance Generic Float -- Defined in `GHC.Generics'
+| instance Generic Double -- Defined in `GHC.Generics'
+| instance Generic Char -- Defined in `GHC.Generics'
+| instance Generic Bool -- Defined in `GHC.Generics'
+| instance Generic (Maybe a) -- Defined in `Data.Maybe'
+| instance Generic (Either a b) -- Defined in `Data.Either'
+| instance Generic (a, b, c, d, e, f, g) -- Defined in `GHC.Tuple'
+| instance Generic (a, b, c, d, e, f) -- Defined in `GHC.Tuple'
+| instance Generic (a, b, c, d, e) -- Defined in `GHC.Tuple'
+| instance Generic (a, b, c, d) -- Defined in `GHC.Tuple'
+| instance Generic (a, b, c) -- Defined in `GHC.Tuple'
+| instance Generic (a, b) -- Defined in `GHC.Tuple'
+| instance Generic () -- Defined in `GHC.Tuple'
+</code></pre>
+
+<p>The only missing definition we need is:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">instance</span> <span class="variable">Serialize</span> a <span class="atom">=&gt;</span> <span class="variable">Serialize</span> <span class="paren1">(<span class="code"><span class="variable">Vector</span> a</span>)</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>   put <span class="keyword">=</span> put <span class="atom">`fmap`</span> <span class="variable">V</span><span class="atom">.</span>toList
+<span class="atom">&gt;</span>   get <span class="keyword">=</span> <span class="variable">V</span><span class="atom">.</span>fromList <span class="atom">`fmap`</span> get</span></code></pre>
+
+<p>There should be other way which shows better performance for serializing
+<code>Vector</code>, but recall the title of this post. Now we are ready to
+serialize.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">instance</span> <span class="variable">Serialize</span> <span class="variable">Foo</span></span></code></pre>
+
+<p>Testing it with writing to file, reading from the file and comparing
+with original:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> main <span class="keyword">::</span> <span class="variable">IO</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span> main <span class="keyword">=</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>   <span class="keyword">let</span> file <span class="keyword">=</span> <span class="string">"foo1.data"</span>
+<span class="atom">&gt;</span>   <span class="variable">B</span><span class="atom">.</span>writeFile file <span class="paren1">(<span class="code">encode foo1</span>)</span>
+<span class="atom">&gt;</span>   res <span class="keyword">&lt;-</span> decode <span class="atom">`fmap`</span> <span class="variable">B</span><span class="atom">.</span>readFile file <span class="keyword">::</span> <span class="variable">IO</span> <span class="paren1">(<span class="code"><span class="variable">Either</span> <span class="variable">String</span> <span class="variable">Foo</span></span>)</span>
+<span class="atom">&gt;</span>   <span class="keyword">case</span> res <span class="keyword">of</span>
+<span class="atom">&gt;</span>      <span class="variable">Right</span> foo1' <span class="keyword">-&gt;</span> print <span class="atom">$</span> foo1 <span class="atom">==</span> foo1'
+<span class="atom">&gt;</span>      <span class="variable">Left</span>  err   <span class="keyword">-&gt;</span> error err</span></code></pre>
+
+<p>Result:</p>
+
+<pre><code>| ghci&gt; main
+| True
+</code></pre>
+ </div> <div class="post-tags"> TAGGED: <a href="/tag/haskell.html">haskell</a>, <a href="/tag/generic.html">generic</a>, <a href="/tag/ghc.html">ghc</a> </div> <div class="prev-post-link"> Prev: <a href="/posts/Loading-dph-codes-in-ghci.html">Loading dph codes in ghci</a> </div> <div class="next-post-link"> Next: <a href="/posts/Minimalistic-pdf-and-ps-viewers-for-linux---WinterSpring-2012.html">Minimalistic pdf and ps viewers for linux - Winter/Spring 2012</a> </div> </div> <footer> <section class="tags"> <h3>Tags</h3> <a href="/tag/algorithm.html">algorithm</a> • <a href="/tag/arc.html">arc</a> • <a href="/tag/arrow.html">arrow</a> • <a href="/tag/cabal.html">cabal</a> • <a href="/tag/ci.html">ci</a> • <a href="/tag/coleslaw.html">coleslaw</a> • <a href="/tag/commonlisp.html">commonlisp</a> • <a href="/tag/continuation.html">continuation</a> • <a href="/tag/datastructure.html">datastructure</a> • <a href="/tag/delimited.html">delimited</a> • <a href="/tag/dph.html">dph</a> • <a href="/tag/dsl.html">dsl</a> • <a href="/tag/emacs.html">emacs</a> • <a href="/tag/french.html">french</a> • <a href="/tag/functionaldependency.html">functionaldependency</a> • <a href="/tag/generic.html">generic</a> • <a href="/tag/ghc.html">ghc</a> • <a href="/tag/ghci.html">ghci</a> • <a href="/tag/git.html">git</a> • <a href="/tag/hakyll.html">hakyll</a> • <a href="/tag/haskell.html">haskell</a> • <a href="/tag/heroku.html">heroku</a> • <a href="/tag/image.html">image</a> • <a href="/tag/linux.html">linux</a> • <a href="/tag/lisp.html">lisp</a> • <a href="/tag/monad.html">monad</a> • <a href="/tag/package.html">package</a> • <a href="/tag/pdf.html">pdf</a> • <a href="/tag/performance.html">performance</a> • <a href="/tag/ps.html">ps</a> • <a href="/tag/repa.html">repa</a> • <a href="/tag/sound.html">sound</a> • <a href="/tag/supercollider.html">supercollider</a> • <a href="/tag/templatehaskell.html">templatehaskell</a> • <a href="/tag/tips.html">tips</a> • <a href="/tag/travis.html">travis</a> • <a href="/tag/tree.html">tree</a> • <a href="/tag/typefamily.html">typefamily</a> • <a href="/tag/utf-8.html">utf-8</a> • <a href="/tag/web.html">web</a> </section> Copyright © 2011-2017 8c6794b6; Unless otherwise noted, site contents licensed under <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"> CC-by-SA</a>. </footer> </body> </html>

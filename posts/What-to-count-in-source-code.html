@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=defice-width, initial-scale=1"> <title>8c6794b6.github.io</title> <link href="/css/style.css" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=Noto+Serif" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=PT+Serif" rel="stylesheet" type="text/css" /> <link rel="icon" type="image/png" href="/static/favicon.png"/>  </head> <body> <header> <h1><a href="/index.html">8c6794b6.github.io</a></h1> <nav> <a href="/index.html">HOME</a> • <a href="/about.html">ABOUT</a> • <a href="/archive.html">ARCHIVE</a> • <a href="/rss.xml">RSS</a> </nav> </header> <div class="contents"> <div class="post-title"> <h2>What to count in source code</h2> <em class="post-date">2011-10-21</em> </div> <div class="post"> <p>Below is a sample arc code:</p>
+
+<pre><code> | (defop said req
+ |   (aform [onlink &quot;click here&quot; (pr &quot;you said: &quot; (arg _ &quot;foo&quot;))]
+ |     (input &quot;foo&quot;)
+ |     (submit)))
+</code></pre>
+
+<p>In an article <a href="http://paulgraham.com/arcchallenge.html" >arc challenge</a>,
+Paul Graham was counting size of codetree of arc program. He counted
+above arc program as 21 nodes: 14 leaves + 7 interior.</p>
+
+<p>How can we count the size of haskell codetree?</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">module</span> <span class="variable">Main</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Control</span><span class="atom">.</span><span class="variable">Monad</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Data</span><span class="atom">.</span><span class="variable">Generics</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Data</span><span class="atom">.</span><span class="variable">Tree</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">System</span><span class="atom">.</span><span class="variable">Environment</span> <span class="paren1">(<span class="code">getArgs</span>)</span></span></code></pre>
+
+<p>We could use other module than Language.Haskell.Syntax. e.g.
+Language.Haskell.Exts from haskell-src-exts.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Language</span><span class="atom">.</span><span class="variable">Haskell</span><span class="atom">.</span><span class="variable">Parser</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Language</span><span class="atom">.</span><span class="variable">Haskell</span><span class="atom">.</span><span class="variable">Syntax</span></span></code></pre>
+
+<p>This code could be run from command line. Parses the contents and count
+the number of codesize in all given file paths.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> main <span class="keyword">::</span> <span class="variable">IO</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span> main <span class="keyword">=</span>  getArgs <span class="atom">&gt;&gt;=</span> mapM_ <span class="paren1">(<span class="code">readFile <span class="atom">&gt;=&gt;</span> count namesAndLits</span>)</span></span></code></pre>
+
+<p>Below is arc expression written with Tree data type. Last node &quot;submit&quot;
+has a child element with empty string, since it was parenthesized
+explicitly.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> arc <span class="keyword">::</span> <span class="variable">Tree</span> <span class="variable">String</span>
+<span class="atom">&gt;</span> arc <span class="keyword">=</span>
+<span class="atom">&gt;</span>   <span class="variable">Node</span> <span class="string">"defop"</span>
+<span class="atom">&gt;</span>     <span class="paren1">[<span class="code"><span class="variable">Node</span> <span class="string">"said"</span> <span class="paren2">[<span class="code"></span>]</span>
+<span class="atom">&gt;</span>     ,<span class="variable">Node</span> <span class="string">"req"</span> <span class="paren2">[<span class="code"></span>]</span>
+<span class="atom">&gt;</span>     ,<span class="variable">Node</span> <span class="string">"aform"</span>
+<span class="atom">&gt;</span>       <span class="paren2">[<span class="code"><span class="variable">Node</span> <span class="string">"onlink"</span>
+<span class="atom">&gt;</span>         <span class="paren3">[<span class="code"><span class="variable">Node</span> <span class="string">"click here"</span> <span class="paren4">[<span class="code"></span>]</span>
+<span class="atom">&gt;</span>         ,<span class="variable">Node</span> <span class="string">"pr"</span>
+<span class="atom">&gt;</span>           <span class="paren4">[<span class="code"><span class="variable">Node</span> <span class="string">"you said: "</span> <span class="paren5">[<span class="code"></span>]</span>
+<span class="atom">&gt;</span>           ,<span class="variable">Node</span> <span class="string">"arg"</span>
+<span class="atom">&gt;</span>             <span class="paren5">[<span class="code"><span class="variable">Node</span> <span class="string">"_"</span> <span class="paren6">[<span class="code"></span>]</span>
+<span class="atom">&gt;</span>             ,<span class="variable">Node</span> <span class="string">"foo"</span> <span class="paren6">[<span class="code"></span>]</span></span>]</span></span>]</span></span>]</span>
+<span class="atom">&gt;</span>         ,<span class="variable">Node</span> <span class="string">"input"</span>
+<span class="atom">&gt;</span>           <span class="paren3">[<span class="code"><span class="variable">Node</span> <span class="string">"foo"</span> <span class="paren4">[<span class="code"></span>]</span></span>]</span>
+<span class="atom">&gt;</span>         ,<span class="variable">Node</span> <span class="string">"submit"</span>
+<span class="atom">&gt;</span>           <span class="paren3">[<span class="code"><span class="variable">Node</span> <span class="string">""</span> <span class="paren4">[<span class="code"></span>]</span></span>]</span></span>]</span></span>]</span></span></code></pre>
+
+<p>Viewing this expression:</p>
+
+<pre><code>| *Main&gt; putStrLn $ drawTree arc
+| defop
+| |
+| +- said
+| |
+| +- req
+| |
+| `- aform
+|    |
+|    +- onlink
+|    |  |
+|    |  +- click here
+|    |  |
+|    |  `- pr
+|    |     |
+|    |     +- you said:
+|    |     |
+|    |     `- arg
+|    |        |
+|    |        +- _
+|    |        |
+|    |        `- foo
+|    |
+|    +- input
+|    |  |
+|    |  `- foo
+|    |
+|    `- submit
+|       |
+|       `-
+</code></pre>
+
+<p>To count number of leaves:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> numLeaf <span class="keyword">::</span> <span class="variable">Tree</span> a <span class="keyword">-&gt;</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> numLeaf <span class="keyword">=</span> length <span class="atom">.</span> flatten</span></code></pre>
+
+<p>And number of interior nodes:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> numInterior <span class="keyword">::</span> <span class="variable">Tree</span> a <span class="keyword">-&gt;</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> numInterior t <span class="keyword">=</span> <span class="keyword">case</span> t <span class="keyword">of</span>
+<span class="atom">&gt;</span>   <span class="variable">Node</span> _ <span class="paren1">[<span class="code"></span>]</span> <span class="keyword">-&gt;</span> 0
+<span class="atom">&gt;</span>   <span class="variable">Node</span> _ xs <span class="keyword">-&gt;</span> 1 <span class="atom">+</span> sum <span class="paren1">(<span class="code">map numInterior xs</span>)</span></span></code></pre>
+
+<p>And getting the sum:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> countArc <span class="keyword">::</span> <span class="variable">Tree</span> a <span class="keyword">-&gt;</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> countArc t <span class="keyword">=</span> numLeaf t <span class="atom">+</span> numInterior t</span></code></pre>
+
+<p>Number of expression is:</p>
+
+<pre><code>| *Main&gt; countArc arc
+| 22
+</code></pre>
+
+<p>It's 22, not 21, due to the addition of extra empty node in the end.</p>
+
+<p>So, that was how we can count expression of lisp. Then how to count like
+for haskell expression? One way is to count occurance of specific data
+types found in Language.Haskell.Syntax module. When we found HsName
+datatype in source code, increase the number of codesize by 1. Below is
+the definition of HsName.</p>
+
+<pre><code>| data HsName = HsIdent String | HsSymbol String
+</code></pre>
+
+<p>Since most data types in Language.Haskell.Syntax are defined as instance
+of Data and Typeable, we can use generic functions.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> anyName <span class="keyword">::</span> <span class="variable">HsName</span> <span class="keyword">-&gt;</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> anyName _ <span class="keyword">=</span> 1</span></code></pre>
+
+<p>Traversing over module:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> names <span class="keyword">::</span> <span class="variable">HsModule</span> <span class="keyword">-&gt;</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> names <span class="keyword">=</span> everything <span class="paren1">(<span class="code"><span class="atom">+</span></span>)</span> <span class="paren1">(<span class="code">0 <span class="atom">`mkQ`</span> anyName</span>)</span></span></code></pre>
+
+<p>Worker for parsing contents of source code, and applying the counter
+function.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> count <span class="keyword">::</span> <span class="paren1">(<span class="code"><span class="variable">HsModule</span> <span class="keyword">-&gt;</span> <span class="variable">Int</span></span>)</span> <span class="keyword">-&gt;</span> <span class="variable">String</span> <span class="keyword">-&gt;</span> <span class="variable">IO</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span> count f code <span class="keyword">=</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>   <span class="keyword">case</span> parseModule code <span class="keyword">of</span>
+<span class="atom">&gt;</span>     <span class="variable">ParseOk</span> mdl<span class="keyword">@</span><span class="paren1">(<span class="code"><span class="variable">HsModule</span> _ name _ _ _</span>)</span> <span class="keyword">-&gt;</span>
+<span class="atom">&gt;</span>       putStrLn <span class="atom">$</span> unwords <span class="paren1">[<span class="code">show <span class="atom">$</span> f mdl, <span class="string">"</span><span class="string">\t</span><span class="string">"</span>, show name</span>]</span>
+<span class="atom">&gt;</span>     <span class="variable">ParseFailed</span> loc err <span class="keyword">-&gt;</span> print loc <span class="atom">&gt;&gt;</span> putStrLn err</span></code></pre>
+
+<p>Try it:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> sample1 <span class="keyword">::</span> <span class="variable">String</span>
+<span class="atom">&gt;</span> sample1 <span class="keyword">=</span> <span class="string">"x = 100"</span></span></code></pre>
+
+<pre><code>| *Main&gt; count names sample1
+| 2        Module &quot;Main&quot;
+</code></pre>
+
+<p>Seems like working. How about another expression?</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> sample2 <span class="keyword">::</span> <span class="variable">String</span>
+<span class="atom">&gt;</span> sample2 <span class="keyword">=</span> <span class="string">"x = 100 + 2"</span></span></code></pre>
+
+<p>Outputs:</p>
+
+<pre><code>| *Main&gt; count names sample2
+| 3        Module &quot;Main&quot;
+</code></pre>
+
+<p>Why above codesize counted as 3? Not 4, code size of sample1 + 2?</p>
+
+<p>We should have missed some data type to count. For second try, counting
+HsLiteral and HsName.</p>
+
+<pre><code>| data HsLiteral
+|   = HsChar Char
+|   | HsString String
+|   | HsInt Integer
+|   | HsFrac Rational
+|   | HsCharPrim Char
+|   | HsStringPrim String
+|   | HsIntPrim Integer
+|   | HsFloatPrim Rational
+|   | HsDoublePrim Rational
+</code></pre>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> anyLiteral <span class="keyword">::</span> <span class="variable">HsLiteral</span> <span class="keyword">-&gt;</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> anyLiteral _ <span class="keyword">=</span> 1
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> namesAndLits <span class="keyword">::</span> <span class="variable">HsModule</span> <span class="keyword">-&gt;</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> namesAndLits <span class="keyword">=</span> everything <span class="paren1">(<span class="code"><span class="atom">+</span></span>)</span> <span class="paren1">(<span class="code">const 0 <span class="atom">`extQ`</span> anyName <span class="atom">`extQ`</span> anyLiteral</span>)</span></span></code></pre>
+
+<p>Trying again:</p>
+
+<pre><code>| *Main&gt; count namesAndLits sample1
+| 3        Module &quot;Main&quot;
+| *Main&gt; count namesAndLits sample2
+| 5        Module &quot;Main&quot;
+</code></pre>
+
+<p>Getting better, but this is counting leaves only.</p>
+
+<p>Since all haskell expression in general is a function that takes single
+argument, and giving back another function, every expression other than
+constant value has child element. I'm not sure what we should count as
+interior node in expression.</p>
+
+<!--
+Local Variables:
+mode: markdown
+End:
+-->
+ </div> <div class="post-tags"> TAGGED: <a href="/tag/haskell.html">haskell</a>, <a href="/tag/arc.html">arc</a>, <a href="/tag/lisp.html">lisp</a> </div>  <div class="next-post-link"> Next: <a href="/posts/Another-instance-deriving-example-with-template-haskell.html">Another instance deriving example with template haskell</a> </div> </div> <footer> <section class="tags"> <h3>Tags</h3> <a href="/tag/algorithm.html">algorithm</a> • <a href="/tag/arc.html">arc</a> • <a href="/tag/arrow.html">arrow</a> • <a href="/tag/cabal.html">cabal</a> • <a href="/tag/ci.html">ci</a> • <a href="/tag/coleslaw.html">coleslaw</a> • <a href="/tag/commonlisp.html">commonlisp</a> • <a href="/tag/continuation.html">continuation</a> • <a href="/tag/datastructure.html">datastructure</a> • <a href="/tag/delimited.html">delimited</a> • <a href="/tag/dph.html">dph</a> • <a href="/tag/dsl.html">dsl</a> • <a href="/tag/emacs.html">emacs</a> • <a href="/tag/french.html">french</a> • <a href="/tag/functionaldependency.html">functionaldependency</a> • <a href="/tag/generic.html">generic</a> • <a href="/tag/ghc.html">ghc</a> • <a href="/tag/ghci.html">ghci</a> • <a href="/tag/git.html">git</a> • <a href="/tag/hakyll.html">hakyll</a> • <a href="/tag/haskell.html">haskell</a> • <a href="/tag/heroku.html">heroku</a> • <a href="/tag/image.html">image</a> • <a href="/tag/linux.html">linux</a> • <a href="/tag/lisp.html">lisp</a> • <a href="/tag/monad.html">monad</a> • <a href="/tag/package.html">package</a> • <a href="/tag/pdf.html">pdf</a> • <a href="/tag/performance.html">performance</a> • <a href="/tag/ps.html">ps</a> • <a href="/tag/repa.html">repa</a> • <a href="/tag/sound.html">sound</a> • <a href="/tag/supercollider.html">supercollider</a> • <a href="/tag/templatehaskell.html">templatehaskell</a> • <a href="/tag/tips.html">tips</a> • <a href="/tag/travis.html">travis</a> • <a href="/tag/tree.html">tree</a> • <a href="/tag/typefamily.html">typefamily</a> • <a href="/tag/utf-8.html">utf-8</a> • <a href="/tag/web.html">web</a> </section> Copyright © 2011-2017 8c6794b6; Unless otherwise noted, site contents licensed under <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"> CC-by-SA</a>. </footer> </body> </html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=defice-width, initial-scale=1"> <title>8c6794b6.github.io</title> <link href="/css/style.css" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=Noto+Serif" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=PT+Serif" rel="stylesheet" type="text/css" /> <link rel="icon" type="image/png" href="/static/favicon.png"/>  </head> <body> <header> <h1><a href="/index.html">8c6794b6.github.io</a></h1> <nav> <a href="/index.html">HOME</a> • <a href="/about.html">ABOUT</a> • <a href="/archive.html">ARCHIVE</a> • <a href="/rss.xml">RSS</a> </nav> </header> <div class="contents"> <div class="post-title"> <h2>Calling itself as a dependency in cabal package</h2> <em class="post-date">2012-03-24</em> </div> <div class="post"> <p>For self reminder. When we're creating cabal package, sometime we want
+to call itself as a depdency, for instance when making a package with
+library and bundled executable, using cabal's test-suite feature.</p>
+
+<p>For quite a while I didn't realise that we can call itself as dependency
+and suppress compiling the whole library modules used in exectuables and
+tests. The trick was, <em>separating the directory containing library
+source and executable source</em> in single package.</p>
+
+<p>Sample cabal config:</p>
+
+<pre><code><span class="code"><span class="function">name</span><span class="variable">:</span>          selfdep
+<span class="function">build</span><span class="atom">-</span><span class="keyword">type</span><span class="variable">:</span>    <span class="variable">Simple</span>
+<span class="function">cabal</span><span class="atom">-</span>version<span class="variable">:</span> <span class="atom">&gt;=</span>1<span class="atom">.</span>8
+
+<span class="function">library</span>
+&nbsp; exposed<span class="atom">-</span>modules<span class="variable">:</span>
+&nbsp;   <span class="variable">Self</span><span class="atom">.</span><span class="variable">Dep</span>
+&nbsp;   <span class="variable">Self</span><span class="atom">.</span><span class="variable">Dep</span><span class="atom">.</span><span class="variable">Foo</span>
+&nbsp;   <span class="variable">Self</span><span class="atom">.</span><span class="variable">Dep</span><span class="atom">.</span><span class="variable">Bar</span>
+&nbsp; build<span class="atom">-</span>depends<span class="variable">:</span>
+&nbsp;   base       <span class="atom">&gt;=</span> 4<span class="atom">.</span>4 <span class="atom">&amp;&amp;</span> <span class="atom">&lt;</span> 5,
+&nbsp;   containers <span class="atom">&gt;=</span> 0<span class="atom">.</span>4 <span class="atom">&amp;&amp;</span> <span class="atom">&lt;</span> 1<span class="atom">.</span>0
+
+<span class="function">test</span><span class="atom">-</span>suite tests
+&nbsp; <span class="keyword">type</span><span class="variable">:</span> exitcode<span class="atom">-</span>stdio<span class="atom">-</span>1<span class="atom">.</span>0
+&nbsp; hs<span class="atom">-</span>source<span class="atom">-</span>dirs<span class="variable">:</span> tests
+&nbsp; main<span class="atom">-</span>is<span class="variable">:</span> test<span class="atom">.</span>hs
+&nbsp; build<span class="atom">-</span>depends<span class="variable">:</span>
+&nbsp;   base       <span class="atom">&gt;=</span> 4<span class="atom">.</span>4 <span class="atom">&amp;&amp;</span> <span class="atom">&lt;</span> 5,
+&nbsp;   <span class="variable">QuickCheck</span> <span class="atom">&gt;=</span> 2<span class="atom">.</span>4 <span class="atom">&amp;&amp;</span> <span class="atom">&lt;</span> 3,
+&nbsp;   selfdep <span class="atom">-</span>any
+
+<span class="function">executable</span> foo
+&nbsp; hs<span class="atom">-</span>source<span class="atom">-</span>dirs<span class="variable">:</span> run
+&nbsp; main<span class="atom">-</span>is<span class="variable">:</span> foo<span class="atom">.</span>hs
+&nbsp; build<span class="atom">-</span>depends<span class="variable">:</span>
+&nbsp;   base    <span class="atom">&gt;=</span> 4<span class="atom">.</span>4 <span class="atom">&amp;&amp;</span> <span class="atom">&lt;</span> 5,
+&nbsp;   selfdep <span class="atom">-</span>any</span></code></pre>
+
+<p>In file <code>foo.hs</code>, module <code>Self.Dep.Foo</code> is imported:</p>
+
+<pre><code>$ cat run/foo.hs
+module Main where
+
+import qualified Self.Dep.Foo
+
+main :: IO ()
+main = print Self.Dep.Foo.foo
+</code></pre>
+
+<p>Building the package:</p>
+
+<pre><code>$ cabal configure &amp;&amp; cabal build
+Resolving dependencies...
+Configuring selfdep-0.1.0.0...
+Building selfdep-0.1.0.0...
+Preprocessing library selfdep-0.1.0.0...
+[1 of 3] Compiling Self.Dep.Bar     ( Self/Dep/Bar.hs, dist/build/Self/Dep/Bar.o )
+[2 of 3] Compiling Self.Dep.Foo     ( Self/Dep/Foo.hs, dist/build/Self/Dep/Foo.o )
+[3 of 3] Compiling Self.Dep         ( Self/Dep.hs, dist/build/Self/Dep.o )
+Registering selfdep-0.1.0.0...
+Preprocessing executable 'foo' for selfdep-0.1.0.0...
+[1 of 1] Compiling Main             ( run/foo.hs, dist/build/foo/foo-tmp/Main.o )
+Linking dist/build/foo/foo ...
+</code></pre>
+
+<p>During the compilation of executable <code>foo</code>, modules under <code>Self.*</code> were
+not recompiled. This separation of the directory works also for tests.</p>
+ </div> <div class="post-tags"> TAGGED: <a href="/tag/haskell.html">haskell</a>, <a href="/tag/cabal.html">cabal</a>, <a href="/tag/package.html">package</a> </div> <div class="prev-post-link"> Prev: <a href="/posts/Minimalistic-pdf-and-ps-viewers-for-linux---WinterSpring-2012.html">Minimalistic pdf and ps viewers for linux - Winter/Spring 2012</a> </div> <div class="next-post-link"> Next: <a href="/posts/How-to-manage-this-site.html">How to manage this site</a> </div> </div> <footer> <section class="tags"> <h3>Tags</h3> <a href="/tag/algorithm.html">algorithm</a> • <a href="/tag/arc.html">arc</a> • <a href="/tag/arrow.html">arrow</a> • <a href="/tag/cabal.html">cabal</a> • <a href="/tag/ci.html">ci</a> • <a href="/tag/coleslaw.html">coleslaw</a> • <a href="/tag/commonlisp.html">commonlisp</a> • <a href="/tag/continuation.html">continuation</a> • <a href="/tag/datastructure.html">datastructure</a> • <a href="/tag/delimited.html">delimited</a> • <a href="/tag/dph.html">dph</a> • <a href="/tag/dsl.html">dsl</a> • <a href="/tag/emacs.html">emacs</a> • <a href="/tag/french.html">french</a> • <a href="/tag/functionaldependency.html">functionaldependency</a> • <a href="/tag/generic.html">generic</a> • <a href="/tag/ghc.html">ghc</a> • <a href="/tag/ghci.html">ghci</a> • <a href="/tag/git.html">git</a> • <a href="/tag/hakyll.html">hakyll</a> • <a href="/tag/haskell.html">haskell</a> • <a href="/tag/heroku.html">heroku</a> • <a href="/tag/image.html">image</a> • <a href="/tag/linux.html">linux</a> • <a href="/tag/lisp.html">lisp</a> • <a href="/tag/monad.html">monad</a> • <a href="/tag/package.html">package</a> • <a href="/tag/pdf.html">pdf</a> • <a href="/tag/performance.html">performance</a> • <a href="/tag/ps.html">ps</a> • <a href="/tag/repa.html">repa</a> • <a href="/tag/sound.html">sound</a> • <a href="/tag/supercollider.html">supercollider</a> • <a href="/tag/templatehaskell.html">templatehaskell</a> • <a href="/tag/tips.html">tips</a> • <a href="/tag/travis.html">travis</a> • <a href="/tag/tree.html">tree</a> • <a href="/tag/typefamily.html">typefamily</a> • <a href="/tag/utf-8.html">utf-8</a> • <a href="/tag/web.html">web</a> </section> Copyright © 2011-2017 8c6794b6; Unless otherwise noted, site contents licensed under <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"> CC-by-SA</a>. </footer> </body> </html>

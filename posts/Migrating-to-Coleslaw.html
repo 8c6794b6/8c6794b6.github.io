@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=defice-width, initial-scale=1"> <title>8c6794b6.github.io</title> <link href="/css/style.css" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=Noto+Serif" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=PT+Serif" rel="stylesheet" type="text/css" /> <link rel="icon" type="image/png" href="/static/favicon.png"/>  </head> <body> <header> <h1><a href="/index.html">8c6794b6.github.io</a></h1> <nav> <a href="/index.html">HOME</a> • <a href="/about.html">ABOUT</a> • <a href="/archive.html">ARCHIVE</a> • <a href="/rss.xml">RSS</a> </nav> </header> <div class="contents"> <div class="post-title"> <h2>Migrating to Coleslaw</h2> <em class="post-date">2016-12-27</em> </div> <div class="post"> <p>Made updates to this gh-page. The site is still generated with static site
+generator, though the generator has changed
+from <a href="https://jaspervdj.be/hakyll/" >Hakyll</a>
+to <a href="http://github.com/kingcons/coleslaw" >Coleslaw</a>.  The site uses
+hand-made scratchy CSS with color scheme borrowed
+from <a href="http://ethanschoonover.com/solarized" >Solarized</a>.</p>
+
+<p>Coleslaw is a static site generator written in Common Lisp. As of the
+version included in Quicklisp 2016-12-08, Coleslaw supports plain
+HTML, <a href="https://daringfireball.net/projects/markdown/" >Markdown</a>
+and <a href="http://docutils.sourceforge.net/rst.html" >reStructuredText</a> for
+writing contents. Basic usage of Coleslaw is written
+in <a href="https://github.com/kingcons/coleslaw/blob/master/README.md" >README</a>
+file. Coleslaw uses <code>.coleslawrc</code> file to configure the site. The
+configuration file could be placed under the user's home directory (i.e.:
+<code>$HOME/.coleslawrc</code>), or under the directory containing all the other
+files for building the site (e.g.: <code>/path/to/my/site/.coleslawrc</code>).  It
+uses <a href="https://github.com/archimag/cl-closure-template" >Common Lisp port</a>
+of <a href="https://developers.google.com/closure/templates/" >Closure Templates</a>
+for defining theme templates. Markdown parser used by Coleslaw
+is <a href="https://github.com/3b/3bmd" >3bmd</a>.</p>
+
+<p>Coleslaw recommends the use of <em>plugins</em> to customize and extend the
+site. The <a href="../archive.html" >archive page of this site</a> and the pages
+showing the posts for each tag are built with simple plugins. Plugins are
+simply a Common Lisp source code, which should be a package with
+Coleslaw's naming convention. The naming convention is
+<code>coleslaw-NAME_OF_PLUGIN</code>, where <code>NAME_OF_PLUGIN</code> is name of the plugin
+(e.g.: Package name of the <code>archive</code> plugin is <code>coleslaw-archive</code>).
+Suppose that, the directory containing the static site is structured as
+below:</p>
+
+<pre><code>/path/to/my/site/
+├── .coleslawrc
+├── 404.page
+├── about.page
+├── plugins
+│   ├── archive.lisp
+│   └── tags.lisp
+├── posts
+│   ├── 2011-10-21-what-to-count-in-source-code.post
+│   ├── ...
+│   └── 2016-12-27-migrating-to-coleslaw.post
+├── static
+│   ├── bench-avl-insert-member.html
+│   └── ...
+├── the.archive
+└── themes
+    └── simple
+        ├── archive.tmpl
+        ├── base.tmpl
+        ├── css
+        │   └── style.css
+        ├── index.tmpl
+        ├── post.tmpl
+        └── tag.tmpl</code></pre>
+
+<p>And the contents of <code>.coleslawrc</code> similar to below:</p>
+
+<pre><code><span class="code"><span class="paren1">(<span class="code"><span class="keyword">:author</span> <span class="string">"8c6794b6"</span>
+ <span class="keyword">:charset</span> <span class="string">"UTF-8"</span>
+ <span class="keyword">:deploy-dir</span> <span class="string">"/path/for/deploy/"</span>
+ <span class="keyword">:domain</span> <span class="string">"http://my.url.com"</span>
+ <span class="keyword">:plugins</span> <span class="paren2">(<span class="code"><span class="paren3">(<span class="code">mathjax</span>)</span>
+           <span class="paren3">(<span class="code">static-pages</span>)</span>
+           <span class="paren3">(<span class="code">sitemap</span>)</span>
+           <span class="paren3">(<span class="code">archive</span>)</span>
+           <span class="paren3">(<span class="code">tags</span>)</span></span>)</span>
+ <span class="keyword">:routing</span> <span class="paren2">(<span class="code"><span class="paren3">(<span class="code"><span class="keyword">:post</span>           <span class="string">"posts/~a"</span></span>)</span>
+           <span class="paren3">(<span class="code"><span class="keyword">:tag-index</span>      <span class="string">"tag/~a"</span></span>)</span>
+           <span class="paren3">(<span class="code"><span class="keyword">:month-index</span>    <span class="string">"date/~a"</span></span>)</span>
+           <span class="paren3">(<span class="code"><span class="keyword">:numeric-index</span>  <span class="string">"~d"</span></span>)</span>
+           <span class="paren3">(<span class="code"><span class="keyword">:feed</span>           <span class="string">"~a.xml"</span></span>)</span>
+           <span class="paren3">(<span class="code"><span class="keyword">:tag-feed</span>       <span class="string">"tag/~a.xml"</span></span>)</span></span>)</span>
+ <span class="keyword">:staging-dir</span> <span class="string">"/tmp/coleslaw-staging/"</span>
+ <span class="keyword">:title</span> <span class="string">"8c6794b6.github.io"</span>
+ <span class="keyword">:theme</span> <span class="string">"simple"</span></span>)</span></span></code></pre>
+
+<p>By evaluating <code>(coleslaw:main #p&quot;/path/to/my/site&quot;)</code> in Common Lisp,
+coleslaw will generate the site contents. Some of the works done are:</p>
+
+<ul>
+<li><p>Load plugins. Coleslaw will look for <code>coleslaw-mathjax</code>,
+  <code>coleslaw-static-pages</code>, <code>coleslaw-sitemap</code>, <code>coleslaw-archive</code>, and
+  <code>coleslaw-tags</code> under <code>/path/to/my/site/plugins</code> and installed
+  coleslaw's source directory. Coleslaw seeks the plugins under the
+  directory named <code>plugins</code> of the site contents, and under the Coleslaw's
+  source directory. Plugins <code>mathjax</code>, <code>static-pages</code>, and <code>sitemap</code> are
+  bundled within default coleslaw installation.</p></li>
+<li><p>Search the specified theme. Coleslaw will search the
+  <code>/path/to/my/site/themes</code> first, then if not found, search for the theme
+  under Coleslaw's default installation. The name of the theme is
+  specified in the file <code>.coleslawrc</code>. There is
+  a
+  <a href="https://github.com/kingcons/coleslaw/blob/master/docs/themes.md" >guide</a>
+  for writing theme in the Coleslaw source. The theme <code>simple</code> is the one
+  used for this site.</p></li>
+<li><p>Copy the files under the directory named <code>static</code> in <code>/path/to/my/site</code>
+  to the deploy directory.</p></li>
+<li><p>Apply functions according to file extensions. Files for post pages have
+  <code>.post</code> in its file name, static pages has <code>.page</code>, and so on.</p></li>
+</ul>
+
+<p>For <code>archive</code> and <code>tags</code> plugins, which are made for this site, the source
+codes and templates are tightly coupled, so the plugins are not much
+reusable.</p>
+
+<!--
+Local Variables:
+mode: markdown;
+fill-column: 74;
+End:
+-->
+ </div> <div class="post-tags"> TAGGED: <a href="/tag/git.html">git</a>, <a href="/tag/lisp.html">lisp</a>, <a href="/tag/coleslaw.html">coleslaw</a>, <a href="/tag/commonlisp.html">commonlisp</a>, <a href="/tag/web.html">web</a> </div> <div class="prev-post-link"> Prev: <a href="/posts/Modifying-commit-attributes-and-editing-hunk-in-git.html">Modifying commit attributes and editing hunk in git</a> </div> <div class="next-post-link"> Next: <a href="/posts/Delimited-continuations-with-monadic-functions-in-Common-Lisp.html">Delimited continuations with monadic functions in Common Lisp</a> </div> </div> <footer> <section class="tags"> <h3>Tags</h3> <a href="/tag/algorithm.html">algorithm</a> • <a href="/tag/arc.html">arc</a> • <a href="/tag/arrow.html">arrow</a> • <a href="/tag/cabal.html">cabal</a> • <a href="/tag/ci.html">ci</a> • <a href="/tag/coleslaw.html">coleslaw</a> • <a href="/tag/commonlisp.html">commonlisp</a> • <a href="/tag/continuation.html">continuation</a> • <a href="/tag/datastructure.html">datastructure</a> • <a href="/tag/delimited.html">delimited</a> • <a href="/tag/dph.html">dph</a> • <a href="/tag/dsl.html">dsl</a> • <a href="/tag/emacs.html">emacs</a> • <a href="/tag/french.html">french</a> • <a href="/tag/functionaldependency.html">functionaldependency</a> • <a href="/tag/generic.html">generic</a> • <a href="/tag/ghc.html">ghc</a> • <a href="/tag/ghci.html">ghci</a> • <a href="/tag/git.html">git</a> • <a href="/tag/hakyll.html">hakyll</a> • <a href="/tag/haskell.html">haskell</a> • <a href="/tag/heroku.html">heroku</a> • <a href="/tag/image.html">image</a> • <a href="/tag/linux.html">linux</a> • <a href="/tag/lisp.html">lisp</a> • <a href="/tag/monad.html">monad</a> • <a href="/tag/package.html">package</a> • <a href="/tag/pdf.html">pdf</a> • <a href="/tag/performance.html">performance</a> • <a href="/tag/ps.html">ps</a> • <a href="/tag/repa.html">repa</a> • <a href="/tag/sound.html">sound</a> • <a href="/tag/supercollider.html">supercollider</a> • <a href="/tag/templatehaskell.html">templatehaskell</a> • <a href="/tag/tips.html">tips</a> • <a href="/tag/travis.html">travis</a> • <a href="/tag/tree.html">tree</a> • <a href="/tag/typefamily.html">typefamily</a> • <a href="/tag/utf-8.html">utf-8</a> • <a href="/tag/web.html">web</a> </section> Copyright © 2011-2017 8c6794b6; Unless otherwise noted, site contents licensed under <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"> CC-by-SA</a>. </footer> </body> </html>

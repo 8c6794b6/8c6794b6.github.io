@@ -1,0 +1,1235 @@
+<?xml version="1.0"?>
+<feed xmlns="http://www.w3.org/2005/Atom"> <title>8c6794b6.github.io</title> <link href=""/> <link type="application/atom+xml" rel="self" href="/atom.xml"/> <updated>Mon, 03 Apr 2017 16:21:50 +0900</updated> <author> <name>8c6794b6</name> </author> <entry> <link type="text/html" rel="alternate" href="/posts/Delimited-continuations-with-monadic-functions-in-Common-Lisp.html"/> <title>Delimited continuations with monadic functions in Common Lisp</title> <published>2017-02-07</published> <updated>2017-02-07</updated> <author> <name>8c6794b6</name> <uri></uri> </author> <content type="html">&lt;h3&gt;Introduction&lt;/h3&gt;
+
+&lt;p&gt;Exploring
+&lt;a href=&quot;https://en.wikipedia.org/wiki/Delimited_continuation&quot; &gt;delimited continuation&lt;/a&gt; in
+Common Lisp, in
+particular,
+&lt;a href=&quot;http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.43.8753&quot; &gt;&lt;code&gt;shift&lt;/code&gt; and &lt;code&gt;reset&lt;/code&gt; from Danvy and Filinski&lt;/a&gt;. There
+is &lt;a href=&quot;http://quickdocs.org/cl-cont/&quot; &gt;cl-cont&lt;/a&gt; package, which supports
+shift/reset style continuation with rewriting expression inside
+&lt;code&gt;with-call/cc&lt;/code&gt; macro. The implementation shown in this post is simple,
+short (less than 50 lines), and uses monadic functions to capture
+continuations.&lt;/p&gt;
+
+&lt;h3&gt;Monad for Continuation&lt;/h3&gt;
+
+&lt;p&gt;As
+&lt;a href=&quot;http://homepages.inf.ed.ac.uk/wadler/topics/monads.html&quot; &gt;Wadler mentioned in various papers&lt;/a&gt;,
+monads could be used to express continuations. Monads consists of type
+constructor &lt;code&gt;M&lt;/code&gt; and following two operations:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;function&quot;&gt;unit&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;M&lt;/span&gt; a
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;★&lt;/span&gt;)&lt;/span&gt;  &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;M&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;M&lt;/span&gt; b&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;M&lt;/span&gt; b&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;It is possible to express concept of Monads in other programming
+languages than Haskell. Several implementation already exist, such as
+in &lt;a href=&quot;http://okmij.org/ftp/Scheme/monad-in-Scheme.html&quot; &gt;Scheme&lt;/a&gt;
+and &lt;a href=&quot;http://okmij.org/ftp/Scheme/monad-in-Scheme.html&quot; &gt;JavaScript&lt;/a&gt;, to
+name a few. In impure languages, there are not much needs for monad,
+since the problems solved by monads in purely functional language are
+solved with different techniques. Though, one of the programming
+techniques which could be solved with monad, and missing in most
+language is, expressing first class continuation.&lt;/p&gt;
+
+&lt;p&gt;One of the programming languages supporting first class continuation is
+Scheme. Scheme has &lt;code&gt;call-with-current-continuation&lt;/code&gt;, which captures
+undelimited continuation as first class value. Some of the Scheme
+implementations also support delimited continuations. Delimited
+continuations are not in the Scheme language specifications so far,
+though it
+is
+&lt;a href=&quot;http://okmij.org/ftp/continuations/implementations.html&quot; &gt;possible to implement it with undelimited continuations&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h3&gt;Wrapping Expression Into CPS&lt;/h3&gt;
+
+&lt;p&gt;In a programming language without builtin support for continuation, one
+need to express the computation in Continuation-Passing-Style (CPS) to
+capture the continuation, and that is where monad is used for. Firstly,
+defining a structure to represent continuation. The structure &lt;code&gt;CONT&lt;/code&gt; has
+single field, a function taking the current continuation.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defstruct&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;cont &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;:constructor&lt;/span&gt; make-cont &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;fn&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+  &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;fn #&#039;values &lt;span class=&quot;keyword&quot;&gt;:type&lt;/span&gt; &lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;function&lt;/span&gt;&lt;/i&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defun&lt;/span&gt;&lt;/i&gt; run-cont &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;c k&lt;/span&gt;)&lt;/span&gt;
+  &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;funcall &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;cont-fn c&lt;/span&gt;)&lt;/span&gt; k&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Defining &lt;code&gt;unit&lt;/code&gt; and &lt;code&gt;(★)&lt;/code&gt; to make &lt;code&gt;CONT&lt;/code&gt; as an instance of monad. In the
+code shown below, &lt;code&gt;unit&lt;/code&gt; is renamed to &lt;code&gt;returnc&lt;/code&gt;, and &lt;code&gt;(★)&lt;/code&gt; is renamed
+to &lt;code&gt;bindc&lt;/code&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defun&lt;/span&gt;&lt;/i&gt; returnc &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;x&lt;/span&gt;)&lt;/span&gt;
+  &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;make-cont &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;lambda&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;k&lt;/span&gt;)&lt;/span&gt;
+               &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;funcall k x&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defun&lt;/span&gt;&lt;/i&gt; bindc &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;c f&lt;/span&gt;)&lt;/span&gt;
+  &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;make-cont &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;lambda&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;k&lt;/span&gt;)&lt;/span&gt;
+               &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;run-cont c &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;lambda&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;x&lt;/span&gt;)&lt;/span&gt;
+                             &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;run-cont &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;funcall f x&lt;/span&gt;)&lt;/span&gt; k&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Definition of &lt;code&gt;returnc&lt;/code&gt; makes CPS representation of &lt;code&gt;x&lt;/code&gt; wrapped with
+&lt;code&gt;CONT&lt;/code&gt; structure. &lt;code&gt;bindc&lt;/code&gt; runs the continuation &lt;code&gt;c&lt;/code&gt;, then pass the
+result to &lt;code&gt;f&lt;/code&gt;, and runs the continuation returned by &lt;code&gt;f&lt;/code&gt; with the
+current continuation &lt;code&gt;k&lt;/code&gt;. Note that in &lt;code&gt;bindc&lt;/code&gt;, current continuation &lt;code&gt;k&lt;/code&gt;
+is not passed to &lt;code&gt;c&lt;/code&gt; but to the returned value of &lt;code&gt;f&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Some examples:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;gt; (run-cont (returnc &#039;foo) #&#039;values)
+FOO
+&amp;gt; (run-cont (bindc (returnc 21) (lambda (x) (returnc (* x 2)))) #&#039;values)
+42&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Adding two syntax helper macros, &lt;code&gt;letc*&lt;/code&gt; and &lt;code&gt;progc&lt;/code&gt;. The macro &lt;code&gt;letc*&lt;/code&gt;
+is similar to &lt;code&gt;let*&lt;/code&gt;, but instead of binding result of pure expressions,
+&lt;code&gt;letc*&lt;/code&gt; binds the variable to the argument passed to the continuation.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defmacro&lt;/span&gt;&lt;/i&gt; letc* &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;bindings &amp;amp;body body&lt;/span&gt;)&lt;/span&gt;
+  &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;if&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;null bindings&lt;/span&gt;)&lt;/span&gt;
+      `&lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;progn&lt;/span&gt;&lt;/i&gt; ,@body&lt;/span&gt;)&lt;/span&gt;
+      &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;destructuring-bind &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;name c&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;car bindings&lt;/span&gt;)&lt;/span&gt;
+        `&lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;bindc ,c &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;lambda&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;,name&lt;/span&gt;)&lt;/span&gt;
+                     &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;letc* ,&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;cdr bindings&lt;/span&gt;)&lt;/span&gt; ,@body&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The second example shown above could be written with &lt;code&gt;letc*&lt;/code&gt; as follows:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;gt; (run-cont (letc* ((x (returnc 21)))
+              (returnc (* x 2)))
+            #&#039;values)
+42&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;&lt;code&gt;progc&lt;/code&gt; is similar to &lt;code&gt;letc*&lt;/code&gt;, but discards the variable, intended to be
+used in the codes where side effects of continuations are the main
+concern.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defmacro&lt;/span&gt;&lt;/i&gt; progc &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&amp;amp;body body&lt;/span&gt;)&lt;/span&gt;
+  &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;if&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;null &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;cdr body&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+      &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;car body&lt;/span&gt;)&lt;/span&gt;
+      &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;let&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;garg &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;gensym&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+        `&lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;bindc ,&lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;car body&lt;/span&gt;)&lt;/span&gt;
+                &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;lambda&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;,garg&lt;/span&gt;)&lt;/span&gt;
+                  &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;declare &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;ignore ,garg&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+                  &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;progc ,@&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;cdr body&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3&gt;Shift And Reset&lt;/h3&gt;
+
+&lt;p&gt;With monadic interfaces for continuation, &lt;code&gt;shift&lt;/code&gt; and &lt;code&gt;reset&lt;/code&gt; could be
+expressed as below. The function &lt;code&gt;reset&lt;/code&gt; unwrap the &lt;code&gt;CONT&lt;/code&gt; structure if
+the given argument is &lt;code&gt;CONT&lt;/code&gt;, otherwise returns the given value itself.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defun&lt;/span&gt;&lt;/i&gt; reset &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;k&lt;/span&gt;)&lt;/span&gt;
+  &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;if&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;cont-p k&lt;/span&gt;)&lt;/span&gt;
+      &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;run-cont k #&#039;values&lt;/span&gt;)&lt;/span&gt;
+      k&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The macro &lt;code&gt;shift&lt;/code&gt; binds the current continuation to given &lt;code&gt;var&lt;/code&gt; as a
+function defined with &lt;code&gt;flet&lt;/code&gt;, and then invoke the &lt;code&gt;expr&lt;/code&gt;. Inside &lt;code&gt;expr&lt;/code&gt;,
+bounded continuation could be invoked as an ordinary function. In other
+words, &lt;code&gt;shift&lt;/code&gt; captures the continuation from the captured place until
+the first appearance of enclosing &lt;code&gt;reset&lt;/code&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defmacro&lt;/span&gt;&lt;/i&gt; shift &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;var expr&lt;/span&gt;)&lt;/span&gt;
+  &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;let&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;gk &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;gensym&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+        &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;garg &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;gensym&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+    `&lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;make-cont &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;lambda&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;,gk&lt;/span&gt;)&lt;/span&gt;
+                  &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;declare &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;function&lt;/span&gt;&lt;/i&gt; ,gk&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+                  &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;flet&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;,var &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;,garg&lt;/span&gt;)&lt;/span&gt;
+                           &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;funcall ,gk ,garg&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+                    &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;declare &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;ignorable &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;function&lt;/span&gt;&lt;/i&gt; ,var&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+                    ,expr&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Evaluating some sample expressions with &lt;code&gt;shift&lt;/code&gt; and &lt;code&gt;reset&lt;/code&gt;. The
+resulting value of &lt;code&gt;shift&lt;/code&gt; is a &lt;code&gt;CONT&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;gt; (shift k (k 2))
+#S(CONT :FN #&amp;lt;FUNCTION (LAMBDA (#:G656)) {1004B9A55B}&amp;gt;)&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;To perform the computation in &lt;code&gt;CONT&lt;/code&gt;, one can apply &lt;code&gt;reset&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;gt; (reset (shift k (k 2))
+2&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The resulting &lt;code&gt;CONT&lt;/code&gt; object from &lt;code&gt;shift&lt;/code&gt; could be passed to &lt;code&gt;bindc&lt;/code&gt;, as
+those made from &lt;code&gt;returnc&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;gt; (reset (letc* ((x (shift k (k 2))))
+           (returnc (+ x 3))))
+5&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;When the expression in &lt;code&gt;shift&lt;/code&gt; returns without calling captured
+continuation, the whole computation will escape immediately. Instead of
+the sum of &lt;code&gt;x&lt;/code&gt; and &lt;code&gt;y&lt;/code&gt; or an error from &lt;code&gt;+&lt;/code&gt;, following expression
+evaluates as symbol &lt;code&gt;FOO&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;gt; (reset (letc* ((x (returnc 100))
+                 (y (shift k &#039;foo)))
+           (returnc (+ x y))))
+FOO&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Since captured continuation is an ordinary function, it could be invoked
+multiple times. In the following expression, the captured computation
+with &lt;code&gt;shift&lt;/code&gt; could be viewed as &lt;code&gt;(lambda (x) (+ x 3))&lt;/code&gt;. The captured
+continuation is applied twice, which results in &lt;code&gt;(+ (+ 2 3) 3)&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;gt; (reset (letc* ((x (shift k (k (k 2)))))
+           (returnc (+ x 3))))
+8&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Inside the expression of &lt;code&gt;shift&lt;/code&gt;, further computation could be done with
+returned value from captured computation. Following expression applies
+captured continuation twice as in previous example, then multiplies by
+&lt;code&gt;2&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;gt; (reset (letc* ((x (shift k (* 2 (k (k 2))))))
+           (returnc (+ x 3))))
+16&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;In the implementation of &lt;code&gt;shift&lt;/code&gt; and &lt;code&gt;reset&lt;/code&gt; shown here, continuations
+are captured with monad, hence some wrapping with &lt;code&gt;returnc&lt;/code&gt; and
+unwrapping with &lt;code&gt;letc*&lt;/code&gt; are required. In an implementation which has
+builtin support of &lt;code&gt;shift&lt;/code&gt; and &lt;code&gt;reset&lt;/code&gt;
+(e.g.: &lt;a href=&quot;https://racket-lang.org/&quot; &gt;Racket&lt;/a&gt;), the last example could be
+written as:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;gt; (reset (+ (shift k (* 2 (k (k 2)))) 3))
+16&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3&gt;Example: Nondeterminism&lt;/h3&gt;
+
+&lt;p&gt;One common use of continuation is for nondeterministic
+programming. Showing an implementation of &lt;code&gt;choice&lt;/code&gt; from
+the
+&lt;a href=&quot;http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.43.8753&quot; &gt;Danvy and Filinski&#039;s paper&lt;/a&gt;,
+and its use with function &lt;code&gt;triple&lt;/code&gt;. The problem we have is to find out
+all triples of distinct positive integers &lt;code&gt;i&lt;/code&gt;, &lt;code&gt;j&lt;/code&gt;, and &lt;code&gt;k&lt;/code&gt; less than or
+equal to a given integer &lt;code&gt;n&lt;/code&gt; that sums to a given integer &lt;code&gt;s&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defun&lt;/span&gt;&lt;/i&gt; fail &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;)&lt;/span&gt;
+  &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;shift k &#039;no&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defun&lt;/span&gt;&lt;/i&gt; choice &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;n&lt;/span&gt;)&lt;/span&gt;
+  &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;shift k &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;loop&lt;/span&gt;&lt;/i&gt; for i from 1 to n do &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;k i&lt;/span&gt;)&lt;/span&gt; finally &#039;no&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defun&lt;/span&gt;&lt;/i&gt; triple &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;n s&lt;/span&gt;)&lt;/span&gt;
+  &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;letc* &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;i &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;choice n&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+          &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;j &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;choice &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;- i 1&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+          &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;k &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;choice &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;- j 1&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+    &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;if&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;= s &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;+ i j k&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+        &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;returnc &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;list i j k&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+        &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;fail&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;To print the results of &lt;code&gt;triple&lt;/code&gt;, one may write as follows:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&amp;gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;reset &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;letc* &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;ijk &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;triple 9 15&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+           &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;returnc &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;print ijk&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;)
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;6 5 4&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;7 5 3&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;7 6 2&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;8 4 3&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;8 5 2&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;8 6 1&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;9 4 2&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;9 5 1&lt;/span&gt;)&lt;/span&gt;
+NIL&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Note that unlike the original example in the paper, the version of
+&lt;code&gt;shift&lt;/code&gt; in this post returns a value of &lt;code&gt;CONT&lt;/code&gt; structure. The expression
+&lt;code&gt;(triple 9 15)&lt;/code&gt; is evaluated as &lt;code&gt;CONT&lt;/code&gt; structure, not the answer values
+returned by &lt;code&gt;(returnc (list i j k))&lt;/code&gt;. The answers need to be unwrapped
+with &lt;code&gt;letc*&lt;/code&gt; or &lt;code&gt;bindc&lt;/code&gt; to print with &lt;code&gt;print&lt;/code&gt; function.&lt;/p&gt;
+
+&lt;h3&gt;Example: Coroutine&lt;/h3&gt;
+
+&lt;p&gt;Another famous problem solved with continuation is, so-called the
+&lt;em&gt;same-fringe&lt;/em&gt; problem. Two binary trees have the same fringe if they
+have exactly the same leaves reading from left to right. The problem is
+to decide whether two binary trees have the same fringe. Basically, we
+want to return from the tree traversal as soon as we detect that the
+trees are different.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defun&lt;/span&gt;&lt;/i&gt; donep &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;x&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;eq &#039;done x&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defun&lt;/span&gt;&lt;/i&gt; nextp &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;x&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;not &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;donep x&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defun&lt;/span&gt;&lt;/i&gt; next &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;n k&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;lambda&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;values n k&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defun&lt;/span&gt;&lt;/i&gt; walkerc &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;tree&lt;/span&gt;)&lt;/span&gt;
+  &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;cond&lt;/span&gt;&lt;/i&gt;
+    &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;null tree&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;returnc &#039;done&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+    &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;atom tree&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;shift k &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;next tree #&#039;k&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+    &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;t &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;progc
+         &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;walkerc &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;car tree&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+         &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;walkerc &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;cdr tree&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The function &lt;code&gt;walkerc&lt;/code&gt; takes a tree, returns a &lt;code&gt;CONT&lt;/code&gt; value. Each
+element of the tree is converted as a closure with the function &lt;code&gt;next&lt;/code&gt;.
+The closure returns two values: the element and the captured
+continuation. The resulting &lt;code&gt;CONT&lt;/code&gt; could be viewed as a coroutine
+object, which traverses the tree from right to left order.&lt;/p&gt;
+
+&lt;p&gt;With &lt;code&gt;walkerc&lt;/code&gt;, function &lt;code&gt;same-fringe&lt;/code&gt; could be written as below:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defun&lt;/span&gt;&lt;/i&gt; same-fringe &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;t1 t2&lt;/span&gt;)&lt;/span&gt;
+  &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;labels&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;rec &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;r1 r2&lt;/span&gt;)&lt;/span&gt;
+             &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;if&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;nextp r1&lt;/span&gt;)&lt;/span&gt;
+                 &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;and &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;nextp r2&lt;/span&gt;)&lt;/span&gt;
+                      &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;multiple-value-bind &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;n1 k1&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;funcall r1&lt;/span&gt;)&lt;/span&gt;
+                        &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;multiple-value-bind &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;n2 k2&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;funcall r2&lt;/span&gt;)&lt;/span&gt;
+                          &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;and &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;eql n1 n2&lt;/span&gt;)&lt;/span&gt;
+                               &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;rec &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;funcall k1 nil&lt;/span&gt;)&lt;/span&gt;
+                                    &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;funcall k2 nil&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+                 &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;donep r2&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+    &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;rec &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;reset &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;walkerc t1&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+         &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;reset &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;walkerc t2&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Sample runs:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&amp;gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;same-fringe &#039;&lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;1&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;2 &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;3 &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;4&lt;/span&gt;)&lt;/span&gt; 5&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt; &#039;&lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;1 &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;2&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;3 4&lt;/span&gt;)&lt;/span&gt; 5&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+T
+&amp;gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;same-fringe &#039;&lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;1&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;2 &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;3 &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;4&lt;/span&gt;)&lt;/span&gt; 5&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt; &#039;&lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;1 &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;2&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;4&lt;/span&gt;)&lt;/span&gt; 5&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+NIL&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3&gt;Some thoughts&lt;/h3&gt;
+
+&lt;p&gt;Both non-deterministic example and coroutine example could be directly written
+in continuation passing style (CPS), which shall be slightly efficient since
+direct CPS does not require to make the &lt;code&gt;cont&lt;/code&gt; structure.&lt;/p&gt;
+
+&lt;p&gt;Te implementation shown in this post is similar to the one done
+by
+&lt;a href=&quot;https://groups.google.com/forum/#!topic/comp.lang.lisp/D72jdiAmiBE&quot; &gt;Matthew D Swank&lt;/a&gt;,
+written in 2006.&lt;/p&gt;
+
+&lt;!--
+Local Variables:
+mode: markdown;
+fill column: 72;
+End;
+--&gt;
+</content> </entry><entry> <link type="text/html" rel="alternate" href="/posts/Migrating-to-Coleslaw.html"/> <title>Migrating to Coleslaw</title> <published>2016-12-27</published> <updated>2016-12-27</updated> <author> <name>8c6794b6</name> <uri></uri> </author> <content type="html">&lt;p&gt;Made updates to this gh-page. The site is still generated with static site
+generator, though the generator has changed
+from &lt;a href=&quot;https://jaspervdj.be/hakyll/&quot; &gt;Hakyll&lt;/a&gt;
+to &lt;a href=&quot;http://github.com/kingcons/coleslaw&quot; &gt;Coleslaw&lt;/a&gt;.  The site uses
+hand-made scratchy CSS with color scheme borrowed
+from &lt;a href=&quot;http://ethanschoonover.com/solarized&quot; &gt;Solarized&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Coleslaw is a static site generator written in Common Lisp. As of the
+version included in Quicklisp 2016-12-08, Coleslaw supports plain
+HTML, &lt;a href=&quot;https://daringfireball.net/projects/markdown/&quot; &gt;Markdown&lt;/a&gt;
+and &lt;a href=&quot;http://docutils.sourceforge.net/rst.html&quot; &gt;reStructuredText&lt;/a&gt; for
+writing contents. Basic usage of Coleslaw is written
+in &lt;a href=&quot;https://github.com/kingcons/coleslaw/blob/master/README.md&quot; &gt;README&lt;/a&gt;
+file. Coleslaw uses &lt;code&gt;.coleslawrc&lt;/code&gt; file to configure the site. The
+configuration file could be placed under the user&#039;s home directory (i.e.:
+&lt;code&gt;$HOME/.coleslawrc&lt;/code&gt;), or under the directory containing all the other
+files for building the site (e.g.: &lt;code&gt;/path/to/my/site/.coleslawrc&lt;/code&gt;).  It
+uses &lt;a href=&quot;https://github.com/archimag/cl-closure-template&quot; &gt;Common Lisp port&lt;/a&gt;
+of &lt;a href=&quot;https://developers.google.com/closure/templates/&quot; &gt;Closure Templates&lt;/a&gt;
+for defining theme templates. Markdown parser used by Coleslaw
+is &lt;a href=&quot;https://github.com/3b/3bmd&quot; &gt;3bmd&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Coleslaw recommends the use of &lt;em&gt;plugins&lt;/em&gt; to customize and extend the
+site. The &lt;a href=&quot;../archive.html&quot; &gt;archive page of this site&lt;/a&gt; and the pages
+showing the posts for each tag are built with simple plugins. Plugins are
+simply a Common Lisp source code, which should be a package with
+Coleslaw&#039;s naming convention. The naming convention is
+&lt;code&gt;coleslaw-NAME_OF_PLUGIN&lt;/code&gt;, where &lt;code&gt;NAME_OF_PLUGIN&lt;/code&gt; is name of the plugin
+(e.g.: Package name of the &lt;code&gt;archive&lt;/code&gt; plugin is &lt;code&gt;coleslaw-archive&lt;/code&gt;).
+Suppose that, the directory containing the static site is structured as
+below:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;/path/to/my/site/
+├── .coleslawrc
+├── 404.page
+├── about.page
+├── plugins
+│   ├── archive.lisp
+│   └── tags.lisp
+├── posts
+│   ├── 2011-10-21-what-to-count-in-source-code.post
+│   ├── ...
+│   └── 2016-12-27-migrating-to-coleslaw.post
+├── static
+│   ├── bench-avl-insert-member.html
+│   └── ...
+├── the.archive
+└── themes
+    └── simple
+        ├── archive.tmpl
+        ├── base.tmpl
+        ├── css
+        │   └── style.css
+        ├── index.tmpl
+        ├── post.tmpl
+        └── tag.tmpl&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;And the contents of &lt;code&gt;.coleslawrc&lt;/code&gt; similar to below:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;:author&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;8c6794b6&quot;&lt;/span&gt;
+ &lt;span class=&quot;keyword&quot;&gt;:charset&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;UTF-8&quot;&lt;/span&gt;
+ &lt;span class=&quot;keyword&quot;&gt;:deploy-dir&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;/path/for/deploy/&quot;&lt;/span&gt;
+ &lt;span class=&quot;keyword&quot;&gt;:domain&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;http://my.url.com&quot;&lt;/span&gt;
+ &lt;span class=&quot;keyword&quot;&gt;:plugins&lt;/span&gt; &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;mathjax&lt;/span&gt;)&lt;/span&gt;
+           &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;static-pages&lt;/span&gt;)&lt;/span&gt;
+           &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;sitemap&lt;/span&gt;)&lt;/span&gt;
+           &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;archive&lt;/span&gt;)&lt;/span&gt;
+           &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;tags&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+ &lt;span class=&quot;keyword&quot;&gt;:routing&lt;/span&gt; &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;:post&lt;/span&gt;           &lt;span class=&quot;string&quot;&gt;&quot;posts/~a&quot;&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+           &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;:tag-index&lt;/span&gt;      &lt;span class=&quot;string&quot;&gt;&quot;tag/~a&quot;&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+           &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;:month-index&lt;/span&gt;    &lt;span class=&quot;string&quot;&gt;&quot;date/~a&quot;&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+           &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;:numeric-index&lt;/span&gt;  &lt;span class=&quot;string&quot;&gt;&quot;~d&quot;&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+           &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;:feed&lt;/span&gt;           &lt;span class=&quot;string&quot;&gt;&quot;~a.xml&quot;&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+           &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;:tag-feed&lt;/span&gt;       &lt;span class=&quot;string&quot;&gt;&quot;tag/~a.xml&quot;&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+ &lt;span class=&quot;keyword&quot;&gt;:staging-dir&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;/tmp/coleslaw-staging/&quot;&lt;/span&gt;
+ &lt;span class=&quot;keyword&quot;&gt;:title&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;8c6794b6.github.io&quot;&lt;/span&gt;
+ &lt;span class=&quot;keyword&quot;&gt;:theme&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;simple&quot;&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;By evaluating &lt;code&gt;(coleslaw:main #p&amp;quot;/path/to/my/site&amp;quot;)&lt;/code&gt; in Common Lisp,
+coleslaw will generate the site contents. Some of the works done are:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;Load plugins. Coleslaw will look for &lt;code&gt;coleslaw-mathjax&lt;/code&gt;,
+  &lt;code&gt;coleslaw-static-pages&lt;/code&gt;, &lt;code&gt;coleslaw-sitemap&lt;/code&gt;, &lt;code&gt;coleslaw-archive&lt;/code&gt;, and
+  &lt;code&gt;coleslaw-tags&lt;/code&gt; under &lt;code&gt;/path/to/my/site/plugins&lt;/code&gt; and installed
+  coleslaw&#039;s source directory. Coleslaw seeks the plugins under the
+  directory named &lt;code&gt;plugins&lt;/code&gt; of the site contents, and under the Coleslaw&#039;s
+  source directory. Plugins &lt;code&gt;mathjax&lt;/code&gt;, &lt;code&gt;static-pages&lt;/code&gt;, and &lt;code&gt;sitemap&lt;/code&gt; are
+  bundled within default coleslaw installation.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Search the specified theme. Coleslaw will search the
+  &lt;code&gt;/path/to/my/site/themes&lt;/code&gt; first, then if not found, search for the theme
+  under Coleslaw&#039;s default installation. The name of the theme is
+  specified in the file &lt;code&gt;.coleslawrc&lt;/code&gt;. There is
+  a
+  &lt;a href=&quot;https://github.com/kingcons/coleslaw/blob/master/docs/themes.md&quot; &gt;guide&lt;/a&gt;
+  for writing theme in the Coleslaw source. The theme &lt;code&gt;simple&lt;/code&gt; is the one
+  used for this site.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Copy the files under the directory named &lt;code&gt;static&lt;/code&gt; in &lt;code&gt;/path/to/my/site&lt;/code&gt;
+  to the deploy directory.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Apply functions according to file extensions. Files for post pages have
+  &lt;code&gt;.post&lt;/code&gt; in its file name, static pages has &lt;code&gt;.page&lt;/code&gt;, and so on.&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;For &lt;code&gt;archive&lt;/code&gt; and &lt;code&gt;tags&lt;/code&gt; plugins, which are made for this site, the source
+codes and templates are tightly coupled, so the plugins are not much
+reusable.&lt;/p&gt;
+
+&lt;!--
+Local Variables:
+mode: markdown;
+fill-column: 74;
+End:
+--&gt;
+</content> </entry><entry> <link type="text/html" rel="alternate" href="/posts/Modifying-commit-attributes-and-editing-hunk-in-git.html"/> <title>Modifying commit attributes and editing hunk in git</title> <published>2014-05-30</published> <updated>2014-05-30</updated> <author> <name>8c6794b6</name> <uri></uri> </author> <content type="html">&lt;h3&gt;Changing author (or any other commit attribute) in existing commits&lt;/h3&gt;
+
+&lt;p&gt;From
+&lt;a href=&quot;http://stackoverflow.com/questions/750172/how-do-i-change-the-author-of-a-commit-in-git&quot; &gt;this SOF Q&amp;amp;A&lt;/a&gt;. Linked
+page was showing a scenario to change committer and author&#039;s name and email from
+old value to new value:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;git filter-branch --commit-filter &#039;
+    if [ &quot;$GIT_COMMITTER_NAME&quot; = &quot;&amp;lt;OLD_NAME&amp;gt;&quot; ];
+    then
+        GIT_COMMITTER_NAME=&quot;&amp;lt;NEW_NAME&amp;gt;&quot;;
+
+        # ...
+        # modify other attributes if any, then...
+
+        git commit-tree &quot;$@&quot;;
+    else
+        git commit-tree &quot;$@&quot;;
+    fi&#039; HEAD&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Comment in the answer was mentioning &lt;code&gt;git env-filter&lt;/code&gt; will change all commits,
+but the one shown above allows conditional behaviour.&lt;/p&gt;
+
+&lt;h3&gt;Editing hunk while adding commits&lt;/h3&gt;
+
+&lt;p&gt;There are
+&lt;a href=&quot;http://joaquin.windmuller.ca/post/35-selectively-select-changes-to-commit-with-git-or-imma-edit-your-hunk&quot; &gt;couple&lt;/a&gt;
+&lt;a href=&quot;http://pivotallabs.com/git-add-e/&quot; &gt;articles&lt;/a&gt; mentioning it, including the
+&lt;a href=&quot;http://git-scm.com/docs/git-add&quot; &gt;git add man page&lt;/a&gt;. Section &lt;code&gt;EDITING PATCHES&lt;/code&gt;
+in the manual has detailed explanation.&lt;/p&gt;
+</content> </entry><entry> <link type="text/html" rel="alternate" href="/posts/Syntax-for-building-rose-tree.html"/> <title>Syntax for building rose tree</title> <published>2014-05-23</published> <updated>2014-05-23</updated> <author> <name>8c6794b6</name> <uri></uri> </author> <content type="html">&lt;h3&gt;Introduction&lt;/h3&gt;
+
+&lt;p&gt;Suppose that, we want to write contents of following rose tree, by hand:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;0
+|
++- 1
+|  |
+|  `- 2
+|
++- 3
+|
++- 4
+|  |
+|  +- 5
+|  |  |
+|  |  +- 6
+|  |  |
+|  |  `- 7
+|  |
+|  `- 8
+|
+`- 9
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Using &lt;code&gt;Data.Tree.Tree&lt;/code&gt; from &lt;code&gt;containers&lt;/code&gt; package for our purpose, the
+definition is:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;data Tree a = Node { rootLabel :: a
+                   , subForest :: Forest a }
+
+type Forest a = [Tree a]
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This document explores couple alternative ways to write rose tree data
+structure, mainly focusing on situations when writing by hand.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;comment&quot;&gt;{-# LANGUAGE FlexibleContexts #-}&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;comment&quot;&gt;{-# LANGUAGE FlexibleInstances #-}&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;comment&quot;&gt;{-# LANGUAGE FunctionalDependencies #-}&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;comment&quot;&gt;{-# LANGUAGE GeneralizedNewtypeDeriving #-}&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;comment&quot;&gt;{-# LANGUAGE MultiParamTypeClasses #-}&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;comment&quot;&gt;{-# LANGUAGE TypeFamilies #-}&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;comment&quot;&gt;{-# LANGUAGE UndecidableInstances #-}&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;module&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Main&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;where&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Data&lt;/span&gt;&lt;span class=&quot;atom&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;variable&quot;&gt;Tree&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Control&lt;/span&gt;&lt;span class=&quot;atom&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;variable&quot;&gt;Monad&lt;/span&gt;&lt;span class=&quot;atom&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;variable&quot;&gt;Writer&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;It could be nice if we can write the rose tree in single line like:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; t3&#039; &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Tree&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Int&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; t3&#039; &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; buildBranch &lt;span class=&quot;atom&quot;&gt;$&lt;/span&gt; pnode 0 &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;pnode 1 2&lt;/span&gt;)&lt;/span&gt; 3 &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;pnode 4 &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;pnode 5 6 7&lt;/span&gt;)&lt;/span&gt; 8&lt;/span&gt;)&lt;/span&gt; 9&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Here, &lt;code&gt;pnode&lt;/code&gt; is a polyvariadic function, treating the first argument as
+element in itself, and rest as leaves. The code used for writing &lt;code&gt;t3&#039;&lt;/code&gt;
+is shown in Take 3.&lt;/p&gt;
+
+&lt;h3&gt;Take 1: The Straightforward Way&lt;/h3&gt;
+
+&lt;p&gt;In straightforward way, sample tree may written like below:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; t0 &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Tree&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Int&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; t0 &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; 0
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;paren1&quot;&gt;[&lt;span class=&quot;code&quot;&gt; &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; 1
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;       &lt;span class=&quot;paren2&quot;&gt;[&lt;span class=&quot;code&quot;&gt; &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; 2 &lt;span class=&quot;paren3&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;]&lt;/span&gt; &lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     , &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; 3 &lt;span class=&quot;paren2&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     , &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; 4
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;       &lt;span class=&quot;paren2&quot;&gt;[&lt;span class=&quot;code&quot;&gt; &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; 5
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         &lt;span class=&quot;paren3&quot;&gt;[&lt;span class=&quot;code&quot;&gt; &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; 6 &lt;span class=&quot;paren4&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;]&lt;/span&gt;, &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; 7 &lt;span class=&quot;paren4&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;]&lt;/span&gt;&lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;       , &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; 8 &lt;span class=&quot;paren3&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;]&lt;/span&gt; &lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     , &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; 9 &lt;span class=&quot;paren2&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;]&lt;/span&gt; &lt;/span&gt;]&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The sample tree containing 10 nodes already looks a bit cumbersome to
+write by hand. From my point of view, things making the typing hard
+were:&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;Use of CAPITAL LETTERS: In general typing lower case letters are
+easier than typing capital letters.&lt;/li&gt;
+&lt;li&gt;Use of brackets and commas: I realised that when typing numbers and
+commas, my fingers are making quite a large movements on the
+keyboard. This coulbe be a problem arise when typing numbers only.
+Say, if &lt;code&gt;Char&lt;/code&gt; was used instead of &lt;code&gt;Int&lt;/code&gt;, may not be a problem.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3&gt;Take 2: Slightly Less Straightforward Way&lt;/h3&gt;
+
+&lt;p&gt;Pretty simple replacement of type constructors with functions with lower
+case letters. Also using variant of &lt;code&gt;node&lt;/code&gt; function named &lt;code&gt;leaf&lt;/code&gt; which
+takes empty list as second argument of &lt;code&gt;Node&lt;/code&gt;. The sample tree looks
+like below:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; t1 &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Tree&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Int&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; t1 &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     node 0
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;paren1&quot;&gt;[&lt;span class=&quot;code&quot;&gt; node 1
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;       &lt;span class=&quot;paren2&quot;&gt;[&lt;span class=&quot;code&quot;&gt; leaf 2 &lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     , leaf 3
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     , node 4
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;       &lt;span class=&quot;paren2&quot;&gt;[&lt;span class=&quot;code&quot;&gt; node 5
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         &lt;span class=&quot;paren3&quot;&gt;[&lt;span class=&quot;code&quot;&gt;leaf 6, leaf 7&lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;       , leaf 8 &lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     , leaf 9 &lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; node &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Tree&lt;/span&gt; a&lt;/span&gt;]&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Tree&lt;/span&gt; a
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; node a fs &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; a fs
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; leaf &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Tree&lt;/span&gt; a
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; leaf a &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; a &lt;span class=&quot;paren1&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;]&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Confirm that the two trees are identical:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;ghci&amp;gt; t1 == t0
+True
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now &lt;code&gt;t1&lt;/code&gt; does not contain capital letters in its body, though nested
+lists might still look clumsy.&lt;/p&gt;
+
+&lt;h3&gt;Take 3: Reducing Commas And Brackets&lt;/h3&gt;
+
+&lt;p&gt;Avoid typing commas and brackets (&lt;code&gt;,&lt;/code&gt;, &lt;code&gt;[&lt;/code&gt;, and &lt;code&gt;]&lt;/code&gt;), let the
+&lt;code&gt;do notation&lt;/code&gt; to take care of node grouping. The sample tree looks like
+below:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; t2 &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Tree&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Int&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; t2 &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; buildTree &lt;span class=&quot;atom&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;do&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     mnode 0 &lt;span class=&quot;atom&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;do&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         mnode 1 &lt;span class=&quot;atom&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;do&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;             mleaf 2
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         mleaf 3
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         mnode 4 &lt;span class=&quot;atom&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;do&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;             mnode 5 &lt;span class=&quot;atom&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;do&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;                 mleaf 6 &lt;span class=&quot;atom&quot;&gt;&amp;gt;&amp;gt;&lt;/span&gt; mleaf 7
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;             mleaf 8
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         mleaf 9&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Implementation is done with &lt;code&gt;Writer&lt;/code&gt; monad with simple &lt;code&gt;DiffList&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;newtype&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;DiffList&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;DiffList&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren2&quot;&gt;[&lt;span class=&quot;code&quot;&gt;a&lt;/span&gt;]&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;paren2&quot;&gt;[&lt;span class=&quot;code&quot;&gt;a&lt;/span&gt;]&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;keyword&quot;&gt;deriving&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Monoid&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;instance&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Show&lt;/span&gt; a &lt;span class=&quot;atom&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Show&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;DiffList&lt;/span&gt; a&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;where&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     show &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;DiffList&lt;/span&gt; f&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; show &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;f &lt;span class=&quot;paren2&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;]&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;type&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;TreeBuilder&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Writer&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;DiffList&lt;/span&gt; a&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; snoc &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;DiffList&lt;/span&gt; a
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; snoc x &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;DiffList&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;x&lt;span class=&quot;variable&quot;&gt;:&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; runTreeBuilder &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;TreeBuilder&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Tree&lt;/span&gt; a&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Tree&lt;/span&gt; a&lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; runTreeBuilder builder &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;case&lt;/span&gt; runWriter builder &lt;span class=&quot;keyword&quot;&gt;of&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;_,DiffList f&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; f &lt;span class=&quot;paren1&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; buildTree &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;TreeBuilder&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Tree&lt;/span&gt; a&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Tree&lt;/span&gt; a
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; buildTree builder &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;case&lt;/span&gt; runTreeBuilder builder &lt;span class=&quot;keyword&quot;&gt;of&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;paren1&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;]&lt;/span&gt;  &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; error &lt;span class=&quot;string&quot;&gt;&quot;buildTree: empty tree&quot;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     t&lt;span class=&quot;variable&quot;&gt;:&lt;/span&gt;_ &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; t
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; mnode &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;TreeBuilder&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Tree&lt;/span&gt; a&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;TreeBuilder&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Tree&lt;/span&gt; a&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; mnode x builder &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; tell &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;snoc &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; x &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;runTreeBuilder builder&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; mleaf &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;TreeBuilder&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Tree&lt;/span&gt; a&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; mleaf x &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; tell &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;snoc &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; x &lt;span class=&quot;paren3&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;]&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Checking whether that &lt;code&gt;t2&lt;/code&gt; is identical to &lt;code&gt;t0&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;ghci&amp;gt; t2 == t0
+True
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3&gt;Take 4: Removing Do Notation&lt;/h3&gt;
+
+&lt;p&gt;Use of &lt;code&gt;do notation&lt;/code&gt; has freed us from using commans and brackets,
+though introduced redundancy with &lt;code&gt;do&lt;/code&gt;s. Introducing &lt;code&gt;Monoid&lt;/code&gt; wrapper
+newtype and polyvariadic function to remove &lt;code&gt;do&lt;/code&gt;s. Sample tree may looks
+like below:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; t3 &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Tree&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Int&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; t3 &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; buildBranch &lt;span class=&quot;atom&quot;&gt;$&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     pnode 0
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;pnode 1
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;      &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;pleaf 2&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;pleaf 3&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;pnode 4
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;      &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;pnode 5
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;       &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;pleaf 6&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;pleaf 7&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;      &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;pleaf 8&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;pleaf 9&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now &lt;code&gt;do&lt;/code&gt;s are removed, thought increase of parenthesis is making the
+code quite _lisp_y. Implementation is heavily inspired by
+&lt;a href=&quot;http://okmij.org/ftp/Scheme/xml.html#typed-SXML&quot; &gt;HSXML&lt;/a&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;newtype&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Branch&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Branch&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;DiffList&lt;/span&gt; &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Tree&lt;/span&gt; a&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;keyword&quot;&gt;deriving&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Show,&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Monoid&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Monoid&lt;/span&gt; acc &lt;span class=&quot;atom&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;BuildTree&lt;/span&gt; acc out ret &lt;span class=&quot;keyword&quot;&gt;|&lt;/span&gt; ret &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; out &lt;span class=&quot;keyword&quot;&gt;where&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     build &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;acc&lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt;out&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; acc &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; ret
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;instance&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Monoid&lt;/span&gt; acc &lt;span class=&quot;atom&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;BuildTree&lt;/span&gt; acc &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Branch&lt;/span&gt; a&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Branch&lt;/span&gt; a&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;where&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     build f acc &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; f acc
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;instance&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;BuildTree&lt;/span&gt; acc out ret, e &lt;span class=&quot;keyword&quot;&gt;~&lt;/span&gt; acc&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;atom&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;BuildTree&lt;/span&gt; acc out &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;e&lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt;ret&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;where&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     build f acc &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;\&lt;/span&gt;t &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; build f &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;acc &lt;span class=&quot;atom&quot;&gt;&amp;lt;&amp;gt;&lt;/span&gt; t&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; pnode &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;BuildTree&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Branch&lt;/span&gt; a&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Branch&lt;/span&gt; a&lt;/span&gt;)&lt;/span&gt; ret &lt;span class=&quot;atom&quot;&gt;=&amp;gt;&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Branch&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; ret
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; pnode x &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; build &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Branch&lt;/span&gt; &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;DiffList&lt;/span&gt; b&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Branch&lt;/span&gt; &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;snoc &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; x &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;b &lt;span class=&quot;paren5&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;]&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; pleaf &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Branch&lt;/span&gt; a
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; pleaf x &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Branch&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;snoc &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; x mempty&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; buildBranch &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Branch&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Tree&lt;/span&gt; a
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; buildBranch &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Branch&lt;/span&gt; &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;DiffList&lt;/span&gt; ts&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;case&lt;/span&gt; ts &lt;span class=&quot;paren1&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;]&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;of&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;paren1&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;]&lt;/span&gt;  &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; error &lt;span class=&quot;string&quot;&gt;&quot;buildBranch: empty branch&quot;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     t&lt;span class=&quot;variable&quot;&gt;:&lt;/span&gt;_ &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; t&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Checking again:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;ghci&amp;gt; t3 == t0
+True
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3&gt;Some Thoughts&lt;/h3&gt;
+
+&lt;p&gt;Other data type than &lt;code&gt;Data.Tree.Tree&lt;/code&gt; could be used, though haven&#039;t
+explored.&lt;/p&gt;
+
+&lt;p&gt;In take 2, monadic approach may easy to combine with other monads with
+&lt;code&gt;mtl&lt;/code&gt;. For instance, use &lt;code&gt;State&lt;/code&gt; monad and count the number of leaves
+while traversing.&lt;/p&gt;
+
+&lt;p&gt;In take 3, by defining &lt;code&gt;Branch&lt;/code&gt; as instance of &lt;code&gt;Num class&lt;/code&gt;, &lt;code&gt;t3&lt;/code&gt; could
+rewritten in single line, which is shown as &lt;code&gt;t3&#039;&lt;/code&gt; at the beginning of
+this document:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;t3&#039; = buildBranch $ pnode 0 (pnode 1 2) 3 (pnode 4 (pnode 5 6 7) 8) 9
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Checking:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;ghci&amp;gt; t3&#039; == t0
+True
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Purpose of making as &lt;code&gt;Num&lt;/code&gt; instance is merely for helping syntax. Other
+functions than &lt;code&gt;fromInteger&lt;/code&gt; may left &lt;code&gt;undefined&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;instance&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Num&lt;/span&gt; a &lt;span class=&quot;atom&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Num&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Branch&lt;/span&gt; a&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;where&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;+&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;         &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; undefined
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;*&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;         &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; undefined
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     negate      &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; undefined
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     abs         &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; undefined
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     signum      &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; undefined
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     fromInteger &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; pleaf &lt;span class=&quot;atom&quot;&gt;.&lt;/span&gt; fromInteger&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;GHC has restriction in context reduction stack, as of ghc-7.8.2, default
+size is 21. Polyvariadic function taking more than 22 arguments needs
+&lt;code&gt;-fcontext-stack=N&lt;/code&gt; option and increase the context stack with using
+large context stack size &lt;em&gt;N&lt;/em&gt;.&lt;/p&gt;
+</content> </entry><entry> <link type="text/html" rel="alternate" href="/posts/French-input-methods-and-œ.html"/> <title>French input methods and œ</title> <published>2013-11-28</published> <updated>2013-11-28</updated> <author> <name>8c6794b6</name> <uri></uri> </author> <content type="html">&lt;p&gt;Notes about typing français in emacs with English keyboard.&lt;/p&gt;
+
+&lt;p&gt;Change input method with &lt;code&gt;C-x RET C-\&lt;/code&gt; or &lt;code&gt;M-x set-input-method&lt;/code&gt;. There are
+three french input methods for English keyboard: &lt;code&gt;french-prefix&lt;/code&gt;,
+&lt;code&gt;french-postfix&lt;/code&gt;, and &lt;code&gt;french-alt-postfix&lt;/code&gt;. &lt;code&gt;french-prefix&lt;/code&gt; input method will
+let the accent to be typed before alphabets, e.g: to type &lt;code&gt;ç&lt;/code&gt;, type &lt;code&gt;,c&lt;/code&gt;. In
+&lt;code&gt;french-postfix&lt;/code&gt; input method, type &lt;code&gt;c,&lt;/code&gt;. Help of &lt;code&gt;french-prefix&lt;/code&gt; input method,
+which shown with &lt;code&gt;C-h I&lt;/code&gt; or &lt;code&gt;M-x describe-input-method&lt;/code&gt;, had a nice table:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Input method: french-prefix (mode line indicator:FR&amp;gt;)
+
+French (Français) input method with prefix modifiers
+
+    effect   | prefix | examples
+ ------------+--------+----------
+    acute    |   &#039;    | &#039;e -&amp;gt; é
+    grave    |   `    | `a -&amp;gt; à
+  circumflex |   ^    | ^a -&amp;gt; â
+  diaeresis  |   &amp;quot;    | &amp;quot;i -&amp;gt; ï
+   cedilla   | ~ or , | ~c -&amp;gt; ç   ,c -&amp;gt; ç
+   symbol    |   ~    | ~&amp;gt; -&amp;gt; »   ~&amp;lt; -&amp;gt; «
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Characters with accents were able to type with these two modes, though the
+character &lt;code&gt;œ&lt;/code&gt; was not. Found an entry in emacs-devel thread posted in 2008 which
+mentioning &lt;a href=&quot;http://lists.gnu.org/archive/html/emacs-devel/2008-10/msg00760.html&quot; &gt;french ç and œ&lt;/a&gt;. To type in œ, use &lt;code&gt;latin-postfix&lt;/code&gt; or
+&lt;code&gt;latin-prefix&lt;/code&gt; input method, the key sequence to type &lt;code&gt;œ&lt;/code&gt; is &lt;code&gt;o/2&lt;/code&gt; and &lt;code&gt;/o2&lt;/code&gt;,
+respectively. &lt;code&gt;latin-prefix&lt;/code&gt; and &lt;code&gt;latin-postfix&lt;/code&gt; input methods contains those
+characters typed in with french input methods:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Input method: latin-postfix (mode line indicator:L&amp;lt;)
+
+Latin character input method with postfix modifiers.
+This is the union of various input methods originally made for input
+of characters from a single Latin-N charset.
+
+             | postfix | examples
+ ------------+---------+----------
+  acute      |    &#039;    | a&#039; -&amp;gt; á
+  grave      |    `    | a` -&amp;gt; à
+  circumflex |    ^    | a^ -&amp;gt; â
+  diaeresis  |    &amp;quot;    | a&amp;quot; -&amp;gt; ä
+  tilde      |    ~    | a~ -&amp;gt; ã
+  cedilla    |    ,    | c, -&amp;gt; ç
+  ogonek     |    ,    | a, -&amp;gt; ą
+  breve      |    ~    | a~ -&amp;gt; ă
+  caron      |    ~    | c~ -&amp;gt; č
+  dbl. acute |    :    | o: -&amp;gt; ő
+  ring       |    .    | u. -&amp;gt; ů
+  dot        |    .    | z. -&amp;gt; ż
+  stroke     |    /    | d/ -&amp;gt; đ
+  nordic     |    /    | d/ -&amp;gt; ð   t/ -&amp;gt; þ   a/ -&amp;gt; å   e/ -&amp;gt; æ   o/ -&amp;gt; ø
+  others     |    /    | s/ -&amp;gt; ß   ?/ -&amp;gt; ¿   !/ -&amp;gt; ¡   // -&amp;gt; °
+             | various | &amp;lt;&amp;lt; -&amp;gt; «   &amp;gt;&amp;gt; -&amp;gt; »   o_ -&amp;gt; º   a_ -&amp;gt; ª
+
+Doubling the postfix separates the letter and postfix: e.g. a&#039;&#039; -&amp;gt; a&#039;
+&lt;/code&gt;&lt;/pre&gt;
+</content> </entry><entry> <link type="text/html" rel="alternate" href="/posts/Notes-about-travis-and-ghc.html"/> <title>Notes about travis and ghc</title> <published>2013-11-21</published> <updated>2013-11-21</updated> <author> <name>8c6794b6</name> <uri></uri> </author> <content type="html">&lt;p&gt;Brief note about current status of ghc and &lt;a href=&quot;http://travis-ci.org&quot; &gt;travis-ci&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Recently made a build hook for continuous integration with travis, in one of the
+repository I have in github, by following
+&lt;a href=&quot;http://about.travis-ci.org/docs/user/getting-started/&quot; &gt;getting started guide&lt;/a&gt;.
+The package is requiring &lt;code&gt;base &amp;gt;= 4.6.0&lt;/code&gt;, which is from &lt;code&gt;ghc-7.6.*&lt;/code&gt;, though the
+version used in travis build was &lt;code&gt;base &amp;gt;= 4.5.*&lt;/code&gt;, which is from &lt;code&gt;ghc-7.4.1&lt;/code&gt;.
+There is &lt;a href=&quot;https://github.com/travis-ci/travis-ci/issues/882&quot; &gt;an issue in github&lt;/a&gt;
+mentioning ghc version used by travis builds.&lt;/p&gt;
+
+&lt;p&gt;It is still possible to use &lt;code&gt;CPP&lt;/code&gt;, &lt;code&gt;#ifdef&lt;/code&gt;s and choose the appropriate
+dependency package version. Might be an opportunity to do this, though I&#039;m not
+sure the package worth for having that much maintenance efforts.&lt;/p&gt;
+</content> </entry><entry> <link type="text/html" rel="alternate" href="/posts/Updating-gh-pages.html"/> <title>Updating gh-pages</title> <published>2013-11-19</published> <updated>2013-11-19</updated> <author> <name>8c6794b6</name> <uri></uri> </author> <content type="html">&lt;p&gt;Made couple updates to this gh-pages.&lt;/p&gt;
+
+&lt;p&gt;Migrated to hakyll 4. Had a thought for doing this but haven&#039;t done for
+... perhaps more than a year. As
+&lt;a href=&quot;http://jaspervdj.be/hakyll/tutorials/hakyll-3-to-hakyll4-migration-guide.html&quot; &gt;already&lt;/a&gt;
+&lt;a href=&quot;http://blog.clement.delafargue.name/posts/2013-01-17-hakyll-4.html&quot; &gt;mentioned&lt;/a&gt;,
+&lt;code&gt;Compiler&lt;/code&gt; is not an instance of &lt;code&gt;Arrow&lt;/code&gt;, instead an instance of &lt;code&gt;Monad&lt;/code&gt;, &lt;code&gt;Page&lt;/code&gt;
+and MetaCompilers have been removed, and couple more changes.&lt;/p&gt;
+
+&lt;p&gt;Replaced &amp;quot;8c6794b6.github.com&amp;quot; to &amp;quot;8c6794b6.github.io&amp;quot;, since URLs for gh-pages
+have changed. According to
+&lt;a href=&quot;https://help.github.com/articles/user-organization-and-project-pages&quot; &gt;User, Organization and Project Pages&lt;/a&gt;
+from GitHub Help, repository with &lt;code&gt;*.github.io&lt;/code&gt; is the latest naming scheme.&lt;/p&gt;
+
+&lt;p&gt;Update &lt;a href=&quot;/404.html&quot; &gt;404 page&lt;/a&gt;, showing bigger lambda face now.&lt;/p&gt;
+</content> </entry><entry> <link type="text/html" rel="alternate" href="/posts/Benchmarking-insert-and-member-with-AVL-tree.html"/> <title>Benchmarking insert and member with AVL tree</title> <published>2012-12-17</published> <updated>2012-12-17</updated> <author> <name>8c6794b6</name> <uri></uri> </author> <content type="html">&lt;p&gt;While I was reading &lt;a href=&quot;https://en.wikipedia.org/wiki/AVL_tree&quot; &gt;AVL Tree&lt;/a&gt;
+page on wikipedia, it motivated me enough to write the implementation in
+Haskell.&lt;/p&gt;
+
+&lt;p&gt;There are several AVL Tree implementations already exist: &lt;a href=&quot;http://hackage.haskell.org/package/AvlTree&quot; &gt;a package
+uploaded to hackage&lt;/a&gt;, &lt;a href=&quot;https://gist.github.com/109729&quot; &gt;gist
+snippet&lt;/a&gt;, and &lt;a href=&quot;http://www.okmij.org/ftp/Haskell/types.html#stanamic-AVL&quot; &gt;polymorphic stanamically
+balanced AVL
+tree&lt;/a&gt;. As for
+classic data structure and algorithm exercise, decided to write a simple
+implementation.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;comment&quot;&gt;{-# LANGUAGE BangPatterns #-}&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;module&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;AVL&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;where&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;For taking benchmarks and comparison with &lt;code&gt;Data.Map&lt;/code&gt; from container
+package. None of these modules are used in code implementing AVL.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Control&lt;/span&gt;&lt;span class=&quot;atom&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;variable&quot;&gt;DeepSeq&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;NFData&lt;/span&gt;&lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;..&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;, deepseq&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Criterion&lt;/span&gt;&lt;span class=&quot;atom&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;variable&quot;&gt;Main&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;System&lt;/span&gt;&lt;span class=&quot;atom&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;variable&quot;&gt;Random&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; qualified &lt;span class=&quot;variable&quot;&gt;Data&lt;/span&gt;&lt;span class=&quot;atom&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;variable&quot;&gt;Map&lt;/span&gt; as &lt;span class=&quot;variable&quot;&gt;M&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Like other binary trees, AVL tree has leaf constructor and node
+constructor with right and left branch, with a field to hold height of
+the node:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;data&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;AVL&lt;/span&gt; a
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;comment&quot;&gt;{-# UNPACK #-}&lt;/span&gt; &lt;span class=&quot;atom&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;variable&quot;&gt;Int&lt;/span&gt; &lt;span class=&quot;atom&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;AVL&lt;/span&gt; a&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;atom&quot;&gt;!&lt;/span&gt;a &lt;span class=&quot;atom&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;AVL&lt;/span&gt; a&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;keyword&quot;&gt;|&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Leaf&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;keyword&quot;&gt;deriving&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Eq,&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Show&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;There was a note about order of constructors written in comments of
+&lt;a href=&quot;http://www.haskell.org/ghc/docs/latest/html/libraries/containers/src/Data-Map-Base.html&quot; &gt;Data.Map.Base&lt;/a&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;When type has 2 constructors, a forward conditional jump is made
+when successfully matching second constructor, in GHC 7.0.
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This was still true in GHC 7.6.1, the version used at the time of
+writing. This is the reason why &lt;code&gt;Node&lt;/code&gt; constructor came before the
+&lt;code&gt;Leaf&lt;/code&gt; constructor.&lt;/p&gt;
+
+&lt;p&gt;An alias for leaf node:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; empty &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;AVL&lt;/span&gt; a
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; empty &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Leaf&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;comment&quot;&gt;{-# INLINEABLE empty #-}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Height of tree. Defining height of &lt;code&gt;Leaf&lt;/code&gt; node as &#039;0&#039;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; height &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;AVL&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Int&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; height t &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;case&lt;/span&gt; t &lt;span class=&quot;keyword&quot;&gt;of&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;variable&quot;&gt;Leaf&lt;/span&gt;          &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; 0
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;atom&quot;&gt;!&lt;/span&gt;n _ _ _ &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; n
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;comment&quot;&gt;{-# INLINE height #-}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Insert element to AVL tree. This function calls &lt;code&gt;rebalance&lt;/code&gt; after
+inserting new element. Also, new element is strictly evaluated inside
+the local function &lt;code&gt;go&lt;/code&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; insert &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Ord&lt;/span&gt; a &lt;span class=&quot;atom&quot;&gt;=&amp;gt;&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;AVL&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;AVL&lt;/span&gt; a
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; insert &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; go &lt;span class=&quot;keyword&quot;&gt;where&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   go &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Ord&lt;/span&gt; a &lt;span class=&quot;atom&quot;&gt;=&amp;gt;&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;AVL&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;AVL&lt;/span&gt; a
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   go &lt;span class=&quot;atom&quot;&gt;!&lt;/span&gt;n &lt;span class=&quot;variable&quot;&gt;Leaf&lt;/span&gt;             &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; 1 &lt;span class=&quot;variable&quot;&gt;Leaf&lt;/span&gt; n &lt;span class=&quot;variable&quot;&gt;Leaf&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   go &lt;span class=&quot;atom&quot;&gt;!&lt;/span&gt;n &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; h l &lt;span class=&quot;atom&quot;&gt;!&lt;/span&gt;n&#039; r&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;case&lt;/span&gt; compare n&#039; n &lt;span class=&quot;keyword&quot;&gt;of&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;variable&quot;&gt;LT&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; rebalance &lt;span class=&quot;atom&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; h l n&#039; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;insert n r&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     _  &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; rebalance &lt;span class=&quot;atom&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; h &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;insert n l&lt;/span&gt;)&lt;/span&gt; n&#039; r
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;comment&quot;&gt;{-# INLINEABLE insert #-}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;A function to check whether given element is a member of tree or not.
+Given element and element of pattern matched node are, again strictly
+evaluated.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; member &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Ord&lt;/span&gt; a, &lt;span class=&quot;variable&quot;&gt;Eq&lt;/span&gt; a&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;atom&quot;&gt;=&amp;gt;&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;AVL&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Bool&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; member _  &lt;span class=&quot;variable&quot;&gt;Leaf&lt;/span&gt;           &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;False&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; member &lt;span class=&quot;atom&quot;&gt;!&lt;/span&gt;x &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; _ l &lt;span class=&quot;atom&quot;&gt;!&lt;/span&gt;y r&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;case&lt;/span&gt; compare x y &lt;span class=&quot;keyword&quot;&gt;of&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;variable&quot;&gt;LT&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; member x l
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;variable&quot;&gt;GT&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; member x r
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;variable&quot;&gt;EQ&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;True&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;comment&quot;&gt;{-# INLINEABLE member #-}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;There could be more functions, delete, merge, etc. But I&#039;m little bit
+lazy to write them in this post.&lt;/p&gt;
+
+&lt;p&gt;Here comes the balancing function. It rebalances tree, four cases are
+considered: &lt;em&gt;right-right&lt;/em&gt;, &lt;em&gt;right-left&lt;/em&gt;, &lt;em&gt;left-left&lt;/em&gt;, and &lt;em&gt;left-right&lt;/em&gt;.&lt;/p&gt;
+
+&lt;p&gt;Firstly, comparing with &lt;code&gt;Leaf&lt;/code&gt; node, which is not needed to rebalance
+any more. Then the height from left node and right node are compared,
+leading to next case.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; rebalance &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;AVL&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;AVL&lt;/span&gt; a
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; rebalance &lt;span class=&quot;variable&quot;&gt;Leaf&lt;/span&gt;                 &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Leaf&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; rebalance n1&lt;span class=&quot;keyword&quot;&gt;@&lt;/span&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; _ l1 x1 r1&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;case&lt;/span&gt; compare hL1 hR1 &lt;span class=&quot;keyword&quot;&gt;of&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;variable&quot;&gt;LT&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; rightIsHeavy
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;variable&quot;&gt;GT&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; leftIsHeavy
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;variable&quot;&gt;EQ&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; updateHeight n1
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;keyword&quot;&gt;where&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     hL1 &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; height l1
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     hR1 &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; height r1&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;When right node is heavy, we compare the left node and right node again,
+and perform the rotations.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     rightIsHeavy &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;case&lt;/span&gt; r1 &lt;span class=&quot;keyword&quot;&gt;of&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;       &lt;span class=&quot;variable&quot;&gt;Leaf&lt;/span&gt;            &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; n1
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;       &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; _ l2 x2 r2 &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         &lt;span class=&quot;keyword&quot;&gt;case&lt;/span&gt; compare &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;height l2&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;height r2&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;of&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The right-right case, single rotation swapping the node in the middle to
+top and top node to left:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;           &lt;span class=&quot;variable&quot;&gt;LT&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;hL1&lt;span class=&quot;atom&quot;&gt;+&lt;/span&gt;2&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;hL1&lt;span class=&quot;atom&quot;&gt;+&lt;/span&gt;1&lt;/span&gt;)&lt;/span&gt; l1 x1 l2&lt;/span&gt;)&lt;/span&gt; x2 r2&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The right-left case, bringing the bottom element to top, top element to
+left, and middle element to right, with reordering each hanging nodes
+appropriately.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;           &lt;span class=&quot;variable&quot;&gt;GT&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;case&lt;/span&gt; l2 &lt;span class=&quot;keyword&quot;&gt;of&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;             &lt;span class=&quot;variable&quot;&gt;Leaf&lt;/span&gt;             &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; n1
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;             &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; h3 l3 x3 r3 &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;               &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;h3&lt;span class=&quot;atom&quot;&gt;+&lt;/span&gt;1&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; h3 l1 x1 l3&lt;/span&gt;)&lt;/span&gt; x3 &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; h3 r3 x2 r2&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Nothing left to do when nodes already has same height, merely returning
+the given node itself.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;          &lt;span class=&quot;variable&quot;&gt;EQ&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; n1&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Left-left case and left-right cases are symmetrical to above:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     leftIsHeavy &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;case&lt;/span&gt; l1 &lt;span class=&quot;keyword&quot;&gt;of&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;       &lt;span class=&quot;variable&quot;&gt;Leaf&lt;/span&gt;            &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; n1
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;       &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; _ l2 x2 r2 &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         &lt;span class=&quot;keyword&quot;&gt;case&lt;/span&gt; compare &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;height l2&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;height r2&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;of&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;           &lt;span class=&quot;variable&quot;&gt;LT&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;case&lt;/span&gt; r2 &lt;span class=&quot;keyword&quot;&gt;of&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;             &lt;span class=&quot;variable&quot;&gt;Leaf&lt;/span&gt;             &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; n1
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;             &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; h3 l3 x3 r3 &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;               &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;h3&lt;span class=&quot;atom&quot;&gt;+&lt;/span&gt;1&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; h3 l2 x2 l3&lt;/span&gt;)&lt;/span&gt; x3 &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; h3 r3 x1 r1&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;           &lt;span class=&quot;variable&quot;&gt;GT&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;hR1&lt;span class=&quot;atom&quot;&gt;+&lt;/span&gt;2&lt;/span&gt;)&lt;/span&gt; l2 x2 &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;hR1&lt;span class=&quot;atom&quot;&gt;+&lt;/span&gt;1&lt;/span&gt;)&lt;/span&gt; r2 x1 r1&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;           &lt;span class=&quot;variable&quot;&gt;EQ&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; n1
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;comment&quot;&gt;{-# INLINE rebalance #-}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Non-recursive height updating function, used in &lt;code&gt;EQ&lt;/code&gt; case of
+&lt;code&gt;rebalance&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; updateHeight &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;AVL&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;AVL&lt;/span&gt; a
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; updateHeight t &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;case&lt;/span&gt; t &lt;span class=&quot;keyword&quot;&gt;of&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;variable&quot;&gt;Leaf&lt;/span&gt;                                         &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Leaf&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; _ &lt;span class=&quot;variable&quot;&gt;Leaf&lt;/span&gt; n &lt;span class=&quot;variable&quot;&gt;Leaf&lt;/span&gt;                           &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; 1 &lt;span class=&quot;variable&quot;&gt;Leaf&lt;/span&gt; n &lt;span class=&quot;variable&quot;&gt;Leaf&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; _ l&lt;span class=&quot;keyword&quot;&gt;@&lt;/span&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; h _ _ _&lt;/span&gt;)&lt;/span&gt;  n  &lt;span class=&quot;variable&quot;&gt;Leaf&lt;/span&gt;             &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;h&lt;span class=&quot;atom&quot;&gt;+&lt;/span&gt;1&lt;/span&gt;)&lt;/span&gt; l n &lt;span class=&quot;variable&quot;&gt;Leaf&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; _ &lt;span class=&quot;variable&quot;&gt;Leaf&lt;/span&gt;              n r&lt;span class=&quot;keyword&quot;&gt;@&lt;/span&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; h _ _ _&lt;/span&gt;)&lt;/span&gt;  &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;h&lt;span class=&quot;atom&quot;&gt;+&lt;/span&gt;1&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Leaf&lt;/span&gt; n r
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; _ l&lt;span class=&quot;keyword&quot;&gt;@&lt;/span&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; hl _ _ _&lt;/span&gt;)&lt;/span&gt; n r&lt;span class=&quot;keyword&quot;&gt;@&lt;/span&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; hr _ _ _&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; h&#039; l n r &lt;span class=&quot;keyword&quot;&gt;where&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     h&#039; &lt;span class=&quot;keyword&quot;&gt;|&lt;/span&gt; hl &lt;span class=&quot;atom&quot;&gt;&amp;lt;&lt;/span&gt; hr   &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; hr &lt;span class=&quot;atom&quot;&gt;+&lt;/span&gt; 1
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;        &lt;span class=&quot;keyword&quot;&gt;|&lt;/span&gt; otherwise &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; hl &lt;span class=&quot;atom&quot;&gt;+&lt;/span&gt; 1
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;comment&quot;&gt;{-# INLINE updateHeight #-}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;That&#039;s all for AVL tree to have &lt;code&gt;insert&lt;/code&gt; and &lt;code&gt;member&lt;/code&gt; function. For
+testing, a function to check the balance:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; isBalanced &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;AVL&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Bool&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; isBalanced t &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;case&lt;/span&gt; t &lt;span class=&quot;keyword&quot;&gt;of&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;variable&quot;&gt;Leaf&lt;/span&gt;         &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;True&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; h l _ r &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     abs &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;h &lt;span class=&quot;atom&quot;&gt;-&lt;/span&gt; height l&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;atom&quot;&gt;&amp;lt;=&lt;/span&gt; 1 &lt;span class=&quot;atom&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; abs &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;h &lt;span class=&quot;atom&quot;&gt;-&lt;/span&gt; height r&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;atom&quot;&gt;&amp;lt;=&lt;/span&gt; 1 &lt;span class=&quot;atom&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     isBalanced l &lt;span class=&quot;atom&quot;&gt;&amp;amp;&amp;amp;&lt;/span&gt; isBalanced r
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;comment&quot;&gt;{-# INLINE isBalanced #-}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Simple check:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;ghci&amp;gt; isBalanced $ foldr insert empty [1..1024]
+True
+ghci&amp;gt; isBalanced $ foldr insert empty [1024,1023..1]
+True
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Benchmarks:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;instance&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;NFData&lt;/span&gt; a &lt;span class=&quot;atom&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;NFData&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;AVL&lt;/span&gt; a&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;where&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   rnf &lt;span class=&quot;variable&quot;&gt;Leaf&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   rnf &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; h l x r&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; rnf h &lt;span class=&quot;atom&quot;&gt;`seq`&lt;/span&gt; rnf l &lt;span class=&quot;atom&quot;&gt;`seq`&lt;/span&gt; rnf x &lt;span class=&quot;atom&quot;&gt;`seq`&lt;/span&gt; rnf r
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; avlBenches &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Benchmark&lt;/span&gt;&lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; avlBenches &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;keyword&quot;&gt;let&lt;/span&gt; tn n &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; foldr insert empty &lt;span class=&quot;paren1&quot;&gt;[&lt;span class=&quot;code&quot;&gt;0&lt;span class=&quot;keyword&quot;&gt;..&lt;/span&gt;n&lt;span class=&quot;atom&quot;&gt;-&lt;/span&gt;1&lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;variable&quot;&gt;Int&lt;/span&gt;&lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;       insertAVL &lt;span class=&quot;atom&quot;&gt;!&lt;/span&gt;k &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         &lt;span class=&quot;keyword&quot;&gt;let&lt;/span&gt; &lt;span class=&quot;atom&quot;&gt;!&lt;/span&gt;x &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;let&lt;/span&gt; x&#039; &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; tn k &lt;span class=&quot;keyword&quot;&gt;in&lt;/span&gt; x&#039; &lt;span class=&quot;atom&quot;&gt;`deepseq`&lt;/span&gt; x&#039;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         &lt;span class=&quot;keyword&quot;&gt;in&lt;/span&gt;  bench &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;string&quot;&gt;&quot;n=&quot;&lt;/span&gt; &lt;span class=&quot;atom&quot;&gt;++&lt;/span&gt; show k&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;whnfIO &lt;span class=&quot;atom&quot;&gt;$&lt;/span&gt; insertRand x &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;0,k&lt;span class=&quot;atom&quot;&gt;-&lt;/span&gt;1&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;       insertRand t &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;a,b&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;do&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         x &lt;span class=&quot;keyword&quot;&gt;&amp;lt;-&lt;/span&gt; getStdRandom &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;randomR &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;a,b&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         &lt;span class=&quot;keyword&quot;&gt;let&lt;/span&gt; y &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; insert x t
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         return &lt;span class=&quot;atom&quot;&gt;$!&lt;/span&gt; y
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;       memberAVL k &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         &lt;span class=&quot;keyword&quot;&gt;let&lt;/span&gt; x &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; tn k
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         &lt;span class=&quot;keyword&quot;&gt;in&lt;/span&gt;  x &lt;span class=&quot;atom&quot;&gt;`deepseq`&lt;/span&gt; bench &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;string&quot;&gt;&quot;n=&quot;&lt;/span&gt; &lt;span class=&quot;atom&quot;&gt;++&lt;/span&gt; show k&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;whnfIO &lt;span class=&quot;atom&quot;&gt;$&lt;/span&gt; memberRand x &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;0,k&lt;span class=&quot;atom&quot;&gt;-&lt;/span&gt;1&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;       memberRand t &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;a,b&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;do&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         x &lt;span class=&quot;keyword&quot;&gt;&amp;lt;-&lt;/span&gt; getStdRandom &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;randomR &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;a,b&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         &lt;span class=&quot;keyword&quot;&gt;let&lt;/span&gt; y &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; member x t
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         return &lt;span class=&quot;atom&quot;&gt;$!&lt;/span&gt; y
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;       mn n &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;let&lt;/span&gt; xs &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;[&lt;span class=&quot;code&quot;&gt;0&lt;span class=&quot;keyword&quot;&gt;..&lt;/span&gt;n&lt;span class=&quot;atom&quot;&gt;-&lt;/span&gt;1&lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;variable&quot;&gt;Int&lt;/span&gt;&lt;/span&gt;]&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;M&lt;/span&gt;&lt;span class=&quot;atom&quot;&gt;.&lt;/span&gt;fromList &lt;span class=&quot;atom&quot;&gt;$&lt;/span&gt; zip xs &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;repeat &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;       insertMap &lt;span class=&quot;atom&quot;&gt;!&lt;/span&gt;k &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         &lt;span class=&quot;keyword&quot;&gt;let&lt;/span&gt; &lt;span class=&quot;atom&quot;&gt;!&lt;/span&gt;x &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;let&lt;/span&gt; x&#039; &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; mn k &lt;span class=&quot;keyword&quot;&gt;in&lt;/span&gt; x&#039; &lt;span class=&quot;atom&quot;&gt;`deepseq`&lt;/span&gt; x&#039;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         &lt;span class=&quot;keyword&quot;&gt;in&lt;/span&gt;  bench &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;string&quot;&gt;&quot;n=&quot;&lt;/span&gt; &lt;span class=&quot;atom&quot;&gt;++&lt;/span&gt; show k&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;whnfIO &lt;span class=&quot;atom&quot;&gt;$&lt;/span&gt; insertRandM x &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;0,k&lt;span class=&quot;atom&quot;&gt;-&lt;/span&gt;1&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;       insertRandM m &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;a,b&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;do&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         x &lt;span class=&quot;keyword&quot;&gt;&amp;lt;-&lt;/span&gt; getStdRandom &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;randomR &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;a,b&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         &lt;span class=&quot;keyword&quot;&gt;let&lt;/span&gt; y &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;M&lt;/span&gt;&lt;span class=&quot;atom&quot;&gt;.&lt;/span&gt;insert x &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;)&lt;/span&gt; m
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         return &lt;span class=&quot;atom&quot;&gt;$!&lt;/span&gt; y
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;       memberMap k &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         &lt;span class=&quot;keyword&quot;&gt;let&lt;/span&gt; &lt;span class=&quot;atom&quot;&gt;!&lt;/span&gt;x &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;let&lt;/span&gt; x&#039; &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; mn k &lt;span class=&quot;keyword&quot;&gt;in&lt;/span&gt; x&#039; &lt;span class=&quot;atom&quot;&gt;`deepseq`&lt;/span&gt; x&#039;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         &lt;span class=&quot;keyword&quot;&gt;in&lt;/span&gt;  bench &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;string&quot;&gt;&quot;n=&quot;&lt;/span&gt; &lt;span class=&quot;atom&quot;&gt;++&lt;/span&gt; show k&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;whnfIO &lt;span class=&quot;atom&quot;&gt;$&lt;/span&gt; memberRandM x &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;0,k&lt;span class=&quot;atom&quot;&gt;-&lt;/span&gt;1&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;       memberRandM m &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;a,b&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;do&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         x &lt;span class=&quot;keyword&quot;&gt;&amp;lt;-&lt;/span&gt; getStdRandom &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;randomR &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;a,b&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         &lt;span class=&quot;keyword&quot;&gt;let&lt;/span&gt; y &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;M&lt;/span&gt;&lt;span class=&quot;atom&quot;&gt;.&lt;/span&gt;member x m
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         return &lt;span class=&quot;atom&quot;&gt;$!&lt;/span&gt; y
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;       benchmarks &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         &lt;span class=&quot;paren1&quot;&gt;[&lt;span class=&quot;code&quot;&gt; bgroup &lt;span class=&quot;string&quot;&gt;&quot;AVL&quot;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;           &lt;span class=&quot;paren2&quot;&gt;[&lt;span class=&quot;code&quot;&gt; bgroup &lt;span class=&quot;string&quot;&gt;&quot;insert&quot;&lt;/span&gt; &lt;span class=&quot;paren3&quot;&gt;[&lt;span class=&quot;code&quot;&gt;insertAVL &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;2&lt;span class=&quot;atom&quot;&gt;^&lt;/span&gt;k&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;|&lt;/span&gt; k &lt;span class=&quot;keyword&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;paren4&quot;&gt;[&lt;span class=&quot;code&quot;&gt;10&lt;span class=&quot;keyword&quot;&gt;..&lt;/span&gt;14&lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;variable&quot;&gt;Int&lt;/span&gt;&lt;/span&gt;]&lt;/span&gt;&lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;           , bgroup &lt;span class=&quot;string&quot;&gt;&quot;member&quot;&lt;/span&gt; &lt;span class=&quot;paren3&quot;&gt;[&lt;span class=&quot;code&quot;&gt;memberAVL &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;2&lt;span class=&quot;atom&quot;&gt;^&lt;/span&gt;k&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;|&lt;/span&gt; k &lt;span class=&quot;keyword&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;paren4&quot;&gt;[&lt;span class=&quot;code&quot;&gt;10&lt;span class=&quot;keyword&quot;&gt;..&lt;/span&gt;14&lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;variable&quot;&gt;Int&lt;/span&gt;&lt;/span&gt;]&lt;/span&gt;&lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;           &lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         , bgroup &lt;span class=&quot;string&quot;&gt;&quot;Data.Map&quot;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;           &lt;span class=&quot;paren2&quot;&gt;[&lt;span class=&quot;code&quot;&gt; bgroup &lt;span class=&quot;string&quot;&gt;&quot;insert&quot;&lt;/span&gt; &lt;span class=&quot;paren3&quot;&gt;[&lt;span class=&quot;code&quot;&gt;insertMap &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;2&lt;span class=&quot;atom&quot;&gt;^&lt;/span&gt;k&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;|&lt;/span&gt; k &lt;span class=&quot;keyword&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;paren4&quot;&gt;[&lt;span class=&quot;code&quot;&gt;10&lt;span class=&quot;keyword&quot;&gt;..&lt;/span&gt;14&lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;variable&quot;&gt;Int&lt;/span&gt;&lt;/span&gt;]&lt;/span&gt;&lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;           , bgroup &lt;span class=&quot;string&quot;&gt;&quot;member&quot;&lt;/span&gt; &lt;span class=&quot;paren3&quot;&gt;[&lt;span class=&quot;code&quot;&gt;memberMap &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;2&lt;span class=&quot;atom&quot;&gt;^&lt;/span&gt;k&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;|&lt;/span&gt; k &lt;span class=&quot;keyword&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;paren4&quot;&gt;[&lt;span class=&quot;code&quot;&gt;10&lt;span class=&quot;keyword&quot;&gt;..&lt;/span&gt;14&lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt;&lt;span class=&quot;variable&quot;&gt;Int&lt;/span&gt;&lt;/span&gt;]&lt;/span&gt;&lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;           &lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         &lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;keyword&quot;&gt;in&lt;/span&gt;  benchmarks&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Using above benchmark as main:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; main &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;IO&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; main &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; defaultMain avlBenches&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Compile, run the benchmark, and see the result in html report:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;$ ghc -O2 -fllvm AVL.lhs -main-is AVL -o AVL
+$ ./AVL -o bench.html
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Report is &lt;a href=&quot;../static/bench-avl-insert-member.html&quot; &gt;here&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Lessons learned: from above simple implementation, a data structure with
+performance close to those provided by standard package could be
+implemented. Benchmark show that AVL tree insertion was slightly slower
+than insertion in Data.Map, performance of member lookup was almost
+identical. Though when there is no need for making own implemntation,
+just use the implementation from proven package, in most case those
+provided data structures has more features, Data.Map.Map has useful
+functions like &lt;code&gt;insetWith&lt;/code&gt;, &lt;code&gt;unionWith&lt;/code&gt;, etc.&lt;/p&gt;
+
+&lt;p&gt;By the way, during the benchmark I was using &lt;code&gt;nfIO&lt;/code&gt; instead of &lt;code&gt;whnfIO&lt;/code&gt;
+for a while, resulting to linearly increasing insertion time for while.&lt;/p&gt;
+</content> </entry><entry> <link type="text/html" rel="alternate" href="/posts/Tip-using-asTypeOf.html"/> <title>Tip using &#039;asTypeOf&#039;</title> <published>2012-10-11</published> <updated>2012-10-11</updated> <author> <name>8c6794b6</name> <uri></uri> </author> <content type="html">&lt;p&gt;I found myself an idiot for such a long time I was not aware of this use
+of &lt;code&gt;asTypeOf&lt;/code&gt; function.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;module&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;AsTypeOf&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;where&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;When we have a type with multiple varialbles, e.g. &lt;code&gt;Either&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; rightChar &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Right&lt;/span&gt; &lt;span class=&quot;character&quot;&gt;&#039;a&#039;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;In ghci:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;ghci&amp;gt; :t rightChar
+rightChar :: Either a Char
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;We are yet not sure for remaining type variables. In above case, we
+still do not have a clue to fix the type of &lt;code&gt;Left&lt;/code&gt; constructor.&lt;/p&gt;
+
+&lt;p&gt;One way to fix the type used for &lt;code&gt;Left&lt;/code&gt; is wrapping multiple values in
+single list:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; rightCharInList &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;[&lt;span class=&quot;code&quot;&gt;rightChar, &lt;span class=&quot;variable&quot;&gt;Left&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;True&lt;/span&gt;&lt;/span&gt;]&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Showing the type:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;ghci&amp;gt; :t rightCharInList
+rightCharInList :: [Either Bool Char]
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Or another, using &lt;code&gt;asTypeOf&lt;/code&gt; instead of list:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; rightChar&#039; &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; rightChar &lt;span class=&quot;atom&quot;&gt;`asTypeOf`&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Left&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;True&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Now the type for &lt;code&gt;Left&lt;/code&gt; constructor is fixed, value is identical to
+&lt;code&gt;rightChar&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;ghci&amp;gt; rightChar&#039;
+Right &#039;a&#039;
+ghci&amp;gt; :t rightChar&#039;
+rightChar&#039; :: Either Bool Char
+&lt;/code&gt;&lt;/pre&gt;
+</content> </entry><entry> <link type="text/html" rel="alternate" href="/posts/Mapping-show-to-tuples-with-TH.html"/> <title>Mapping &#039;show&#039; to tuples with TH</title> <published>2012-05-28</published> <updated>2012-05-28</updated> <author> <name>8c6794b6</name> <uri></uri> </author> <content type="html">&lt;p&gt;Consider:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;gt; mapM_ putStrLn [show 1, show (1,2), show (1,2,3), show (1,2,3,4) ...]
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The contents of list is String, but before applying &#039;show&#039;, type of
+elements differ. Goal of this post is to express above with using
+template haskell, like:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;gt; mapM_ putStrLn $(tups 3)
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Which expands to:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;gt; mapM_ putStrLn [show 1, show (1,2), show (1,2,3))]
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;in caller module.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;comment&quot;&gt;{-# LANGUAGE TemplateHaskell #-}&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;module&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;MappingShow&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;where&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Control&lt;/span&gt;&lt;span class=&quot;atom&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;variable&quot;&gt;Applicative&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Control&lt;/span&gt;&lt;span class=&quot;atom&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;variable&quot;&gt;Monad&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Language&lt;/span&gt;&lt;span class=&quot;atom&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;variable&quot;&gt;Haskell&lt;/span&gt;&lt;span class=&quot;atom&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;variable&quot;&gt;TH&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;A pretty printer for template haskell Q monad:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; printQ &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Ppr&lt;/span&gt; a &lt;span class=&quot;atom&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Q&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;IO&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; printQ q &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; print &lt;span class=&quot;atom&quot;&gt;.&lt;/span&gt; ppr &lt;span class=&quot;atom&quot;&gt;=&amp;lt;&amp;lt;&lt;/span&gt; runQ q&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Warming up, manually writing the tuple lists, and applying show to them:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; bTup &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Int&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;ExpQ&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; bTup n &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; tupE &lt;span class=&quot;paren1&quot;&gt;[&lt;span class=&quot;code&quot;&gt;litE &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;integerL j&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;|&lt;/span&gt; j &lt;span class=&quot;keyword&quot;&gt;&amp;lt;-&lt;/span&gt; &lt;span class=&quot;paren2&quot;&gt;[&lt;span class=&quot;code&quot;&gt;1&lt;span class=&quot;keyword&quot;&gt;..&lt;/span&gt;fromIntegral n&lt;/span&gt;]&lt;/span&gt;&lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; take01 &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;ExpQ&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; take01 &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;paren1&quot;&gt;[&lt;span class=&quot;code&quot;&gt;e&lt;span class=&quot;keyword&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;    mapM_ putStrLn &lt;span class=&quot;paren2&quot;&gt;[&lt;span class=&quot;code&quot;&gt;show &lt;span class=&quot;atom&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;bTup 1&lt;/span&gt;)&lt;/span&gt;, show &lt;span class=&quot;atom&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;bTup 2&lt;/span&gt;)&lt;/span&gt;, show &lt;span class=&quot;atom&quot;&gt;$&lt;/span&gt;&lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;bTup 3&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;keyword&quot;&gt;|&lt;/span&gt;&lt;/span&gt;]&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Result:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;ghci&amp;gt; printQ take01
+Control.Monad.mapM_ System.IO.putStrLn [GHC.Show.show (1),
+                                        GHC.Show.show (1, 2),
+                                        GHC.Show.show (1, 2, 3)]
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;We cannot write:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;gt; take02 = [e| map putStrLn [show $(bTup i) | i &amp;lt;- [1..10]] |]
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;staging error occurs:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;Stage error: `i&#039; is bound at stage 2 but used at stage 1
+In the first argument of `bTup&#039;, namely `i&#039;
+In the expression: bTup i
+In the first argument of `show&#039;, namely `$(bTup i)&#039;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;So we cannot directly build a list of tuple with passing argument, &lt;code&gt;i&lt;/code&gt;
+in above case. Though, since &#039;Q&#039; is a Monad, we can run it, and then
+rebind it:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; tups &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Int&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;ExpQ&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; tups n &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; runQ &lt;span class=&quot;atom&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;do&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   ts &lt;span class=&quot;keyword&quot;&gt;&amp;lt;-&lt;/span&gt; foldM &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;\&lt;/span&gt;acc i &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;:&lt;/span&gt;acc&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;atom&quot;&gt;&amp;lt;$&amp;gt;&lt;/span&gt; bTup i&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;]&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;[&lt;span class=&quot;code&quot;&gt;1&lt;span class=&quot;keyword&quot;&gt;..&lt;/span&gt;n&lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   return &lt;span class=&quot;atom&quot;&gt;$&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;ListE&lt;/span&gt; &lt;span class=&quot;atom&quot;&gt;$&lt;/span&gt; map &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;AppE&lt;/span&gt; &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;VarE&lt;/span&gt; &lt;span class=&quot;character&quot;&gt;&#039;show)) (reverse ts)&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Results:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;ghci&amp;gt; printQ $ tups 10
+[GHC.Show.show (1),
+ GHC.Show.show (1, 2),
+ GHC.Show.show (1, 2, 3),
+ GHC.Show.show (1, 2, 3, 4),
+ GHC.Show.show (1, 2, 3, 4, 5),
+ GHC.Show.show (1, 2, 3, 4, 5, 6),
+ GHC.Show.show (1, 2, 3, 4, 5, 6, 7),
+ GHC.Show.show (1, 2, 3, 4, 5, 6, 7, 8),
+ GHC.Show.show (1, 2, 3, 4, 5, 6, 7, 8, 9),
+ GHC.Show.show (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)]
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;We can build a list of String elements in caller module, or prepare a
+template haskell expression which does the &#039;mapM_ putStrLn&#039;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; mapShowTuples &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Int&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;ExpQ&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; mapShowTuples n &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;varE &lt;span class=&quot;character&quot;&gt;&#039;mapM_ `appE` varE &#039;&lt;/span&gt;putStrLn&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;atom&quot;&gt;`appE`&lt;/span&gt; tups n&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Results:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;ghci&amp;gt; printQ $ mapShowTuples 8
+Control.Monad.mapM_ System.IO.putStrLn [GHC.Show.show (1),
+                                        GHC.Show.show (1, 2),
+                                        GHC.Show.show (1, 2, 3),
+                                        GHC.Show.show (1, 2, 3, 4),
+                                        GHC.Show.show (1, 2, 3, 4, 5),
+                                        GHC.Show.show (1, 2, 3, 4, 5, 6),
+                                        GHC.Show.show (1, 2, 3, 4, 5, 6, 7),
+                                        GHC.Show.show (1, 2, 3, 4, 5, 6, 7, 8)]
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Sample caller module may look like below:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;{-# LANGUAGE TemplateHaskell #-}
+import MappingShow
+
+t8s :: [String]
+t8s = $(tups 8)
+
+t8s_view :: IO ()
+t8s_view = mapM_ putStrLn t8s
+
+t8s_view_th :: IO ()
+t8s_view_th = $(mapShowTuples 8)
+
+main :: IO ()
+main = t8s_view &amp;gt;&amp;gt; t8s_view_th
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Result of running &#039;main&#039;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;ghci&amp;gt; main
+1
+(1,2)
+(1,2,3)
+(1,2,3,4)
+(1,2,3,4,5)
+(1,2,3,4,5,6)
+(1,2,3,4,5,6,7)
+(1,2,3,4,5,6,7,8)
+1
+(1,2)
+(1,2,3)
+(1,2,3,4)
+(1,2,3,4,5)
+(1,2,3,4,5,6)
+(1,2,3,4,5,6,7)
+(1,2,3,4,5,6,7,8)
+&lt;/code&gt;&lt;/pre&gt;
+</content> </entry> </feed>

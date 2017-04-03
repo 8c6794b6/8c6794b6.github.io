@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=defice-width, initial-scale=1"> <title>8c6794b6.github.io</title> <link href="/css/style.css" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=Noto+Serif" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=PT+Serif" rel="stylesheet" type="text/css" /> <link rel="icon" type="image/png" href="/static/favicon.png"/>  </head> <body> <header> <h1><a href="/index.html">8c6794b6.github.io</a></h1> <nav> <a href="/index.html">HOME</a> • <a href="/about.html">ABOUT</a> • <a href="/archive.html">ARCHIVE</a> • <a href="/rss.xml">RSS</a> </nav> </header> <div class="contents"> <div class="post-title"> <h2>Cause of 3 nano seconds difference</h2> <em class="post-date">2012-04-22</em> </div> <div class="post"> <p><code>Unboxed Vector</code>, in <a href="http://hackage.haskell.org/package/vector" >vector</a>
+package is efficient data structure. Iterating over unboxed value is
+pretty fast.</p>
+
+<p>Is there any faster way to iterate than unboxed vector?</p>
+
+<p>Interest of comparision here is <em>efficiency of iteration</em>. Not the body
+contents of work in each iteration, but overhead we get from the loop.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="comment">{-# LANGUAGE BangPatterns #-}</span>
+<span class="atom">&gt;</span> <span class="keyword">module</span> <span class="variable">Main</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Criterion</span><span class="atom">.</span><span class="variable">Main</span> <span class="paren1">(<span class="code">bench, defaultMain, nf</span>)</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> qualified <span class="variable">Data</span><span class="atom">.</span><span class="variable">Vector</span><span class="atom">.</span><span class="variable">Unboxed</span> as <span class="variable">U</span></span></code></pre>
+
+<p>Couple type synonyms, and body function to apply inside the loop.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">type</span> <span class="variable">Updater</span> a <span class="keyword">=</span> a <span class="keyword">-&gt;</span> a
+<span class="atom">&gt;</span> <span class="keyword">type</span> <span class="variable">Work</span> a <span class="keyword">=</span> <span class="variable">Updater</span> a <span class="keyword">-&gt;</span> a <span class="keyword">-&gt;</span> <span class="variable">Int</span> <span class="keyword">-&gt;</span> a
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> add1 <span class="keyword">::</span> <span class="variable">Updater</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> add1 <span class="keyword">=</span> <span class="paren1">(<span class="code"><span class="atom">+</span>1</span>)</span></span></code></pre>
+
+<p>Using unboxed vector to loop for given time. Using <code>foldl'</code> and
+<code>replicate</code>.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> work01 <span class="keyword">::</span> <span class="variable">Work</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> work01 f n m <span class="keyword">=</span> <span class="variable">U</span><span class="atom">.</span>foldl' <span class="paren1">(<span class="code"><span class="keyword">\</span>x _ <span class="keyword">-&gt;</span> f x</span>)</span> n <span class="paren1">(<span class="code"><span class="variable">U</span><span class="atom">.</span>replicate m <span class="paren2">(<span class="code"></span>)</span></span>)</span></span></code></pre>
+
+<p>Invoking <code>work01</code> with <code>add1</code>. Below will apply <code>add1</code> to 0 for 100
+times.</p>
+
+<pre><code>ghci&gt; work01 add1 0 100
+100
+</code></pre>
+
+<p>Manual recursive loop function with wrapper strict data type.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">data</span> <span class="variable">P</span> <span class="keyword">=</span> <span class="variable">P</span> <span class="comment">{-# UNPACK #-}</span> <span class="atom">!</span><span class="variable">Int</span> <span class="comment">{-# UNPACK #-}</span> <span class="atom">!</span><span class="variable">Int</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> work02 <span class="keyword">::</span> <span class="variable">Work</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> work02 f n0 m <span class="keyword">=</span> go <span class="paren1">(<span class="code"><span class="variable">P</span> 0 n0</span>)</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>   <span class="comment">{-# INLINE go #-}</span>
+<span class="atom">&gt;</span>   go <span class="atom">!</span><span class="paren1">(<span class="code"><span class="variable">P</span> i n</span>)</span> <span class="keyword">|</span> i <span class="atom">==</span> m    <span class="keyword">=</span> n
+<span class="atom">&gt;</span>               <span class="keyword">|</span> otherwise <span class="keyword">=</span> go <span class="paren1">(<span class="code"><span class="variable">P</span> <span class="paren2">(<span class="code">i<span class="atom">+</span>1</span>)</span> <span class="paren2">(<span class="code">f n</span>)</span></span>)</span></span></code></pre>
+
+<p>Again, applying <code>add1</code> to 0 for 100 times.</p>
+
+<pre><code>ghci&gt; work02 add1 0 100
+100
+</code></pre>
+
+<p>Main for taking benchmark looks like below.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> main_one <span class="keyword">::</span> <span class="variable">IO</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span> main_one <span class="keyword">=</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>   <span class="keyword">let</span> k <span class="keyword">=</span> 2 <span class="atom">^</span> 10
+<span class="atom">&gt;</span>   defaultMain
+<span class="atom">&gt;</span>     <span class="paren1">[<span class="code"> bench <span class="string">"unboxed vector"</span> <span class="paren2">(<span class="code">nf <span class="paren3">(<span class="code">work01 add1 0</span>)</span> k</span>)</span>
+<span class="atom">&gt;</span>     , bench <span class="string">"hand written recursion"</span> <span class="paren2">(<span class="code">nf <span class="paren3">(<span class="code">work02 add1 0</span>)</span> k</span>)</span>
+<span class="atom">&gt;</span>     </span>]</span></span></code></pre>
+
+<p>Compiling with couple optimization options:</p>
+
+<pre><code>$ ghc -O3 -fllvm -optl-O3 -main-is main_one -o a.out loop.lhs
+</code></pre>
+
+<p>The benchmark result:</p>
+
+<pre><code>benchmarking unboxed vector
+mean: 52.56010 ns, lb 52.49446 ns, ub 52.64269 ns, ci 0.950
+std dev: 376.4229 ps, lb 310.1393 ps, ub 458.0804 ps, ci 0.950
+
+benchmarking hand written recursion
+mean: 55.53802 ns, lb 55.51631 ns, ub 55.56074 ns, ci 0.950
+std dev: 113.1906 ps, lb 103.0162 ps, ub 125.4034 ps, ci 0.950
+</code></pre>
+
+<p>In this micro benchmark, looping with unboxed vector was about 3 nano
+seconds faster than manual strict recursion.</p>
+
+<p>What is the cause of this 3 nano seconds difference? Seems like it's a
+goot time to have a look at GHC core. Dumped core of <code>work01</code> looks like
+below:</p>
+
+<pre><code>Main.work01 :: Main.Work GHC.Types.Int
+[GblId,
+ Arity=3,
+ Caf=NoCafRefs,
+ Str=DmdType LS(A)U(L)m,
+ Unf=Unf{Src=InlineStable, TopLvl=True, Arity=0, Value=True,
+         ConLike=True, Cheap=True, Expandable=True,
+         Guidance=ALWAYS_IF(unsat_ok=True,boring_ok=True)
+         Tmpl= Main.work1
+               `cast` (&lt;Main.Updater GHC.Types.Int&gt;
+                       -&gt; &lt;GHC.Types.Int&gt;
+                       -&gt; &lt;GHC.Types.Int&gt;
+                       -&gt; Data.Vector.Fusion.Util.NTCo:Id &lt;GHC.Types.Int&gt;
+                       :: (Main.Updater GHC.Types.Int
+                           -&gt; GHC.Types.Int
+                           -&gt; GHC.Types.Int
+                           -&gt; Data.Vector.Fusion.Util.Id GHC.Types.Int)
+                            ~#
+                          (Main.Updater GHC.Types.Int
+                           -&gt; GHC.Types.Int -&gt; GHC.Types.Int -&gt; GHC.Types.Int))}]
+Main.work01 =
+  Main.work1
+  `cast` (&lt;Main.Updater GHC.Types.Int&gt;
+          -&gt; &lt;GHC.Types.Int&gt;
+          -&gt; &lt;GHC.Types.Int&gt;
+          -&gt; Data.Vector.Fusion.Util.NTCo:Id &lt;GHC.Types.Int&gt;
+          :: (Main.Updater GHC.Types.Int
+              -&gt; GHC.Types.Int
+              -&gt; GHC.Types.Int
+              -&gt; Data.Vector.Fusion.Util.Id GHC.Types.Int)
+               ~#
+             (Main.Updater GHC.Types.Int
+              -&gt; GHC.Types.Int -&gt; GHC.Types.Int -&gt; GHC.Types.Int))
+</code></pre>
+
+<p>We don't find the actual work in <code>Main.work01</code> from dumped result. It's
+function body shows that <code>work01</code> is calling <code>cast</code> with <code>Main.work1</code>,
+which should doing the actual work.</p>
+
+<p>The dumped core of <code>work02</code> looks like this</p>
+
+<pre><code>Main.work02 [InlPrag=INLINE[0]] :: Main.Work GHC.Types.Int
+[GblId,
+ Arity=3,
+ Caf=NoCafRefs,
+ Str=DmdType LU(L)U(L)m,
+ Unf=Unf{Src=Worker=Main.$wwork02, TopLvl=True, Arity=3, Value=True,
+         ConLike=True, Cheap=True, Expandable=True,
+         Guidance=ALWAYS_IF(unsat_ok=True,boring_ok=False)
+         Tmpl= \ (w_s2Uw [Occ=Once] :: Main.Updater GHC.Types.Int)
+                 (w1_s2Ux [Occ=Once!] :: GHC.Types.Int)
+                 (w2_s2UB [Occ=Once!] :: GHC.Types.Int) -&gt;
+                 case w1_s2Ux of _ { GHC.Types.I# ww_s2Uz [Occ=Once] -&gt;
+                 case w2_s2UB of _ { GHC.Types.I# ww1_s2UD [Occ=Once] -&gt;
+                 case Main.$wwork02 w_s2Uw ww_s2Uz ww1_s2UD
+                 of ww2_s2UH { __DEFAULT -&gt;
+                 GHC.Types.I# ww2_s2UH
+                 }
+                 }
+                 }}]
+Main.work02 =
+  \ (w_s2Uw :: Main.Updater GHC.Types.Int)
+    (w1_s2Ux :: GHC.Types.Int)
+    (w2_s2UB :: GHC.Types.Int) -&gt;
+    case w1_s2Ux of _ { GHC.Types.I# ww_s2Uz -&gt;
+    case w2_s2UB of _ { GHC.Types.I# ww1_s2UD -&gt;
+    case Main.$wwork02 w_s2Uw ww_s2Uz ww1_s2UD
+    of ww2_s2UH { __DEFAULT -&gt;
+    GHC.Types.I# ww2_s2UH
+    }
+    }
+    }
+
+Main.$wwork02
+  :: Main.Updater GHC.Types.Int
+     -&gt; GHC.Prim.Int# -&gt; GHC.Prim.Int# -&gt; GHC.Prim.Int#
+[GblId,
+ Arity=3,
+ Caf=NoCafRefs,
+ Str=DmdType LLL,
+ Unf=Unf{Src=&lt;vanilla&gt;, TopLvl=True, Arity=3, Value=True,
+         ConLike=True, Cheap=True, Expandable=True,
+         Guidance=IF_ARGS [60 0 0] 152 0}]
+Main.$wwork02 =
+  \ (w_s2VX :: Main.Updater GHC.Types.Int)
+    (ww_s2W0 :: GHC.Prim.Int#)
+    (ww1_s2W4 :: GHC.Prim.Int#) -&gt;
+    letrec {
+      $wgo1_s2Xg [Occ=LoopBreaker]
+        :: GHC.Prim.Int# -&gt; GHC.Prim.Int# -&gt; GHC.Prim.Int#
+      [LclId, Arity=2, Str=DmdType LL]
+      $wgo1_s2Xg =
+        \ (ww2_s2VN :: GHC.Prim.Int#) (ww3_s2VO :: GHC.Prim.Int#) -&gt;
+          case GHC.Prim.==# ww2_s2VN ww1_s2W4 of _ {
+            GHC.Types.False -&gt;
+              case w_s2VX (GHC.Types.I# ww3_s2VO) of _ { GHC.Types.I# tpl1_B6 -&gt;
+              $wgo1_s2Xg (GHC.Prim.+# ww2_s2VN 1) tpl1_B6
+              };
+            GHC.Types.True -&gt; ww3_s2VO
+          }; } in
+    $wgo1_s2Xg 0 ww_s2W0
+</code></pre>
+
+<p>After taking a closer look, I realised that <code>i == m</code> in guard of
+<code>work02</code> is carrying <code>m</code>, which is passed through the inner functions
+found in the core. This lead <code>$wwork02</code> to compare <code>ww2_s2VN</code> and
+<code>ww1_s2w4</code>, which both of them passed from argument in <code>work02</code>.</p>
+
+<p>Rewriting the guard to compare with constant <code>0</code> instead of <code>m</code>:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> work03 <span class="keyword">::</span> <span class="variable">Work</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> work03 f n0 m <span class="keyword">=</span> go <span class="paren1">(<span class="code"><span class="variable">P</span> m n0</span>)</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>   <span class="comment">{-# INLINE go #-}</span>
+<span class="atom">&gt;</span>   go <span class="atom">!</span><span class="paren1">(<span class="code"><span class="variable">P</span> i n</span>)</span> <span class="keyword">|</span> i <span class="atom">==</span> 0    <span class="keyword">=</span> n
+<span class="atom">&gt;</span>               <span class="keyword">|</span> otherwise <span class="keyword">=</span> go <span class="paren1">(<span class="code"><span class="variable">P</span> <span class="paren2">(<span class="code">i<span class="atom">-</span>1</span>)</span> <span class="paren2">(<span class="code">f n</span>)</span></span>)</span></span></code></pre>
+
+<p>New main for taking benchmark:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> main_two <span class="keyword">::</span> <span class="variable">IO</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span> main_two <span class="keyword">=</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>   <span class="keyword">let</span> k <span class="keyword">=</span> 2 <span class="atom">^</span> 10
+<span class="atom">&gt;</span>   defaultMain
+<span class="atom">&gt;</span>     <span class="paren1">[<span class="code"> bench <span class="string">"unboxed vector"</span> <span class="paren2">(<span class="code">nf <span class="paren3">(<span class="code">work01 add1 0</span>)</span> k</span>)</span>
+<span class="atom">&gt;</span>     , bench <span class="string">"hand written recursion, take 2"</span> <span class="paren2">(<span class="code">nf <span class="paren3">(<span class="code">work03 add1 0</span>)</span> k</span>)</span>
+<span class="atom">&gt;</span>     </span>]</span></span></code></pre>
+
+<p>Compiling:</p>
+
+<pre><code>$ ghc -O3 -fllvm -optl-O3 -main-is main_two -o b.out loop.lhs
+</code></pre>
+
+<p>And running the benchmark:</p>
+
+<pre><code>benchmarking unboxed vector
+mean: 49.86483 ns, lb 49.84522 ns, ub 49.88565 ns, ci 0.950
+std dev: 103.5967 ps, lb 91.78539 ps, ub 117.8307 ps, ci 0.950
+
+benchmarking hand written recursion, take 2
+mean: 48.45895 ns, lb 48.37886 ns, ub 48.61787 ns, ci 0.950
+std dev: 554.6886 ps, lb 337.5092 ps, ub 946.0307 ps, ci 0.950
+</code></pre>
+
+<p>Now the hand written recursion performs about 1.4 nano second faster
+than unboxed vector. Whenever possible, compare with constant in guards.
+And, if few nano seconds does not matter, just use unboxed vector.</p>
+ </div> <div class="post-tags"> TAGGED: <a href="/tag/haskell.html">haskell</a>, <a href="/tag/performance.html">performance</a> </div> <div class="prev-post-link"> Prev: <a href="/posts/How-to-manage-this-site.html">How to manage this site</a> </div> <div class="next-post-link"> Next: <a href="/posts/Guard-case-and-pattern-match.html">Guard, case, and pattern match</a> </div> </div> <footer> <section class="tags"> <h3>Tags</h3> <a href="/tag/algorithm.html">algorithm</a> • <a href="/tag/arc.html">arc</a> • <a href="/tag/arrow.html">arrow</a> • <a href="/tag/cabal.html">cabal</a> • <a href="/tag/ci.html">ci</a> • <a href="/tag/coleslaw.html">coleslaw</a> • <a href="/tag/commonlisp.html">commonlisp</a> • <a href="/tag/continuation.html">continuation</a> • <a href="/tag/datastructure.html">datastructure</a> • <a href="/tag/delimited.html">delimited</a> • <a href="/tag/dph.html">dph</a> • <a href="/tag/dsl.html">dsl</a> • <a href="/tag/emacs.html">emacs</a> • <a href="/tag/french.html">french</a> • <a href="/tag/functionaldependency.html">functionaldependency</a> • <a href="/tag/generic.html">generic</a> • <a href="/tag/ghc.html">ghc</a> • <a href="/tag/ghci.html">ghci</a> • <a href="/tag/git.html">git</a> • <a href="/tag/hakyll.html">hakyll</a> • <a href="/tag/haskell.html">haskell</a> • <a href="/tag/heroku.html">heroku</a> • <a href="/tag/image.html">image</a> • <a href="/tag/linux.html">linux</a> • <a href="/tag/lisp.html">lisp</a> • <a href="/tag/monad.html">monad</a> • <a href="/tag/package.html">package</a> • <a href="/tag/pdf.html">pdf</a> • <a href="/tag/performance.html">performance</a> • <a href="/tag/ps.html">ps</a> • <a href="/tag/repa.html">repa</a> • <a href="/tag/sound.html">sound</a> • <a href="/tag/supercollider.html">supercollider</a> • <a href="/tag/templatehaskell.html">templatehaskell</a> • <a href="/tag/tips.html">tips</a> • <a href="/tag/travis.html">travis</a> • <a href="/tag/tree.html">tree</a> • <a href="/tag/typefamily.html">typefamily</a> • <a href="/tag/utf-8.html">utf-8</a> • <a href="/tag/web.html">web</a> </section> Copyright © 2011-2017 8c6794b6; Unless otherwise noted, site contents licensed under <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"> CC-by-SA</a>. </footer> </body> </html>

@@ -1,0 +1,630 @@
+<?xml version="1.0"?>
+<feed xmlns="http://www.w3.org/2005/Atom"> <title>8c6794b6.github.io</title> <link href=""/> <link type="application/atom+xml" rel="self" href="/atom.xml"/> <updated>Mon, 03 Apr 2017 16:21:50 +0900</updated> <author> <name>8c6794b6</name> </author> <entry> <link type="text/html" rel="alternate" href="/posts/Delimited-continuations-with-monadic-functions-in-Common-Lisp.html"/> <title>Delimited continuations with monadic functions in Common Lisp</title> <published>2017-02-07</published> <updated>2017-02-07</updated> <author> <name>8c6794b6</name> <uri></uri> </author> <content type="html">&lt;h3&gt;Introduction&lt;/h3&gt;
+
+&lt;p&gt;Exploring
+&lt;a href=&quot;https://en.wikipedia.org/wiki/Delimited_continuation&quot; &gt;delimited continuation&lt;/a&gt; in
+Common Lisp, in
+particular,
+&lt;a href=&quot;http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.43.8753&quot; &gt;&lt;code&gt;shift&lt;/code&gt; and &lt;code&gt;reset&lt;/code&gt; from Danvy and Filinski&lt;/a&gt;. There
+is &lt;a href=&quot;http://quickdocs.org/cl-cont/&quot; &gt;cl-cont&lt;/a&gt; package, which supports
+shift/reset style continuation with rewriting expression inside
+&lt;code&gt;with-call/cc&lt;/code&gt; macro. The implementation shown in this post is simple,
+short (less than 50 lines), and uses monadic functions to capture
+continuations.&lt;/p&gt;
+
+&lt;h3&gt;Monad for Continuation&lt;/h3&gt;
+
+&lt;p&gt;As
+&lt;a href=&quot;http://homepages.inf.ed.ac.uk/wadler/topics/monads.html&quot; &gt;Wadler mentioned in various papers&lt;/a&gt;,
+monads could be used to express continuations. Monads consists of type
+constructor &lt;code&gt;M&lt;/code&gt; and following two operations:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;function&quot;&gt;unit&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;M&lt;/span&gt; a
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;★&lt;/span&gt;)&lt;/span&gt;  &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;M&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;M&lt;/span&gt; b&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;M&lt;/span&gt; b&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;It is possible to express concept of Monads in other programming
+languages than Haskell. Several implementation already exist, such as
+in &lt;a href=&quot;http://okmij.org/ftp/Scheme/monad-in-Scheme.html&quot; &gt;Scheme&lt;/a&gt;
+and &lt;a href=&quot;http://okmij.org/ftp/Scheme/monad-in-Scheme.html&quot; &gt;JavaScript&lt;/a&gt;, to
+name a few. In impure languages, there are not much needs for monad,
+since the problems solved by monads in purely functional language are
+solved with different techniques. Though, one of the programming
+techniques which could be solved with monad, and missing in most
+language is, expressing first class continuation.&lt;/p&gt;
+
+&lt;p&gt;One of the programming languages supporting first class continuation is
+Scheme. Scheme has &lt;code&gt;call-with-current-continuation&lt;/code&gt;, which captures
+undelimited continuation as first class value. Some of the Scheme
+implementations also support delimited continuations. Delimited
+continuations are not in the Scheme language specifications so far,
+though it
+is
+&lt;a href=&quot;http://okmij.org/ftp/continuations/implementations.html&quot; &gt;possible to implement it with undelimited continuations&lt;/a&gt;.&lt;/p&gt;
+
+&lt;h3&gt;Wrapping Expression Into CPS&lt;/h3&gt;
+
+&lt;p&gt;In a programming language without builtin support for continuation, one
+need to express the computation in Continuation-Passing-Style (CPS) to
+capture the continuation, and that is where monad is used for. Firstly,
+defining a structure to represent continuation. The structure &lt;code&gt;CONT&lt;/code&gt; has
+single field, a function taking the current continuation.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defstruct&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;cont &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;:constructor&lt;/span&gt; make-cont &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;fn&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+  &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;fn #&#039;values &lt;span class=&quot;keyword&quot;&gt;:type&lt;/span&gt; &lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;function&lt;/span&gt;&lt;/i&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defun&lt;/span&gt;&lt;/i&gt; run-cont &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;c k&lt;/span&gt;)&lt;/span&gt;
+  &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;funcall &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;cont-fn c&lt;/span&gt;)&lt;/span&gt; k&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Defining &lt;code&gt;unit&lt;/code&gt; and &lt;code&gt;(★)&lt;/code&gt; to make &lt;code&gt;CONT&lt;/code&gt; as an instance of monad. In the
+code shown below, &lt;code&gt;unit&lt;/code&gt; is renamed to &lt;code&gt;returnc&lt;/code&gt;, and &lt;code&gt;(★)&lt;/code&gt; is renamed
+to &lt;code&gt;bindc&lt;/code&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defun&lt;/span&gt;&lt;/i&gt; returnc &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;x&lt;/span&gt;)&lt;/span&gt;
+  &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;make-cont &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;lambda&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;k&lt;/span&gt;)&lt;/span&gt;
+               &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;funcall k x&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defun&lt;/span&gt;&lt;/i&gt; bindc &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;c f&lt;/span&gt;)&lt;/span&gt;
+  &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;make-cont &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;lambda&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;k&lt;/span&gt;)&lt;/span&gt;
+               &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;run-cont c &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;lambda&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;x&lt;/span&gt;)&lt;/span&gt;
+                             &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;run-cont &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;funcall f x&lt;/span&gt;)&lt;/span&gt; k&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Definition of &lt;code&gt;returnc&lt;/code&gt; makes CPS representation of &lt;code&gt;x&lt;/code&gt; wrapped with
+&lt;code&gt;CONT&lt;/code&gt; structure. &lt;code&gt;bindc&lt;/code&gt; runs the continuation &lt;code&gt;c&lt;/code&gt;, then pass the
+result to &lt;code&gt;f&lt;/code&gt;, and runs the continuation returned by &lt;code&gt;f&lt;/code&gt; with the
+current continuation &lt;code&gt;k&lt;/code&gt;. Note that in &lt;code&gt;bindc&lt;/code&gt;, current continuation &lt;code&gt;k&lt;/code&gt;
+is not passed to &lt;code&gt;c&lt;/code&gt; but to the returned value of &lt;code&gt;f&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Some examples:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;gt; (run-cont (returnc &#039;foo) #&#039;values)
+FOO
+&amp;gt; (run-cont (bindc (returnc 21) (lambda (x) (returnc (* x 2)))) #&#039;values)
+42&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Adding two syntax helper macros, &lt;code&gt;letc*&lt;/code&gt; and &lt;code&gt;progc&lt;/code&gt;. The macro &lt;code&gt;letc*&lt;/code&gt;
+is similar to &lt;code&gt;let*&lt;/code&gt;, but instead of binding result of pure expressions,
+&lt;code&gt;letc*&lt;/code&gt; binds the variable to the argument passed to the continuation.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defmacro&lt;/span&gt;&lt;/i&gt; letc* &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;bindings &amp;amp;body body&lt;/span&gt;)&lt;/span&gt;
+  &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;if&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;null bindings&lt;/span&gt;)&lt;/span&gt;
+      `&lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;progn&lt;/span&gt;&lt;/i&gt; ,@body&lt;/span&gt;)&lt;/span&gt;
+      &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;destructuring-bind &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;name c&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;car bindings&lt;/span&gt;)&lt;/span&gt;
+        `&lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;bindc ,c &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;lambda&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;,name&lt;/span&gt;)&lt;/span&gt;
+                     &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;letc* ,&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;cdr bindings&lt;/span&gt;)&lt;/span&gt; ,@body&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The second example shown above could be written with &lt;code&gt;letc*&lt;/code&gt; as follows:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;gt; (run-cont (letc* ((x (returnc 21)))
+              (returnc (* x 2)))
+            #&#039;values)
+42&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;&lt;code&gt;progc&lt;/code&gt; is similar to &lt;code&gt;letc*&lt;/code&gt;, but discards the variable, intended to be
+used in the codes where side effects of continuations are the main
+concern.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defmacro&lt;/span&gt;&lt;/i&gt; progc &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&amp;amp;body body&lt;/span&gt;)&lt;/span&gt;
+  &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;if&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;null &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;cdr body&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+      &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;car body&lt;/span&gt;)&lt;/span&gt;
+      &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;let&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;garg &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;gensym&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+        `&lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;bindc ,&lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;car body&lt;/span&gt;)&lt;/span&gt;
+                &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;lambda&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;,garg&lt;/span&gt;)&lt;/span&gt;
+                  &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;declare &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;ignore ,garg&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+                  &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;progc ,@&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;cdr body&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3&gt;Shift And Reset&lt;/h3&gt;
+
+&lt;p&gt;With monadic interfaces for continuation, &lt;code&gt;shift&lt;/code&gt; and &lt;code&gt;reset&lt;/code&gt; could be
+expressed as below. The function &lt;code&gt;reset&lt;/code&gt; unwrap the &lt;code&gt;CONT&lt;/code&gt; structure if
+the given argument is &lt;code&gt;CONT&lt;/code&gt;, otherwise returns the given value itself.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defun&lt;/span&gt;&lt;/i&gt; reset &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;k&lt;/span&gt;)&lt;/span&gt;
+  &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;if&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;cont-p k&lt;/span&gt;)&lt;/span&gt;
+      &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;run-cont k #&#039;values&lt;/span&gt;)&lt;/span&gt;
+      k&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The macro &lt;code&gt;shift&lt;/code&gt; binds the current continuation to given &lt;code&gt;var&lt;/code&gt; as a
+function defined with &lt;code&gt;flet&lt;/code&gt;, and then invoke the &lt;code&gt;expr&lt;/code&gt;. Inside &lt;code&gt;expr&lt;/code&gt;,
+bounded continuation could be invoked as an ordinary function. In other
+words, &lt;code&gt;shift&lt;/code&gt; captures the continuation from the captured place until
+the first appearance of enclosing &lt;code&gt;reset&lt;/code&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defmacro&lt;/span&gt;&lt;/i&gt; shift &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;var expr&lt;/span&gt;)&lt;/span&gt;
+  &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;let&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;gk &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;gensym&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+        &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;garg &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;gensym&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+    `&lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;make-cont &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;lambda&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;,gk&lt;/span&gt;)&lt;/span&gt;
+                  &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;declare &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;function&lt;/span&gt;&lt;/i&gt; ,gk&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+                  &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;flet&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;,var &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;,garg&lt;/span&gt;)&lt;/span&gt;
+                           &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;funcall ,gk ,garg&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+                    &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;declare &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;ignorable &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;function&lt;/span&gt;&lt;/i&gt; ,var&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+                    ,expr&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Evaluating some sample expressions with &lt;code&gt;shift&lt;/code&gt; and &lt;code&gt;reset&lt;/code&gt;. The
+resulting value of &lt;code&gt;shift&lt;/code&gt; is a &lt;code&gt;CONT&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;gt; (shift k (k 2))
+#S(CONT :FN #&amp;lt;FUNCTION (LAMBDA (#:G656)) {1004B9A55B}&amp;gt;)&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;To perform the computation in &lt;code&gt;CONT&lt;/code&gt;, one can apply &lt;code&gt;reset&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;gt; (reset (shift k (k 2))
+2&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The resulting &lt;code&gt;CONT&lt;/code&gt; object from &lt;code&gt;shift&lt;/code&gt; could be passed to &lt;code&gt;bindc&lt;/code&gt;, as
+those made from &lt;code&gt;returnc&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;gt; (reset (letc* ((x (shift k (k 2))))
+           (returnc (+ x 3))))
+5&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;When the expression in &lt;code&gt;shift&lt;/code&gt; returns without calling captured
+continuation, the whole computation will escape immediately. Instead of
+the sum of &lt;code&gt;x&lt;/code&gt; and &lt;code&gt;y&lt;/code&gt; or an error from &lt;code&gt;+&lt;/code&gt;, following expression
+evaluates as symbol &lt;code&gt;FOO&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;gt; (reset (letc* ((x (returnc 100))
+                 (y (shift k &#039;foo)))
+           (returnc (+ x y))))
+FOO&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Since captured continuation is an ordinary function, it could be invoked
+multiple times. In the following expression, the captured computation
+with &lt;code&gt;shift&lt;/code&gt; could be viewed as &lt;code&gt;(lambda (x) (+ x 3))&lt;/code&gt;. The captured
+continuation is applied twice, which results in &lt;code&gt;(+ (+ 2 3) 3)&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;gt; (reset (letc* ((x (shift k (k (k 2)))))
+           (returnc (+ x 3))))
+8&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Inside the expression of &lt;code&gt;shift&lt;/code&gt;, further computation could be done with
+returned value from captured computation. Following expression applies
+captured continuation twice as in previous example, then multiplies by
+&lt;code&gt;2&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;gt; (reset (letc* ((x (shift k (* 2 (k (k 2))))))
+           (returnc (+ x 3))))
+16&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;In the implementation of &lt;code&gt;shift&lt;/code&gt; and &lt;code&gt;reset&lt;/code&gt; shown here, continuations
+are captured with monad, hence some wrapping with &lt;code&gt;returnc&lt;/code&gt; and
+unwrapping with &lt;code&gt;letc*&lt;/code&gt; are required. In an implementation which has
+builtin support of &lt;code&gt;shift&lt;/code&gt; and &lt;code&gt;reset&lt;/code&gt;
+(e.g.: &lt;a href=&quot;https://racket-lang.org/&quot; &gt;Racket&lt;/a&gt;), the last example could be
+written as:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&amp;gt; (reset (+ (shift k (* 2 (k (k 2)))) 3))
+16&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3&gt;Example: Nondeterminism&lt;/h3&gt;
+
+&lt;p&gt;One common use of continuation is for nondeterministic
+programming. Showing an implementation of &lt;code&gt;choice&lt;/code&gt; from
+the
+&lt;a href=&quot;http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.43.8753&quot; &gt;Danvy and Filinski&#039;s paper&lt;/a&gt;,
+and its use with function &lt;code&gt;triple&lt;/code&gt;. The problem we have is to find out
+all triples of distinct positive integers &lt;code&gt;i&lt;/code&gt;, &lt;code&gt;j&lt;/code&gt;, and &lt;code&gt;k&lt;/code&gt; less than or
+equal to a given integer &lt;code&gt;n&lt;/code&gt; that sums to a given integer &lt;code&gt;s&lt;/code&gt;:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defun&lt;/span&gt;&lt;/i&gt; fail &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;)&lt;/span&gt;
+  &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;shift k &#039;no&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defun&lt;/span&gt;&lt;/i&gt; choice &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;n&lt;/span&gt;)&lt;/span&gt;
+  &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;shift k &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;loop&lt;/span&gt;&lt;/i&gt; for i from 1 to n do &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;k i&lt;/span&gt;)&lt;/span&gt; finally &#039;no&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defun&lt;/span&gt;&lt;/i&gt; triple &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;n s&lt;/span&gt;)&lt;/span&gt;
+  &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;letc* &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;i &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;choice n&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+          &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;j &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;choice &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;- i 1&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+          &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;k &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;choice &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;- j 1&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+    &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;if&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;= s &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;+ i j k&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+        &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;returnc &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;list i j k&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+        &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;fail&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;To print the results of &lt;code&gt;triple&lt;/code&gt;, one may write as follows:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&amp;gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;reset &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;letc* &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;ijk &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;triple 9 15&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+           &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;returnc &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;print ijk&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;)
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;6 5 4&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;7 5 3&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;7 6 2&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;8 4 3&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;8 5 2&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;8 6 1&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;9 4 2&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;9 5 1&lt;/span&gt;)&lt;/span&gt;
+NIL&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Note that unlike the original example in the paper, the version of
+&lt;code&gt;shift&lt;/code&gt; in this post returns a value of &lt;code&gt;CONT&lt;/code&gt; structure. The expression
+&lt;code&gt;(triple 9 15)&lt;/code&gt; is evaluated as &lt;code&gt;CONT&lt;/code&gt; structure, not the answer values
+returned by &lt;code&gt;(returnc (list i j k))&lt;/code&gt;. The answers need to be unwrapped
+with &lt;code&gt;letc*&lt;/code&gt; or &lt;code&gt;bindc&lt;/code&gt; to print with &lt;code&gt;print&lt;/code&gt; function.&lt;/p&gt;
+
+&lt;h3&gt;Example: Coroutine&lt;/h3&gt;
+
+&lt;p&gt;Another famous problem solved with continuation is, so-called the
+&lt;em&gt;same-fringe&lt;/em&gt; problem. Two binary trees have the same fringe if they
+have exactly the same leaves reading from left to right. The problem is
+to decide whether two binary trees have the same fringe. Basically, we
+want to return from the tree traversal as soon as we detect that the
+trees are different.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defun&lt;/span&gt;&lt;/i&gt; donep &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;x&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;eq &#039;done x&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defun&lt;/span&gt;&lt;/i&gt; nextp &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;x&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;not &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;donep x&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defun&lt;/span&gt;&lt;/i&gt; next &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;n k&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;lambda&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;values n k&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defun&lt;/span&gt;&lt;/i&gt; walkerc &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;tree&lt;/span&gt;)&lt;/span&gt;
+  &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;cond&lt;/span&gt;&lt;/i&gt;
+    &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;null tree&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;returnc &#039;done&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+    &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;atom tree&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;shift k &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;next tree #&#039;k&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+    &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;t &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;progc
+         &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;walkerc &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;car tree&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+         &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;walkerc &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;cdr tree&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The function &lt;code&gt;walkerc&lt;/code&gt; takes a tree, returns a &lt;code&gt;CONT&lt;/code&gt; value. Each
+element of the tree is converted as a closure with the function &lt;code&gt;next&lt;/code&gt;.
+The closure returns two values: the element and the captured
+continuation. The resulting &lt;code&gt;CONT&lt;/code&gt; could be viewed as a coroutine
+object, which traverses the tree from right to left order.&lt;/p&gt;
+
+&lt;p&gt;With &lt;code&gt;walkerc&lt;/code&gt;, function &lt;code&gt;same-fringe&lt;/code&gt; could be written as below:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;defun&lt;/span&gt;&lt;/i&gt; same-fringe &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;t1 t2&lt;/span&gt;)&lt;/span&gt;
+  &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;labels&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;rec &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;r1 r2&lt;/span&gt;)&lt;/span&gt;
+             &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;i&gt;&lt;span class=&quot;symbol&quot;&gt;if&lt;/span&gt;&lt;/i&gt; &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;nextp r1&lt;/span&gt;)&lt;/span&gt;
+                 &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;and &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;nextp r2&lt;/span&gt;)&lt;/span&gt;
+                      &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;multiple-value-bind &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;n1 k1&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;funcall r1&lt;/span&gt;)&lt;/span&gt;
+                        &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;multiple-value-bind &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;n2 k2&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;funcall r2&lt;/span&gt;)&lt;/span&gt;
+                          &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;and &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;eql n1 n2&lt;/span&gt;)&lt;/span&gt;
+                               &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;rec &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;funcall k1 nil&lt;/span&gt;)&lt;/span&gt;
+                                    &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;funcall k2 nil&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+                 &lt;span class=&quot;paren6&quot;&gt;(&lt;span class=&quot;code&quot;&gt;donep r2&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+    &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;rec &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;reset &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;walkerc t1&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+         &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;reset &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;walkerc t2&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Sample runs:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&amp;gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;same-fringe &#039;&lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;1&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;2 &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;3 &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;4&lt;/span&gt;)&lt;/span&gt; 5&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt; &#039;&lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;1 &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;2&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;3 4&lt;/span&gt;)&lt;/span&gt; 5&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+T
+&amp;gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;same-fringe &#039;&lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;1&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;2 &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;3 &lt;span class=&quot;paren5&quot;&gt;(&lt;span class=&quot;code&quot;&gt;4&lt;/span&gt;)&lt;/span&gt; 5&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt; &#039;&lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;1 &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;2&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren4&quot;&gt;(&lt;span class=&quot;code&quot;&gt;4&lt;/span&gt;)&lt;/span&gt; 5&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+NIL&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;h3&gt;Some thoughts&lt;/h3&gt;
+
+&lt;p&gt;Both non-deterministic example and coroutine example could be directly written
+in continuation passing style (CPS), which shall be slightly efficient since
+direct CPS does not require to make the &lt;code&gt;cont&lt;/code&gt; structure.&lt;/p&gt;
+
+&lt;p&gt;Te implementation shown in this post is similar to the one done
+by
+&lt;a href=&quot;https://groups.google.com/forum/#!topic/comp.lang.lisp/D72jdiAmiBE&quot; &gt;Matthew D Swank&lt;/a&gt;,
+written in 2006.&lt;/p&gt;
+
+&lt;!--
+Local Variables:
+mode: markdown;
+fill column: 72;
+End;
+--&gt;
+</content> </entry><entry> <link type="text/html" rel="alternate" href="/posts/Migrating-to-Coleslaw.html"/> <title>Migrating to Coleslaw</title> <published>2016-12-27</published> <updated>2016-12-27</updated> <author> <name>8c6794b6</name> <uri></uri> </author> <content type="html">&lt;p&gt;Made updates to this gh-page. The site is still generated with static site
+generator, though the generator has changed
+from &lt;a href=&quot;https://jaspervdj.be/hakyll/&quot; &gt;Hakyll&lt;/a&gt;
+to &lt;a href=&quot;http://github.com/kingcons/coleslaw&quot; &gt;Coleslaw&lt;/a&gt;.  The site uses
+hand-made scratchy CSS with color scheme borrowed
+from &lt;a href=&quot;http://ethanschoonover.com/solarized&quot; &gt;Solarized&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Coleslaw is a static site generator written in Common Lisp. As of the
+version included in Quicklisp 2016-12-08, Coleslaw supports plain
+HTML, &lt;a href=&quot;https://daringfireball.net/projects/markdown/&quot; &gt;Markdown&lt;/a&gt;
+and &lt;a href=&quot;http://docutils.sourceforge.net/rst.html&quot; &gt;reStructuredText&lt;/a&gt; for
+writing contents. Basic usage of Coleslaw is written
+in &lt;a href=&quot;https://github.com/kingcons/coleslaw/blob/master/README.md&quot; &gt;README&lt;/a&gt;
+file. Coleslaw uses &lt;code&gt;.coleslawrc&lt;/code&gt; file to configure the site. The
+configuration file could be placed under the user&#039;s home directory (i.e.:
+&lt;code&gt;$HOME/.coleslawrc&lt;/code&gt;), or under the directory containing all the other
+files for building the site (e.g.: &lt;code&gt;/path/to/my/site/.coleslawrc&lt;/code&gt;).  It
+uses &lt;a href=&quot;https://github.com/archimag/cl-closure-template&quot; &gt;Common Lisp port&lt;/a&gt;
+of &lt;a href=&quot;https://developers.google.com/closure/templates/&quot; &gt;Closure Templates&lt;/a&gt;
+for defining theme templates. Markdown parser used by Coleslaw
+is &lt;a href=&quot;https://github.com/3b/3bmd&quot; &gt;3bmd&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Coleslaw recommends the use of &lt;em&gt;plugins&lt;/em&gt; to customize and extend the
+site. The &lt;a href=&quot;../archive.html&quot; &gt;archive page of this site&lt;/a&gt; and the pages
+showing the posts for each tag are built with simple plugins. Plugins are
+simply a Common Lisp source code, which should be a package with
+Coleslaw&#039;s naming convention. The naming convention is
+&lt;code&gt;coleslaw-NAME_OF_PLUGIN&lt;/code&gt;, where &lt;code&gt;NAME_OF_PLUGIN&lt;/code&gt; is name of the plugin
+(e.g.: Package name of the &lt;code&gt;archive&lt;/code&gt; plugin is &lt;code&gt;coleslaw-archive&lt;/code&gt;).
+Suppose that, the directory containing the static site is structured as
+below:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;/path/to/my/site/
+├── .coleslawrc
+├── 404.page
+├── about.page
+├── plugins
+│   ├── archive.lisp
+│   └── tags.lisp
+├── posts
+│   ├── 2011-10-21-what-to-count-in-source-code.post
+│   ├── ...
+│   └── 2016-12-27-migrating-to-coleslaw.post
+├── static
+│   ├── bench-avl-insert-member.html
+│   └── ...
+├── the.archive
+└── themes
+    └── simple
+        ├── archive.tmpl
+        ├── base.tmpl
+        ├── css
+        │   └── style.css
+        ├── index.tmpl
+        ├── post.tmpl
+        └── tag.tmpl&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;And the contents of &lt;code&gt;.coleslawrc&lt;/code&gt; similar to below:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;:author&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;8c6794b6&quot;&lt;/span&gt;
+ &lt;span class=&quot;keyword&quot;&gt;:charset&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;UTF-8&quot;&lt;/span&gt;
+ &lt;span class=&quot;keyword&quot;&gt;:deploy-dir&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;/path/for/deploy/&quot;&lt;/span&gt;
+ &lt;span class=&quot;keyword&quot;&gt;:domain&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;http://my.url.com&quot;&lt;/span&gt;
+ &lt;span class=&quot;keyword&quot;&gt;:plugins&lt;/span&gt; &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;mathjax&lt;/span&gt;)&lt;/span&gt;
+           &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;static-pages&lt;/span&gt;)&lt;/span&gt;
+           &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;sitemap&lt;/span&gt;)&lt;/span&gt;
+           &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;archive&lt;/span&gt;)&lt;/span&gt;
+           &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;tags&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+ &lt;span class=&quot;keyword&quot;&gt;:routing&lt;/span&gt; &lt;span class=&quot;paren2&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;:post&lt;/span&gt;           &lt;span class=&quot;string&quot;&gt;&quot;posts/~a&quot;&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+           &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;:tag-index&lt;/span&gt;      &lt;span class=&quot;string&quot;&gt;&quot;tag/~a&quot;&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+           &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;:month-index&lt;/span&gt;    &lt;span class=&quot;string&quot;&gt;&quot;date/~a&quot;&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+           &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;:numeric-index&lt;/span&gt;  &lt;span class=&quot;string&quot;&gt;&quot;~d&quot;&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+           &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;:feed&lt;/span&gt;           &lt;span class=&quot;string&quot;&gt;&quot;~a.xml&quot;&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+           &lt;span class=&quot;paren3&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;:tag-feed&lt;/span&gt;       &lt;span class=&quot;string&quot;&gt;&quot;tag/~a.xml&quot;&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;
+ &lt;span class=&quot;keyword&quot;&gt;:staging-dir&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;/tmp/coleslaw-staging/&quot;&lt;/span&gt;
+ &lt;span class=&quot;keyword&quot;&gt;:title&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;8c6794b6.github.io&quot;&lt;/span&gt;
+ &lt;span class=&quot;keyword&quot;&gt;:theme&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;simple&quot;&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;By evaluating &lt;code&gt;(coleslaw:main #p&amp;quot;/path/to/my/site&amp;quot;)&lt;/code&gt; in Common Lisp,
+coleslaw will generate the site contents. Some of the works done are:&lt;/p&gt;
+
+&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;Load plugins. Coleslaw will look for &lt;code&gt;coleslaw-mathjax&lt;/code&gt;,
+  &lt;code&gt;coleslaw-static-pages&lt;/code&gt;, &lt;code&gt;coleslaw-sitemap&lt;/code&gt;, &lt;code&gt;coleslaw-archive&lt;/code&gt;, and
+  &lt;code&gt;coleslaw-tags&lt;/code&gt; under &lt;code&gt;/path/to/my/site/plugins&lt;/code&gt; and installed
+  coleslaw&#039;s source directory. Coleslaw seeks the plugins under the
+  directory named &lt;code&gt;plugins&lt;/code&gt; of the site contents, and under the Coleslaw&#039;s
+  source directory. Plugins &lt;code&gt;mathjax&lt;/code&gt;, &lt;code&gt;static-pages&lt;/code&gt;, and &lt;code&gt;sitemap&lt;/code&gt; are
+  bundled within default coleslaw installation.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Search the specified theme. Coleslaw will search the
+  &lt;code&gt;/path/to/my/site/themes&lt;/code&gt; first, then if not found, search for the theme
+  under Coleslaw&#039;s default installation. The name of the theme is
+  specified in the file &lt;code&gt;.coleslawrc&lt;/code&gt;. There is
+  a
+  &lt;a href=&quot;https://github.com/kingcons/coleslaw/blob/master/docs/themes.md&quot; &gt;guide&lt;/a&gt;
+  for writing theme in the Coleslaw source. The theme &lt;code&gt;simple&lt;/code&gt; is the one
+  used for this site.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Copy the files under the directory named &lt;code&gt;static&lt;/code&gt; in &lt;code&gt;/path/to/my/site&lt;/code&gt;
+  to the deploy directory.&lt;/p&gt;&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;Apply functions according to file extensions. Files for post pages have
+  &lt;code&gt;.post&lt;/code&gt; in its file name, static pages has &lt;code&gt;.page&lt;/code&gt;, and so on.&lt;/p&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;For &lt;code&gt;archive&lt;/code&gt; and &lt;code&gt;tags&lt;/code&gt; plugins, which are made for this site, the source
+codes and templates are tightly coupled, so the plugins are not much
+reusable.&lt;/p&gt;
+
+&lt;!--
+Local Variables:
+mode: markdown;
+fill-column: 74;
+End:
+--&gt;
+</content> </entry><entry> <link type="text/html" rel="alternate" href="/posts/What-to-count-in-source-code.html"/> <title>What to count in source code</title> <published>2011-10-21</published> <updated>2011-10-21</updated> <author> <name>8c6794b6</name> <uri></uri> </author> <content type="html">&lt;p&gt;Below is a sample arc code:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt; | (defop said req
+ |   (aform [onlink &amp;quot;click here&amp;quot; (pr &amp;quot;you said: &amp;quot; (arg _ &amp;quot;foo&amp;quot;))]
+ |     (input &amp;quot;foo&amp;quot;)
+ |     (submit)))
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;In an article &lt;a href=&quot;http://paulgraham.com/arcchallenge.html&quot; &gt;arc challenge&lt;/a&gt;,
+Paul Graham was counting size of codetree of arc program. He counted
+above arc program as 21 nodes: 14 leaves + 7 interior.&lt;/p&gt;
+
+&lt;p&gt;How can we count the size of haskell codetree?&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;module&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Main&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;where&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Control&lt;/span&gt;&lt;span class=&quot;atom&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;variable&quot;&gt;Monad&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Data&lt;/span&gt;&lt;span class=&quot;atom&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;variable&quot;&gt;Generics&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Data&lt;/span&gt;&lt;span class=&quot;atom&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;variable&quot;&gt;Tree&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;System&lt;/span&gt;&lt;span class=&quot;atom&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;variable&quot;&gt;Environment&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;getArgs&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;We could use other module than Language.Haskell.Syntax. e.g.
+Language.Haskell.Exts from haskell-src-exts.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Language&lt;/span&gt;&lt;span class=&quot;atom&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;variable&quot;&gt;Haskell&lt;/span&gt;&lt;span class=&quot;atom&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;variable&quot;&gt;Parser&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Language&lt;/span&gt;&lt;span class=&quot;atom&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;variable&quot;&gt;Haskell&lt;/span&gt;&lt;span class=&quot;atom&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;variable&quot;&gt;Syntax&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This code could be run from command line. Parses the contents and count
+the number of codesize in all given file paths.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; main &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;IO&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; main &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt;  getArgs &lt;span class=&quot;atom&quot;&gt;&amp;gt;&amp;gt;=&lt;/span&gt; mapM_ &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;readFile &lt;span class=&quot;atom&quot;&gt;&amp;gt;=&amp;gt;&lt;/span&gt; count namesAndLits&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Below is arc expression written with Tree data type. Last node &amp;quot;submit&amp;quot;
+has a child element with empty string, since it was parenthesized
+explicitly.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; arc &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Tree&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;String&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; arc &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;defop&quot;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;paren1&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;said&quot;&lt;/span&gt; &lt;span class=&quot;paren2&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     ,&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;req&quot;&lt;/span&gt; &lt;span class=&quot;paren2&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     ,&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;aform&quot;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;       &lt;span class=&quot;paren2&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;onlink&quot;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         &lt;span class=&quot;paren3&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;click here&quot;&lt;/span&gt; &lt;span class=&quot;paren4&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         ,&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;pr&quot;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;           &lt;span class=&quot;paren4&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;you said: &quot;&lt;/span&gt; &lt;span class=&quot;paren5&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;           ,&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;arg&quot;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;             &lt;span class=&quot;paren5&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;_&quot;&lt;/span&gt; &lt;span class=&quot;paren6&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;             ,&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;foo&quot;&lt;/span&gt; &lt;span class=&quot;paren6&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;]&lt;/span&gt;&lt;/span&gt;]&lt;/span&gt;&lt;/span&gt;]&lt;/span&gt;&lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         ,&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;input&quot;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;           &lt;span class=&quot;paren3&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;foo&quot;&lt;/span&gt; &lt;span class=&quot;paren4&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;]&lt;/span&gt;&lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;         ,&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;submit&quot;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;           &lt;span class=&quot;paren3&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;&quot;&lt;/span&gt; &lt;span class=&quot;paren4&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;]&lt;/span&gt;&lt;/span&gt;]&lt;/span&gt;&lt;/span&gt;]&lt;/span&gt;&lt;/span&gt;]&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Viewing this expression:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;| *Main&amp;gt; putStrLn $ drawTree arc
+| defop
+| |
+| +- said
+| |
+| +- req
+| |
+| `- aform
+|    |
+|    +- onlink
+|    |  |
+|    |  +- click here
+|    |  |
+|    |  `- pr
+|    |     |
+|    |     +- you said:
+|    |     |
+|    |     `- arg
+|    |        |
+|    |        +- _
+|    |        |
+|    |        `- foo
+|    |
+|    +- input
+|    |  |
+|    |  `- foo
+|    |
+|    `- submit
+|       |
+|       `-
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;To count number of leaves:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; numLeaf &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Tree&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Int&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; numLeaf &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; length &lt;span class=&quot;atom&quot;&gt;.&lt;/span&gt; flatten&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;And number of interior nodes:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; numInterior &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Tree&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Int&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; numInterior t &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;case&lt;/span&gt; t &lt;span class=&quot;keyword&quot;&gt;of&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; _ &lt;span class=&quot;paren1&quot;&gt;[&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;]&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; 0
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;variable&quot;&gt;Node&lt;/span&gt; _ xs &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; 1 &lt;span class=&quot;atom&quot;&gt;+&lt;/span&gt; sum &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;map numInterior xs&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;And getting the sum:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; countArc &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Tree&lt;/span&gt; a &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Int&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; countArc t &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; numLeaf t &lt;span class=&quot;atom&quot;&gt;+&lt;/span&gt; numInterior t&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Number of expression is:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;| *Main&amp;gt; countArc arc
+| 22
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;It&#039;s 22, not 21, due to the addition of extra empty node in the end.&lt;/p&gt;
+
+&lt;p&gt;So, that was how we can count expression of lisp. Then how to count like
+for haskell expression? One way is to count occurance of specific data
+types found in Language.Haskell.Syntax module. When we found HsName
+datatype in source code, increase the number of codesize by 1. Below is
+the definition of HsName.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;| data HsName = HsIdent String | HsSymbol String
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Since most data types in Language.Haskell.Syntax are defined as instance
+of Data and Typeable, we can use generic functions.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; anyName &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;HsName&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Int&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; anyName _ &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; 1&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Traversing over module:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; names &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;HsModule&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Int&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; names &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; everything &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;+&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;0 &lt;span class=&quot;atom&quot;&gt;`mkQ`&lt;/span&gt; anyName&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Worker for parsing contents of source code, and applying the counter
+function.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; count &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;HsModule&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Int&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;IO&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;/span&gt;)&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; count f code &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;do&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;   &lt;span class=&quot;keyword&quot;&gt;case&lt;/span&gt; parseModule code &lt;span class=&quot;keyword&quot;&gt;of&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;variable&quot;&gt;ParseOk&lt;/span&gt; mdl&lt;span class=&quot;keyword&quot;&gt;@&lt;/span&gt;&lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;variable&quot;&gt;HsModule&lt;/span&gt; _ name _ _ _&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;       putStrLn &lt;span class=&quot;atom&quot;&gt;$&lt;/span&gt; unwords &lt;span class=&quot;paren1&quot;&gt;[&lt;span class=&quot;code&quot;&gt;show &lt;span class=&quot;atom&quot;&gt;$&lt;/span&gt; f mdl, &lt;span class=&quot;string&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;string&quot;&gt;\t&lt;/span&gt;&lt;span class=&quot;string&quot;&gt;&quot;&lt;/span&gt;, show name&lt;/span&gt;]&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;     &lt;span class=&quot;variable&quot;&gt;ParseFailed&lt;/span&gt; loc err &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; print loc &lt;span class=&quot;atom&quot;&gt;&amp;gt;&amp;gt;&lt;/span&gt; putStrLn err&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Try it:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; sample1 &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;String&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; sample1 &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;x = 100&quot;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;pre&gt;&lt;code&gt;| *Main&amp;gt; count names sample1
+| 2        Module &amp;quot;Main&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Seems like working. How about another expression?&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; sample2 &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;String&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; sample2 &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;x = 100 + 2&quot;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Outputs:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;| *Main&amp;gt; count names sample2
+| 3        Module &amp;quot;Main&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Why above codesize counted as 3? Not 4, code size of sample1 + 2?&lt;/p&gt;
+
+&lt;p&gt;We should have missed some data type to count. For second try, counting
+HsLiteral and HsName.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;| data HsLiteral
+|   = HsChar Char
+|   | HsString String
+|   | HsInt Integer
+|   | HsFrac Rational
+|   | HsCharPrim Char
+|   | HsStringPrim String
+|   | HsIntPrim Integer
+|   | HsFloatPrim Rational
+|   | HsDoublePrim Rational
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;pre&gt;&lt;code&gt;&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; anyLiteral &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;HsLiteral&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Int&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; anyLiteral _ &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; 1
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; namesAndLits &lt;span class=&quot;keyword&quot;&gt;::&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;HsModule&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;variable&quot;&gt;Int&lt;/span&gt;
+&lt;span class=&quot;atom&quot;&gt;&amp;gt;&lt;/span&gt; namesAndLits &lt;span class=&quot;keyword&quot;&gt;=&lt;/span&gt; everything &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;&lt;span class=&quot;atom&quot;&gt;+&lt;/span&gt;&lt;/span&gt;)&lt;/span&gt; &lt;span class=&quot;paren1&quot;&gt;(&lt;span class=&quot;code&quot;&gt;const 0 &lt;span class=&quot;atom&quot;&gt;`extQ`&lt;/span&gt; anyName &lt;span class=&quot;atom&quot;&gt;`extQ`&lt;/span&gt; anyLiteral&lt;/span&gt;)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Trying again:&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;| *Main&amp;gt; count namesAndLits sample1
+| 3        Module &amp;quot;Main&amp;quot;
+| *Main&amp;gt; count namesAndLits sample2
+| 5        Module &amp;quot;Main&amp;quot;
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Getting better, but this is counting leaves only.&lt;/p&gt;
+
+&lt;p&gt;Since all haskell expression in general is a function that takes single
+argument, and giving back another function, every expression other than
+constant value has child element. I&#039;m not sure what we should count as
+interior node in expression.&lt;/p&gt;
+
+&lt;!--
+Local Variables:
+mode: markdown
+End:
+--&gt;
+</content> </entry> </feed>

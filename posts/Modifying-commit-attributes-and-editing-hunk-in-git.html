@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=defice-width, initial-scale=1"> <title>8c6794b6.github.io</title> <link href="/css/style.css" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=Noto+Serif" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=PT+Serif" rel="stylesheet" type="text/css" /> <link rel="icon" type="image/png" href="/static/favicon.png"/>  </head> <body> <header> <h1><a href="/index.html">8c6794b6.github.io</a></h1> <nav> <a href="/index.html">HOME</a> • <a href="/about.html">ABOUT</a> • <a href="/archive.html">ARCHIVE</a> • <a href="/rss.xml">RSS</a> </nav> </header> <div class="contents"> <div class="post-title"> <h2>Modifying commit attributes and editing hunk in git</h2> <em class="post-date">2014-05-30</em> </div> <div class="post"> <h3>Changing author (or any other commit attribute) in existing commits</h3>
+
+<p>From
+<a href="http://stackoverflow.com/questions/750172/how-do-i-change-the-author-of-a-commit-in-git" >this SOF Q&amp;A</a>. Linked
+page was showing a scenario to change committer and author's name and email from
+old value to new value:</p>
+
+<pre><code>git filter-branch --commit-filter '
+    if [ "$GIT_COMMITTER_NAME" = "&lt;OLD_NAME&gt;" ];
+    then
+        GIT_COMMITTER_NAME="&lt;NEW_NAME&gt;";
+
+        # ...
+        # modify other attributes if any, then...
+
+        git commit-tree "$@";
+    else
+        git commit-tree "$@";
+    fi' HEAD</code></pre>
+
+<p>Comment in the answer was mentioning <code>git env-filter</code> will change all commits,
+but the one shown above allows conditional behaviour.</p>
+
+<h3>Editing hunk while adding commits</h3>
+
+<p>There are
+<a href="http://joaquin.windmuller.ca/post/35-selectively-select-changes-to-commit-with-git-or-imma-edit-your-hunk" >couple</a>
+<a href="http://pivotallabs.com/git-add-e/" >articles</a> mentioning it, including the
+<a href="http://git-scm.com/docs/git-add" >git add man page</a>. Section <code>EDITING PATCHES</code>
+in the manual has detailed explanation.</p>
+ </div> <div class="post-tags"> TAGGED: <a href="/tag/git.html">git</a> </div> <div class="prev-post-link"> Prev: <a href="/posts/Syntax-for-building-rose-tree.html">Syntax for building rose tree</a> </div> <div class="next-post-link"> Next: <a href="/posts/Migrating-to-Coleslaw.html">Migrating to Coleslaw</a> </div> </div> <footer> <section class="tags"> <h3>Tags</h3> <a href="/tag/algorithm.html">algorithm</a> • <a href="/tag/arc.html">arc</a> • <a href="/tag/arrow.html">arrow</a> • <a href="/tag/cabal.html">cabal</a> • <a href="/tag/ci.html">ci</a> • <a href="/tag/coleslaw.html">coleslaw</a> • <a href="/tag/commonlisp.html">commonlisp</a> • <a href="/tag/continuation.html">continuation</a> • <a href="/tag/datastructure.html">datastructure</a> • <a href="/tag/delimited.html">delimited</a> • <a href="/tag/dph.html">dph</a> • <a href="/tag/dsl.html">dsl</a> • <a href="/tag/emacs.html">emacs</a> • <a href="/tag/french.html">french</a> • <a href="/tag/functionaldependency.html">functionaldependency</a> • <a href="/tag/generic.html">generic</a> • <a href="/tag/ghc.html">ghc</a> • <a href="/tag/ghci.html">ghci</a> • <a href="/tag/git.html">git</a> • <a href="/tag/hakyll.html">hakyll</a> • <a href="/tag/haskell.html">haskell</a> • <a href="/tag/heroku.html">heroku</a> • <a href="/tag/image.html">image</a> • <a href="/tag/linux.html">linux</a> • <a href="/tag/lisp.html">lisp</a> • <a href="/tag/monad.html">monad</a> • <a href="/tag/package.html">package</a> • <a href="/tag/pdf.html">pdf</a> • <a href="/tag/performance.html">performance</a> • <a href="/tag/ps.html">ps</a> • <a href="/tag/repa.html">repa</a> • <a href="/tag/sound.html">sound</a> • <a href="/tag/supercollider.html">supercollider</a> • <a href="/tag/templatehaskell.html">templatehaskell</a> • <a href="/tag/tips.html">tips</a> • <a href="/tag/travis.html">travis</a> • <a href="/tag/tree.html">tree</a> • <a href="/tag/typefamily.html">typefamily</a> • <a href="/tag/utf-8.html">utf-8</a> • <a href="/tag/web.html">web</a> </section> Copyright © 2011-2017 8c6794b6; Unless otherwise noted, site contents licensed under <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"> CC-by-SA</a>. </footer> </body> </html>

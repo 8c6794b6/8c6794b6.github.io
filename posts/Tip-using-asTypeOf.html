@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=defice-width, initial-scale=1"> <title>8c6794b6.github.io</title> <link href="/css/style.css" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=Noto+Serif" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=PT+Serif" rel="stylesheet" type="text/css" /> <link rel="icon" type="image/png" href="/static/favicon.png"/>  </head> <body> <header> <h1><a href="/index.html">8c6794b6.github.io</a></h1> <nav> <a href="/index.html">HOME</a> • <a href="/about.html">ABOUT</a> • <a href="/archive.html">ARCHIVE</a> • <a href="/rss.xml">RSS</a> </nav> </header> <div class="contents"> <div class="post-title"> <h2>Tip using &#039;asTypeOf&#039;</h2> <em class="post-date">2012-10-11</em> </div> <div class="post"> <p>I found myself an idiot for such a long time I was not aware of this use
+of <code>asTypeOf</code> function.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">module</span> <span class="variable">AsTypeOf</span> <span class="keyword">where</span></span></code></pre>
+
+<p>When we have a type with multiple varialbles, e.g. <code>Either</code>:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> rightChar <span class="keyword">=</span> <span class="variable">Right</span> <span class="character">'a'</span></span></code></pre>
+
+<p>In ghci:</p>
+
+<pre><code>ghci&gt; :t rightChar
+rightChar :: Either a Char
+</code></pre>
+
+<p>We are yet not sure for remaining type variables. In above case, we
+still do not have a clue to fix the type of <code>Left</code> constructor.</p>
+
+<p>One way to fix the type used for <code>Left</code> is wrapping multiple values in
+single list:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> rightCharInList <span class="keyword">=</span> <span class="paren1">[<span class="code">rightChar, <span class="variable">Left</span> <span class="variable">True</span></span>]</span></span></code></pre>
+
+<p>Showing the type:</p>
+
+<pre><code>ghci&gt; :t rightCharInList
+rightCharInList :: [Either Bool Char]
+</code></pre>
+
+<p>Or another, using <code>asTypeOf</code> instead of list:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> rightChar' <span class="keyword">=</span> rightChar <span class="atom">`asTypeOf`</span> <span class="variable">Left</span> <span class="variable">True</span></span></code></pre>
+
+<p>Now the type for <code>Left</code> constructor is fixed, value is identical to
+<code>rightChar</code>:</p>
+
+<pre><code>ghci&gt; rightChar'
+Right 'a'
+ghci&gt; :t rightChar'
+rightChar' :: Either Bool Char
+</code></pre>
+ </div> <div class="post-tags"> TAGGED: <a href="/tag/haskell.html">haskell</a>, <a href="/tag/tips.html">tips</a> </div> <div class="prev-post-link"> Prev: <a href="/posts/Mapping-show-to-tuples-with-TH.html">Mapping &#039;show&#039; to tuples with TH</a> </div> <div class="next-post-link"> Next: <a href="/posts/Benchmarking-insert-and-member-with-AVL-tree.html">Benchmarking insert and member with AVL tree</a> </div> </div> <footer> <section class="tags"> <h3>Tags</h3> <a href="/tag/algorithm.html">algorithm</a> • <a href="/tag/arc.html">arc</a> • <a href="/tag/arrow.html">arrow</a> • <a href="/tag/cabal.html">cabal</a> • <a href="/tag/ci.html">ci</a> • <a href="/tag/coleslaw.html">coleslaw</a> • <a href="/tag/commonlisp.html">commonlisp</a> • <a href="/tag/continuation.html">continuation</a> • <a href="/tag/datastructure.html">datastructure</a> • <a href="/tag/delimited.html">delimited</a> • <a href="/tag/dph.html">dph</a> • <a href="/tag/dsl.html">dsl</a> • <a href="/tag/emacs.html">emacs</a> • <a href="/tag/french.html">french</a> • <a href="/tag/functionaldependency.html">functionaldependency</a> • <a href="/tag/generic.html">generic</a> • <a href="/tag/ghc.html">ghc</a> • <a href="/tag/ghci.html">ghci</a> • <a href="/tag/git.html">git</a> • <a href="/tag/hakyll.html">hakyll</a> • <a href="/tag/haskell.html">haskell</a> • <a href="/tag/heroku.html">heroku</a> • <a href="/tag/image.html">image</a> • <a href="/tag/linux.html">linux</a> • <a href="/tag/lisp.html">lisp</a> • <a href="/tag/monad.html">monad</a> • <a href="/tag/package.html">package</a> • <a href="/tag/pdf.html">pdf</a> • <a href="/tag/performance.html">performance</a> • <a href="/tag/ps.html">ps</a> • <a href="/tag/repa.html">repa</a> • <a href="/tag/sound.html">sound</a> • <a href="/tag/supercollider.html">supercollider</a> • <a href="/tag/templatehaskell.html">templatehaskell</a> • <a href="/tag/tips.html">tips</a> • <a href="/tag/travis.html">travis</a> • <a href="/tag/tree.html">tree</a> • <a href="/tag/typefamily.html">typefamily</a> • <a href="/tag/utf-8.html">utf-8</a> • <a href="/tag/web.html">web</a> </section> Copyright © 2011-2017 8c6794b6; Unless otherwise noted, site contents licensed under <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"> CC-by-SA</a>. </footer> </body> </html>

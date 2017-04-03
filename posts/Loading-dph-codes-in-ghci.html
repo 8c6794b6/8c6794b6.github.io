@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=defice-width, initial-scale=1"> <title>8c6794b6.github.io</title> <link href="/css/style.css" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=Noto+Serif" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=PT+Serif" rel="stylesheet" type="text/css" /> <link rel="icon" type="image/png" href="/static/favicon.png"/>  </head> <body> <header> <h1><a href="/index.html">8c6794b6.github.io</a></h1> <nav> <a href="/index.html">HOME</a> • <a href="/about.html">ABOUT</a> • <a href="/archive.html">ARCHIVE</a> • <a href="/rss.xml">RSS</a> </nav> </header> <div class="contents"> <div class="post-title"> <h2>Loading dph codes in ghci</h2> <em class="post-date">2012-01-22</em> </div> <div class="post"> <p>In haddock of dph-par package, we see functions like below:</p>
+
+<pre><code><span class="code"><span class="function">zipP</span> <span class="keyword">::</span> <span class="paren1">[<span class="code"><span class="variable">:</span>a<span class="variable">:</span></span>]</span> <span class="keyword">-&gt;</span> <span class="paren1">[<span class="code"><span class="variable">:</span>b<span class="variable">:</span></span>]</span> <span class="keyword">-&gt;</span> <span class="paren1">[<span class="code"><span class="variable">:</span><span class="paren2">(<span class="code">a, b</span>)</span><span class="variable">:</span></span>]</span>
+<span class="comment">{-# NOINLINE zipP #-}</span>
+<span class="function">zipP</span> <span class="atom">!</span>_ <span class="atom">!</span>_ <span class="keyword">=</span> <span class="paren1">[<span class="code"><span class="keyword">::</span></span>]</span>
+<span class="comment">{-# VECTORISE zipP = zipPA #-}</span></span></code></pre>
+
+<p>Above difinition is from
+<a href="http://hackage.haskell.org/packages/archive/dph-par/0.5.1.1/doc/html/src/Data-Array-Parallel.html#zipP" >dph-par-0.5.1.1</a>.
+From what its written, <code>zipP</code> looks like a function that returning an
+empty array. Though after compiling the code with appropriate options,
+<code>zipP</code> indeed work as parallel variant of <code>zip</code> for standard list.</p>
+
+<p>As of GHC-7.2.2 and dph-par-0.5.1.1, we cannot directly load codes with
+parallel array in ghci. One way to load them in ghci is, prepare a
+wrapper with fixing the type of array element, and compile to object
+code.</p>
+
+<p>Suppose that we have a module containing parallel array functions:</p>
+
+<pre><code><span class="code"><span class="comment">{-# LANGUAGE ParallelArrays #-}</span>
+<span class="comment">{-# OPTIONS_GHC -fvectorise #-}</span>
+<span class="comment">-- VectroseMe.hs</span>
+<span class="keyword">module</span> <span class="variable">VectoriseMe</span> <span class="keyword">where</span>
+
+<span class="keyword">import</span> <span class="variable">Data</span><span class="atom">.</span><span class="variable">Array</span><span class="atom">.</span><span class="variable">Parallel</span>
+<span class="keyword">import</span> <span class="variable">Data</span><span class="atom">.</span><span class="variable">Array</span><span class="atom">.</span><span class="variable">Parallel</span><span class="atom">.</span><span class="variable">PArray</span>
+
+<span class="function">myZipP</span> <span class="keyword">::</span> <span class="paren1">[<span class="code"><span class="variable">:</span>a<span class="variable">:</span></span>]</span> <span class="keyword">-&gt;</span> <span class="paren1">[<span class="code"><span class="variable">:</span>b<span class="variable">:</span></span>]</span> <span class="keyword">-&gt;</span> <span class="paren1">[<span class="code"><span class="variable">:</span><span class="paren2">(<span class="code">a, b</span>)</span><span class="variable">:</span></span>]</span>
+<span class="function">myZipP</span> as bs <span class="keyword">=</span> zipP as bs
+
+<span class="function">myZipPA</span> <span class="keyword">::</span> <span class="variable">PArray</span> a <span class="keyword">-&gt;</span> <span class="variable">PArray</span> b <span class="keyword">-&gt;</span> <span class="variable">PArray</span> <span class="paren1">(<span class="code">a, b</span>)</span>
+<span class="function">myZipPA</span> as bs <span class="keyword">=</span> toPArrayP <span class="paren1">(<span class="code">myZipP <span class="paren2">(<span class="code">fromPArrayP as</span>)</span> <span class="paren2">(<span class="code">fromPArrayP bs</span>)</span></span>)</span>
+<span class="comment">{-# NOINLINE myZipPA #-}</span>
+
+<span class="function">myZipIntP</span> <span class="keyword">::</span> <span class="paren1">[<span class="code"><span class="variable">:</span><span class="variable">Int</span><span class="variable">:</span></span>]</span> <span class="keyword">-&gt;</span> <span class="paren1">[<span class="code"><span class="variable">:</span><span class="variable">Int</span><span class="variable">:</span></span>]</span> <span class="keyword">-&gt;</span> <span class="paren1">[<span class="code"><span class="variable">:</span><span class="paren2">(<span class="code"><span class="variable">Int,</span> <span class="variable">Int</span></span>)</span><span class="variable">:</span></span>]</span>
+<span class="function">myZipIntP</span> as bs <span class="keyword">=</span> zipP as bs
+
+<span class="function">myZipIntPA</span> <span class="keyword">::</span> <span class="variable">PArray</span> <span class="variable">Int</span> <span class="keyword">-&gt;</span> <span class="variable">PArray</span> <span class="variable">Int</span> <span class="keyword">-&gt;</span> <span class="variable">PArray</span> <span class="paren1">(<span class="code"><span class="variable">Int,</span> <span class="variable">Int</span></span>)</span>
+<span class="function">myZipIntPA</span> as bs <span class="keyword">=</span> toPArrayP <span class="paren1">(<span class="code">myZipIntP <span class="paren2">(<span class="code">fromPArrayP as</span>)</span> <span class="paren2">(<span class="code">fromPArrayP bs</span>)</span></span>)</span>
+<span class="comment">{-# NOINLINE myZipIntPA #-}</span></span></code></pre>
+
+<p>And a wrapper which imports above module:</p>
+
+<pre><code><span class="code"><span class="comment">-- Wrapper.hs</span>
+<span class="keyword">module</span> <span class="variable">Wrapper</span> <span class="keyword">where</span>
+
+<span class="keyword">import</span> <span class="variable">Data</span><span class="atom">.</span><span class="variable">Array</span><span class="atom">.</span><span class="variable">Parallel</span>
+<span class="keyword">import</span> <span class="variable">Data</span><span class="atom">.</span><span class="variable">Array</span><span class="atom">.</span><span class="variable">Parallel</span><span class="atom">.</span><span class="variable">PArray</span> <span class="paren1">(<span class="code">fromList</span>)</span>
+
+<span class="keyword">import</span> <span class="variable">VectoriseMe</span>
+
+<span class="function">main</span> <span class="keyword">::</span> <span class="variable">IO</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="function">main</span> <span class="keyword">=</span> <span class="keyword">do</span>
+&nbsp; putStrLn <span class="atom">$</span> concat <span class="paren1">[<span class="code"><span class="string">"myZip_test:"</span>, <span class="string">"</span><span class="string">\n</span><span class="string">  "</span>, show myZip_test</span>]</span>
+&nbsp; putStrLn <span class="atom">$</span> concat <span class="paren1">[<span class="code"><span class="string">"myZipInt_test:"</span>, <span class="string">"</span><span class="string">\n</span><span class="string">  "</span>, show myZipInt_test</span>]</span>
+
+<span class="function">pa1,</span> pa2 <span class="keyword">::</span> <span class="variable">PArray</span> <span class="variable">Int</span>
+<span class="function">pa1</span> <span class="keyword">=</span> fromList <span class="paren1">[<span class="code">1,2,3</span>]</span>
+<span class="function">pa2</span> <span class="keyword">=</span> fromList <span class="paren1">[<span class="code">4,5,6</span>]</span>
+
+<span class="function">myZip_test</span> <span class="keyword">::</span> <span class="variable">PArray</span> <span class="paren1">(<span class="code"><span class="variable">Int,</span> <span class="variable">Int</span></span>)</span>
+<span class="function">myZip_test</span> <span class="keyword">=</span> myZipPA pa1 pa2
+
+<span class="function">myZipInt_test</span> <span class="keyword">::</span> <span class="variable">PArray</span> <span class="paren1">(<span class="code"><span class="variable">Int,</span> <span class="variable">Int</span></span>)</span>
+<span class="function">myZipInt_test</span> <span class="keyword">=</span> myZipIntPA pa1 pa2</span></code></pre>
+
+<p>Loading Wrapper.hs in ghci and invoking the main function:</p>
+
+<pre><code>| $ ghci -fdph-par -fobject-code -fforce-recomp Wrapper.hs
+| GHCi, version 7.2.2: http://www.haskell.org/ghc/  :? for help
+| Loading package ghc-prim ... linking ... done.
+| Loading package integer-gmp ... linking ... done.
+| Loading package base ... linking ... done.
+| Loading package array-0.3.0.3 ... linking ... done.
+| Loading package old-locale-1.0.0.3 ... linking ... done.
+| Loading package time-1.2.0.5 ... linking ... done.
+| Loading package random-1.0.1.1 ... linking ... done.
+| Loading package primitive-0.3.1 ... linking ... done.
+| Loading package vector-0.7.1 ... linking ... done.
+| Loading package dph-base-0.5.1.1 ... linking ... done.
+| Loading package dph-prim-interface-0.5.1.1 ... linking ... done.
+| Loading package dph-prim-seq-0.5.1.1 ... linking ... done.
+| Loading package old-time-1.0.0.7 ... linking ... done.
+| Loading package dph-prim-par-0.5.1.1 ... linking ... done.
+| Loading package containers-0.4.1.0 ... linking ... done.
+| Loading package filepath-1.2.0.1 ... linking ... done.
+| Loading package unix-2.5.0.0 ... linking ... done.
+| Loading package directory-1.1.0.1 ... linking ... done.
+| Loading package pretty-1.1.0.0 ... linking ... done.
+| Loading package process-1.1.0.0 ... linking ... done.
+| Loading package Cabal-1.12.0 ... linking ... done.
+| Loading package bytestring-0.9.2.0 ... linking ... done.
+| Loading package binary-0.5.0.2 ... linking ... done.
+| Loading package bin-package-db-0.0.0.0 ... linking ... done.
+| Loading package hoopl-3.8.7.1 ... linking ... done.
+| Loading package hpc-0.5.1.0 ... linking ... done.
+| Loading package template-haskell ... linking ... done.
+| Loading package ghc-7.2.2 ... linking ... done.
+| Loading package dph-par ... linking ... done.
+| Loading package ffi-1.0 ... linking ... done.
+| [1 of 2] Compiling VectoriseMe      ( VectoriseMe.hs, VectoriseMe.o )
+| [2 of 2] Compiling Wrapper          ( Wrapper.hs, Wrapper.o )
+| Ok, modules loaded: Wrapper, VectoriseMe.
+| ghci&gt; main
+| myZip_test:
+|   fromList&lt;PArray&gt; []
+| myZipInt_test:
+|   fromList&lt;PArray&gt; [(1,4),(2,5),(3,6)]
+</code></pre>
+
+<p>We see that <code>myZip_test</code> is showing empty list, and <code>myZipInt_test</code> is
+showing the zipped contents.</p>
+ </div> <div class="post-tags"> TAGGED: <a href="/tag/haskell.html">haskell</a>, <a href="/tag/dph.html">dph</a>, <a href="/tag/ghc.html">ghc</a>, <a href="/tag/ghci.html">ghci</a> </div> <div class="prev-post-link"> Prev: <a href="/posts/Extracting-argument-names.html">Extracting argument names</a> </div> <div class="next-post-link"> Next: <a href="/posts/Serialization-in-a-hurry.html">Serialization in a hurry</a> </div> </div> <footer> <section class="tags"> <h3>Tags</h3> <a href="/tag/algorithm.html">algorithm</a> • <a href="/tag/arc.html">arc</a> • <a href="/tag/arrow.html">arrow</a> • <a href="/tag/cabal.html">cabal</a> • <a href="/tag/ci.html">ci</a> • <a href="/tag/coleslaw.html">coleslaw</a> • <a href="/tag/commonlisp.html">commonlisp</a> • <a href="/tag/continuation.html">continuation</a> • <a href="/tag/datastructure.html">datastructure</a> • <a href="/tag/delimited.html">delimited</a> • <a href="/tag/dph.html">dph</a> • <a href="/tag/dsl.html">dsl</a> • <a href="/tag/emacs.html">emacs</a> • <a href="/tag/french.html">french</a> • <a href="/tag/functionaldependency.html">functionaldependency</a> • <a href="/tag/generic.html">generic</a> • <a href="/tag/ghc.html">ghc</a> • <a href="/tag/ghci.html">ghci</a> • <a href="/tag/git.html">git</a> • <a href="/tag/hakyll.html">hakyll</a> • <a href="/tag/haskell.html">haskell</a> • <a href="/tag/heroku.html">heroku</a> • <a href="/tag/image.html">image</a> • <a href="/tag/linux.html">linux</a> • <a href="/tag/lisp.html">lisp</a> • <a href="/tag/monad.html">monad</a> • <a href="/tag/package.html">package</a> • <a href="/tag/pdf.html">pdf</a> • <a href="/tag/performance.html">performance</a> • <a href="/tag/ps.html">ps</a> • <a href="/tag/repa.html">repa</a> • <a href="/tag/sound.html">sound</a> • <a href="/tag/supercollider.html">supercollider</a> • <a href="/tag/templatehaskell.html">templatehaskell</a> • <a href="/tag/tips.html">tips</a> • <a href="/tag/travis.html">travis</a> • <a href="/tag/tree.html">tree</a> • <a href="/tag/typefamily.html">typefamily</a> • <a href="/tag/utf-8.html">utf-8</a> • <a href="/tag/web.html">web</a> </section> Copyright © 2011-2017 8c6794b6; Unless otherwise noted, site contents licensed under <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"> CC-by-SA</a>. </footer> </body> </html>

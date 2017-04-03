@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=defice-width, initial-scale=1"> <title>8c6794b6.github.io</title> <link href="/css/style.css" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=Noto+Serif" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=PT+Serif" rel="stylesheet" type="text/css" /> <link rel="icon" type="image/png" href="/static/favicon.png"/>  </head> <body> <header> <h1><a href="/index.html">8c6794b6.github.io</a></h1> <nav> <a href="/index.html">HOME</a> • <a href="/about.html">ABOUT</a> • <a href="/archive.html">ARCHIVE</a> • <a href="/rss.xml">RSS</a> </nav> </header> <div class="contents"> <div class="post-title"> <h2>Bytestring and unicode chars from U+0080 to U+00FF</h2> <em class="post-date">2011-11-02</em> </div> <div class="post"> <p>While I was viewing html files, got an error:</p>
+
+<pre><code>| A web handler threw an exception. Details:
+| Cannot decode byte '\xa0': Data.Text.Encoding.Fusion.streamUtf8: Invalid UTF-8 stream
+</code></pre>
+
+<p>The html file was served by <a href="http://www.snapframework.com" >snap</a>.
+Somewhere inside in it's data transfer, something wrong is happening
+with utf8 decoding with function in
+<a href="http://http://hackage.haskell.org/packages/archive/text/latest/doc/html/Data-Text.html" >Data.Text</a>.
+The byte failed to decode: <code>'\xa0'</code>, was <a href="http://www.fileformat.info/info/unicode/char/a0/index.htm" >no-break
+space</a>.</p>
+
+<p>No-break space in UTF-8 is <code>0xc2 0xa0</code>, expressed with 2 bytes. When
+<code>decodeUtf8</code> convert <code>ByteString</code>, it is expecting <code>0xc2</code> prefix to be
+passed together, but when above error occured, only the latter <code>0xa0</code>
+has passed. Later I realised that all characters in between unicode code
+point from U+0080 to U+00FF will raise similar exception, since those
+non-ascii characters need explicit <code>0xc2</code> or <code>0xc3</code> prefix.</p>
+
+<p>How can we get rid of this exception?</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">module</span> <span class="variable">Main</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Data</span><span class="atom">.</span><span class="variable">Word</span> <span class="paren1">(<span class="code"><span class="variable">Word8</span></span>)</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> qualified <span class="variable">Data</span><span class="atom">.</span><span class="variable">ByteString</span> as <span class="variable">B</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> qualified <span class="variable">Data</span><span class="atom">.</span><span class="variable">ByteString</span><span class="atom">.</span><span class="variable">Char8</span> as <span class="variable">C8</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> qualified <span class="variable">Data</span><span class="atom">.</span><span class="variable">ByteString</span><span class="atom">.</span><span class="variable">UTF8</span> as <span class="variable">U8</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> qualified <span class="variable">Data</span><span class="atom">.</span><span class="variable">Text</span> as <span class="variable">T</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> qualified <span class="variable">Data</span><span class="atom">.</span><span class="variable">Text</span><span class="atom">.</span><span class="variable">IO</span> as <span class="variable">T</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> qualified <span class="variable">Data</span><span class="atom">.</span><span class="variable">Text</span><span class="atom">.</span><span class="variable">Encoding</span> as <span class="variable">E</span></span></code></pre>
+
+<p>Suppose that we have latin1 string:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> latin1s <span class="keyword">::</span> <span class="variable">String</span>
+<span class="atom">&gt;</span> latin1s <span class="keyword">=</span> <span class="string">"français"</span></span></code></pre>
+
+<p>Applying <code>decodeUtf8</code> to latin1 chars will raise exception, as shown in
+top of this writing.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> printNG <span class="keyword">::</span> <span class="variable">String</span> <span class="keyword">-&gt;</span> <span class="variable">IO</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span> printNG ss <span class="keyword">=</span> <span class="variable">T</span><span class="atom">.</span>putStrLn <span class="atom">$</span> <span class="variable">E</span><span class="atom">.</span>decodeUtf8 <span class="atom">$</span> <span class="variable">C8</span><span class="atom">.</span>pack ss</span></code></pre>
+
+<p>Results in:</p>
+
+<pre><code>| *Main&gt; ptintNG latin1s
+| &quot;*** Exception: Cannot decode byte '\x61': Data.Text.Encoding.decodeUtf8: Invalid UTF-8 stream
+</code></pre>
+
+<p>The problem in this case was that <code>ByteString</code> representation of <code>ç</code> is
+expressed with single byte, instead of 2 bytes.</p>
+
+<p>When the characters we matter are ascii and latin1 only, simple solution
+is to pad the prefix.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> padLatin1s <span class="keyword">::</span> <span class="variable">C8</span><span class="atom">.</span><span class="variable">ByteString</span> <span class="keyword">-&gt;</span> <span class="variable">T</span><span class="atom">.</span><span class="variable">Text</span>
+<span class="atom">&gt;</span> padLatin1s <span class="keyword">=</span> <span class="variable">E</span><span class="atom">.</span>decodeUtf8 <span class="atom">.</span> <span class="variable">C8</span><span class="atom">.</span>foldr f <span class="variable">C8</span><span class="atom">.</span>empty <span class="keyword">where</span>
+<span class="atom">&gt;</span>   f c a <span class="keyword">|</span> <span class="character">'</span><span class="character">\1</span><span class="character">28'</span> <span class="atom">&lt;=</span> c <span class="atom">&amp;&amp;</span> c <span class="atom">&lt;</span> <span class="character">'</span><span class="character">\1</span><span class="character">92'</span> <span class="keyword">=</span> <span class="variable">C8</span><span class="atom">.</span>cons <span class="character">'</span><span class="character">\1</span><span class="character">94'</span> <span class="atom">.</span> <span class="variable">C8</span><span class="atom">.</span>cons c <span class="atom">$</span> a
+<span class="atom">&gt;</span>         <span class="keyword">|</span> <span class="character">'</span><span class="character">\1</span><span class="character">92'</span> <span class="atom">&lt;=</span> c <span class="atom">&amp;&amp;</span> c <span class="atom">&lt;</span> <span class="character">'</span><span class="character">\2</span><span class="character">56'</span> <span class="keyword">=</span>
+<span class="atom">&gt;</span>           <span class="variable">C8</span><span class="atom">.</span>cons <span class="character">'</span><span class="character">\1</span><span class="character">95'</span> <span class="atom">.</span> <span class="variable">C8</span><span class="atom">.</span>cons <span class="paren1">(<span class="code">toEnum <span class="paren2">(<span class="code">fromEnum c <span class="atom">-</span> 0x40</span>)</span></span>)</span> <span class="atom">$</span> a
+<span class="atom">&gt;</span>         <span class="keyword">|</span> otherwise <span class="keyword">=</span> <span class="variable">C8</span><span class="atom">.</span>cons c a</span></code></pre>
+
+<p>Now we can decode bytestring data to Text data without exception.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> printPadded <span class="keyword">::</span> <span class="variable">String</span> <span class="keyword">-&gt;</span> <span class="variable">IO</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span> printPadded ss <span class="keyword">=</span> <span class="variable">T</span><span class="atom">.</span>putStrLn <span class="atom">$</span> padLatin1s <span class="atom">$</span> <span class="variable">C8</span><span class="atom">.</span>pack ss</span></code></pre>
+
+<p>Results in:</p>
+
+<pre><code>| *Main&gt; printPadded latin1s
+| français
+</code></pre>
+
+<p>Though above padding approach does not work when documents has mixed use
+of characters between U+0080 and U+00FF with non-ascii, non-latin1
+characters, since its always padded. Though it may useful when
+converting a limited set of character, which could expressed with
+sequence of hex numbers from <code>0x00</code> to <code>0xff</code>. Those inputs using hex
+numbers above <code>0xff</code> are not representable with <code>Data.ByteString</code>.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> zhongwen <span class="keyword">::</span> <span class="variable">String</span>
+<span class="atom">&gt;</span> zhongwen <span class="keyword">=</span> <span class="string">"中文"</span></span></code></pre>
+
+<p>Padding does not make sense:</p>
+
+<pre><code>| *Main&gt; printPadded zhongwen
+| -
+</code></pre>
+
+<p>Which function made the change? When we use <code>pack</code> from
+<code>Data.ByteString.Char8</code> to convert this String to ByteString, it results
+in:</p>
+
+<pre><code>| *Main&gt; C8.pack zhongwen
+| &quot;-\135&quot;
+</code></pre>
+
+<p>Which is not what we want in most cases.</p>
+
+<p>Using pack from <code>Data.ByteString.Char8</code> will truncate hex number used
+for the characters, we get a value which could be expressed in <code>Word8</code>
+only.</p>
+
+<p>Representing with ByteString is possible, however. It needs a longer,
+proper sequence of hex numbers.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> zhongwen' <span class="keyword">::</span> <span class="paren1">[<span class="code"><span class="variable">Word8</span></span>]</span>
+<span class="atom">&gt;</span> zhongwen' <span class="keyword">=</span> <span class="paren1">[<span class="code">0xe4, 0xb8, 0xad, 0xe6, 0x96, 0x87</span>]</span></span></code></pre>
+
+<p>We use Data.ByteString.pack to convert list of hex numbers:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> printZhongwen <span class="keyword">::</span> <span class="variable">IO</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span> printZhongwen <span class="keyword">=</span> <span class="variable">T</span><span class="atom">.</span>putStrLn <span class="atom">$</span> <span class="variable">E</span><span class="atom">.</span>decodeUtf8 <span class="atom">$</span> <span class="variable">B</span><span class="atom">.</span>pack zhongwen'</span></code></pre>
+
+<p>Shows:</p>
+
+<pre><code>| *Main&gt; printZhongwen
+| 中文
+</code></pre>
+
+<p>So what we want here is a utf-8 aware function that converts list of
+<code>Char</code> to <code>ByteString</code>. A package
+<a href="http://hackage.haskell.org/package/utf8-string-0.3" >utf8-string</a> has a
+converting function from <code>String</code> to <code>ByteString</code>.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> printUTF8 <span class="keyword">::</span> <span class="variable">String</span> <span class="keyword">-&gt;</span> <span class="variable">IO</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span> printUTF8 ss <span class="keyword">=</span> <span class="variable">T</span><span class="atom">.</span>putStrLn <span class="atom">$</span> <span class="variable">E</span><span class="atom">.</span>decodeUtf8 <span class="atom">$</span> <span class="variable">U8</span><span class="atom">.</span>fromString ss</span></code></pre>
+
+<p>Results:</p>
+
+<pre><code>| *Main&gt; printUTF8 latin1s
+| français
+| *Main&gt; printUTF8 zhongwen
+| 中文
+</code></pre>
+
+<p>There should be a situation with more complicated character encoding
+issues. To get more support of unicode, using
+<a href="http://hackage.haskell.org/package/text-icu" >text-icu</a> should be
+better, as suggested in haddock comment of
+<a href="http://hackage.haskell.org/package/text" >text</a>.</p>
+ </div> <div class="post-tags"> TAGGED: <a href="/tag/haskell.html">haskell</a>, <a href="/tag/utf-8.html">utf-8</a>, <a href="/tag/web.html">web</a> </div> <div class="prev-post-link"> Prev: <a href="/posts/Adhoc-update-of-ugen-parameters.html">Adhoc update of ugen parameters</a> </div> <div class="next-post-link"> Next: <a href="/posts/A-situation-when-type-families-does-not-work-but-functional-dependencies-does.html">A situation when type families does not work, but functional dependencies does</a> </div> </div> <footer> <section class="tags"> <h3>Tags</h3> <a href="/tag/algorithm.html">algorithm</a> • <a href="/tag/arc.html">arc</a> • <a href="/tag/arrow.html">arrow</a> • <a href="/tag/cabal.html">cabal</a> • <a href="/tag/ci.html">ci</a> • <a href="/tag/coleslaw.html">coleslaw</a> • <a href="/tag/commonlisp.html">commonlisp</a> • <a href="/tag/continuation.html">continuation</a> • <a href="/tag/datastructure.html">datastructure</a> • <a href="/tag/delimited.html">delimited</a> • <a href="/tag/dph.html">dph</a> • <a href="/tag/dsl.html">dsl</a> • <a href="/tag/emacs.html">emacs</a> • <a href="/tag/french.html">french</a> • <a href="/tag/functionaldependency.html">functionaldependency</a> • <a href="/tag/generic.html">generic</a> • <a href="/tag/ghc.html">ghc</a> • <a href="/tag/ghci.html">ghci</a> • <a href="/tag/git.html">git</a> • <a href="/tag/hakyll.html">hakyll</a> • <a href="/tag/haskell.html">haskell</a> • <a href="/tag/heroku.html">heroku</a> • <a href="/tag/image.html">image</a> • <a href="/tag/linux.html">linux</a> • <a href="/tag/lisp.html">lisp</a> • <a href="/tag/monad.html">monad</a> • <a href="/tag/package.html">package</a> • <a href="/tag/pdf.html">pdf</a> • <a href="/tag/performance.html">performance</a> • <a href="/tag/ps.html">ps</a> • <a href="/tag/repa.html">repa</a> • <a href="/tag/sound.html">sound</a> • <a href="/tag/supercollider.html">supercollider</a> • <a href="/tag/templatehaskell.html">templatehaskell</a> • <a href="/tag/tips.html">tips</a> • <a href="/tag/travis.html">travis</a> • <a href="/tag/tree.html">tree</a> • <a href="/tag/typefamily.html">typefamily</a> • <a href="/tag/utf-8.html">utf-8</a> • <a href="/tag/web.html">web</a> </section> Copyright © 2011-2017 8c6794b6; Unless otherwise noted, site contents licensed under <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"> CC-by-SA</a>. </footer> </body> </html>

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=defice-width, initial-scale=1"> <title>8c6794b6.github.io</title> <link href="/css/style.css" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=Noto+Serif" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=PT+Serif" rel="stylesheet" type="text/css" /> <link rel="icon" type="image/png" href="/static/favicon.png"/>  </head> <body> <header> <h1><a href="/index.html">8c6794b6.github.io</a></h1> <nav> <a href="/index.html">HOME</a> • <a href="/about.html">ABOUT</a> • <a href="/archive.html">ARCHIVE</a> • <a href="/rss.xml">RSS</a> </nav> </header> <div class="contents"> <div class="post-title"> <h2>A situation when type families does not work, but functional dependencies does</h2> <em class="post-date">2011-11-07</em> </div> <div class="post"> <p>Simon Peyton Jones has posted <a href="http://www.mail-archive.com/haskell-prime@haskell.org/msg03400.html" >a
+summary</a>
+about relationship between type families and functional dependencies. As
+well as similarities, there exist difference between functional
+dependencies and type families.</p>
+
+<p>I met a code that work with functional dependencies but not with type
+families. As above mailing list thread points out, the root of
+difference comes from how overlapping instance are treated.</p>
+
+<p>The situation I met was combination of overlapping instance with higher
+rank type, and use of open recursion. Sound bit mixed up. To make myself
+clear about this, writing it down in detail.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="comment">{-# LANGUAGE TypeFamilies #-}</span>
+<span class="atom">&gt;</span> <span class="comment">{-# LANGUAGE FunctionalDependencies, MultiParamTypeClasses #-}</span>
+<span class="atom">&gt;</span> <span class="comment">{-# LANGUAGE FlexibleInstances, UndecidableInstances #-}</span>
+<span class="atom">&gt;</span> <span class="comment">{-# LANGUAGE RankNTypes, GADTs #-}</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">module</span> <span class="variable">ToFDOrTF</span> <span class="keyword">where</span></span></code></pre>
+
+<p>The code I was working was with heterogeneous collection. All of the
+codes writen here are heavily inspired from <a href="http://okmij.org/ftp/tagless-final/course/" >typed tagless interpreter
+by Oleg Kiselyov</a>. Indeed,
+this situation came to me when I was doing the exercise written in one
+of the code shown in tagless-final courses.</p>
+
+<p>Preparing data type to hold term</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">data</span> <span class="variable">Term</span> r h <span class="keyword">where</span>
+<span class="atom">&gt;</span>   <span class="variable">Term</span> <span class="keyword">::</span> <span class="variable">Ty</span> t <span class="keyword">-&gt;</span> r h t <span class="keyword">-&gt;</span> <span class="variable">Term</span> r h
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">instance</span> <span class="variable">Show</span> <span class="paren1">(<span class="code"><span class="variable">Term</span> r h</span>)</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>   show <span class="paren1">(<span class="code"><span class="variable">Term</span> typ _</span>)</span> <span class="keyword">=</span> <span class="string">"Term "</span> <span class="atom">++</span> show typ</span></code></pre>
+
+<p>And type representations used in our code. This type representation is
+simplified version written in GADT, more resembles to <a href="http://www.comlab.ox.ac.uk/projects/gip/school/tc.hs" >this
+version</a>.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">data</span> <span class="variable">Ty</span> t <span class="keyword">where</span>
+<span class="atom">&gt;</span>   <span class="variable">TInt</span>  <span class="keyword">::</span> <span class="variable">Ty</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span>   <span class="variable">TBool</span> <span class="keyword">::</span> <span class="variable">Ty</span> <span class="variable">Bool</span>
+<span class="atom">&gt;</span>   <span class="variable">TChar</span> <span class="keyword">::</span> <span class="variable">Ty</span> <span class="variable">Char</span>
+<span class="atom">&gt;</span>   <span class="variable">TList</span> <span class="keyword">::</span> <span class="variable">Ty</span> t <span class="keyword">-&gt;</span> <span class="variable">Ty</span> <span class="paren1">[<span class="code">t</span>]</span>
+<span class="atom">&gt;</span>   <span class="variable">TArr</span>  <span class="keyword">::</span> <span class="variable">Ty</span> a <span class="keyword">-&gt;</span> <span class="variable">Ty</span> b <span class="keyword">-&gt;</span> <span class="variable">Ty</span> <span class="paren1">(<span class="code">a<span class="keyword">-&gt;</span>b</span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">instance</span> <span class="variable">Show</span> <span class="paren1">(<span class="code"><span class="variable">Ty</span> t</span>)</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>   show t <span class="keyword">=</span> <span class="keyword">case</span> t <span class="keyword">of</span>
+<span class="atom">&gt;</span>     <span class="variable">TInt</span>     <span class="keyword">-&gt;</span> <span class="string">"Int"</span>
+<span class="atom">&gt;</span>     <span class="variable">TBool</span>    <span class="keyword">-&gt;</span> <span class="string">"Bool"</span>
+<span class="atom">&gt;</span>     <span class="variable">TChar</span>    <span class="keyword">-&gt;</span> <span class="string">"Char"</span>
+<span class="atom">&gt;</span>     <span class="variable">TList</span> ty <span class="keyword">-&gt;</span> <span class="string">"["</span> <span class="atom">++</span> show ty <span class="atom">++</span> <span class="string">"]"</span>
+<span class="atom">&gt;</span>     <span class="variable">TArr</span> a b <span class="keyword">-&gt;</span> show a <span class="atom">++</span> <span class="string">" -&gt; "</span> <span class="atom">++</span> show b</span></code></pre>
+
+<p>Suppose that, we want to use below expression in DSL.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">class</span> <span class="variable">Sym</span> e <span class="keyword">where</span>
+<span class="atom">&gt;</span>   lam  <span class="keyword">::</span> <span class="variable">Ty</span> a <span class="keyword">-&gt;</span> e <span class="paren1">(<span class="code">a,h</span>)</span> b <span class="keyword">-&gt;</span> e h <span class="paren1">(<span class="code">a<span class="keyword">-&gt;</span>b</span>)</span>
+<span class="atom">&gt;</span>   app  <span class="keyword">::</span> e h <span class="paren1">(<span class="code">a<span class="keyword">-&gt;</span>b</span>)</span> <span class="keyword">-&gt;</span> e h a <span class="keyword">-&gt;</span> e h b
+<span class="atom">&gt;</span>   z    <span class="keyword">::</span> e <span class="paren1">(<span class="code">a,h</span>)</span> a
+<span class="atom">&gt;</span>   s    <span class="keyword">::</span> e h a <span class="keyword">-&gt;</span> e <span class="paren1">(<span class="code">any,h</span>)</span> a
+<span class="atom">&gt;</span>   int  <span class="keyword">::</span> <span class="variable">Int</span> <span class="keyword">-&gt;</span> e h <span class="variable">Int</span>
+<span class="atom">&gt;</span>   add  <span class="keyword">::</span> e h <span class="variable">Int</span> <span class="keyword">-&gt;</span> e h <span class="variable">Int</span> <span class="keyword">-&gt;</span> e h <span class="variable">Int</span>
+<span class="atom">&gt;</span>   char <span class="keyword">::</span> <span class="variable">Char</span> <span class="keyword">-&gt;</span> e h <span class="variable">Char</span>
+<span class="atom">&gt;</span>   bool <span class="keyword">::</span> <span class="variable">Bool</span> <span class="keyword">-&gt;</span> e h <span class="variable">Bool</span></span></code></pre>
+
+<p>A sample newtype to implement string representation of <code>Sym</code>.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">newtype</span> <span class="variable">S</span> r h <span class="keyword">=</span> <span class="variable">S</span> <span class="paren1">{<span class="code">unS <span class="keyword">::</span> <span class="variable">Int</span> <span class="keyword">-&gt;</span> <span class="variable">String</span></span>}</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">instance</span> <span class="variable">Sym</span> <span class="variable">S</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>   lam t e   <span class="keyword">=</span> <span class="variable">S</span> <span class="paren1">(<span class="code"><span class="keyword">\</span>h <span class="keyword">-&gt;</span>
+<span class="atom">&gt;</span>     <span class="string">"(</span><span class="string">\\</span><span class="string">(x"</span> <span class="atom">++</span> show h <span class="atom">++</span> <span class="string">"::"</span> <span class="atom">++</span> show t <span class="atom">++</span> <span class="string">") -&gt; "</span> <span class="atom">++</span> unS e <span class="paren2">(<span class="code">h<span class="atom">+</span>1</span>)</span> <span class="atom">++</span> <span class="string">")"</span></span>)</span>
+<span class="atom">&gt;</span>   app e1 e2 <span class="keyword">=</span> <span class="variable">S</span> <span class="paren1">(<span class="code"><span class="keyword">\</span>h <span class="keyword">-&gt;</span> <span class="string">"("</span> <span class="atom">++</span> unS e1 h <span class="atom">++</span> <span class="string">" "</span> <span class="atom">++</span> unS e2 h <span class="atom">++</span> <span class="string">")"</span></span>)</span>
+<span class="atom">&gt;</span>   z         <span class="keyword">=</span> <span class="variable">S</span> <span class="paren1">(<span class="code"><span class="keyword">\</span>h <span class="keyword">-&gt;</span> <span class="string">"x"</span> <span class="atom">++</span> show <span class="paren2">(<span class="code">h<span class="atom">-</span>1</span>)</span></span>)</span>
+<span class="atom">&gt;</span>   s v       <span class="keyword">=</span> <span class="variable">S</span> <span class="paren1">(<span class="code"><span class="keyword">\</span>h <span class="keyword">-&gt;</span> unS v <span class="paren2">(<span class="code">h<span class="atom">-</span>1</span>)</span></span>)</span>
+<span class="atom">&gt;</span>   int x     <span class="keyword">=</span> <span class="variable">S</span> <span class="paren1">(<span class="code"><span class="keyword">\</span>_ <span class="keyword">-&gt;</span> show x</span>)</span>
+<span class="atom">&gt;</span>   add e1 e2 <span class="keyword">=</span> <span class="variable">S</span> <span class="paren1">(<span class="code"><span class="keyword">\</span>h <span class="keyword">-&gt;</span> unS e1 h <span class="atom">++</span> <span class="string">" + "</span> <span class="atom">++</span> unS e2 h</span>)</span>
+<span class="atom">&gt;</span>   char x    <span class="keyword">=</span> <span class="variable">S</span> <span class="paren1">(<span class="code"><span class="keyword">\</span>_ <span class="keyword">-&gt;</span> <span class="paren2">[<span class="code">x</span>]</span></span>)</span>
+<span class="atom">&gt;</span>   bool x    <span class="keyword">=</span> <span class="variable">S</span> <span class="paren1">(<span class="code"><span class="keyword">\</span>_ <span class="keyword">-&gt;</span> show x</span>)</span></span></code></pre>
+
+<p>Sample expression:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> expr1 <span class="keyword">::</span> <span class="variable">Sym</span> r <span class="atom">=&gt;</span> r h <span class="variable">Int</span>
+<span class="atom">&gt;</span> expr1 <span class="keyword">=</span>
+<span class="atom">&gt;</span>   lam <span class="variable">TInt</span> <span class="paren1">(<span class="code">lam <span class="variable">TInt</span> <span class="paren2">(<span class="code">z <span class="atom">`add`</span> s z <span class="atom">`add`</span> int 3</span>)</span></span>)</span> <span class="atom">`app`</span> <span class="paren1">(<span class="code">int 1</span>)</span> <span class="atom">`app`</span> <span class="paren1">(<span class="code">int 2</span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> test_expr1 <span class="keyword">::</span> <span class="variable">IO</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span> test_expr1 <span class="keyword">=</span> putStrLn <span class="atom">$</span> unS expr1 0</span></code></pre>
+
+<p>Viewing the result:</p>
+
+<pre><code>| ghci&gt; test_expr1
+| (((\(x0::Int) -&gt; (\(x1::Int) -&gt; x1 + x0 + 3)) 1) 2)
+</code></pre>
+
+<p>Now, suppose that we want to lookup a variable used in <code>lam</code>. What we
+want to do here is to lookup a value from heterogeneous collection.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">data</span> <span class="variable">Var</span> t <span class="keyword">=</span> <span class="variable">Var</span> <span class="paren1">(<span class="code"><span class="variable">Ty</span> t</span>)</span> <span class="keyword">deriving</span> <span class="variable">Show</span></span></code></pre>
+
+<p>Below is a type class for looking up variable from heterogeneous
+collection, using functional dependencies.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">class</span> <span class="variable">EnvFD</span> g h <span class="keyword">|</span> g <span class="keyword">-&gt;</span> h <span class="keyword">where</span>
+<span class="atom">&gt;</span>   findvarFD <span class="keyword">::</span> <span class="variable">Sym</span> r <span class="atom">=&gt;</span> <span class="variable">Int</span> <span class="keyword">-&gt;</span> g <span class="keyword">-&gt;</span> <span class="variable">Either</span> <span class="variable">String</span> <span class="paren1">(<span class="code"><span class="variable">Term</span> r h</span>)</span></span></code></pre>
+
+<p>Intention here is to go through the heterogeneous collection with
+specifying index, with decrementing the index after each lookup. When
+given index reaches to 0, we finish the traversal.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">instance</span> <span class="variable">EnvFD</span> <span class="paren1">(<span class="code"></span>)</span> <span class="paren1">(<span class="code"></span>)</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>   findvarFD _ _ <span class="keyword">=</span> <span class="variable">Left</span> <span class="string">"Index out of range"</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">instance</span> <span class="variable">EnvFD</span> g h <span class="atom">=&gt;</span> <span class="variable">EnvFD</span> <span class="paren1">(<span class="code"><span class="variable">Var</span> t, g</span>)</span> <span class="paren1">(<span class="code">t, h</span>)</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>   findvarFD i <span class="paren1">(<span class="code"><span class="variable">Var</span> typ,g</span>)</span>
+<span class="atom">&gt;</span>     <span class="keyword">|</span> i <span class="atom">==</span> 0    <span class="keyword">=</span> return <span class="atom">$</span> <span class="variable">Term</span> typ z
+<span class="atom">&gt;</span>     <span class="keyword">|</span> otherwise <span class="keyword">=</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>         <span class="variable">Term</span> typ v <span class="keyword">&lt;-</span> findvarFD <span class="paren1">(<span class="code">pred i</span>)</span> g
+<span class="atom">&gt;</span>         return <span class="atom">$</span> <span class="variable">Term</span> typ <span class="paren1">(<span class="code">s v</span>)</span></span></code></pre>
+
+<p>Sample variable environment holding Char, Int, and Bool representations.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> env1 <span class="keyword">::</span> <span class="paren1">(<span class="code"><span class="variable">Var</span> <span class="variable">Char,</span> <span class="paren2">(<span class="code"><span class="variable">Var</span> <span class="variable">Int,</span> <span class="paren3">(<span class="code"><span class="variable">Var</span> <span class="variable">Bool,</span> <span class="paren4">(<span class="code"></span>)</span></span>)</span></span>)</span></span>)</span>
+<span class="atom">&gt;</span> env1 <span class="keyword">=</span>  <span class="paren1">(<span class="code"><span class="variable">Var</span> <span class="variable">TChar,</span> <span class="paren2">(<span class="code"><span class="variable">Var</span> <span class="variable">TInt,</span> <span class="paren3">(<span class="code"><span class="variable">Var</span> <span class="variable">TBool,</span> <span class="paren4">(<span class="code"></span>)</span></span>)</span></span>)</span></span>)</span></span></code></pre>
+
+<p>Function to find variable, with functional dependencies. The result type
+is fixed to <code>(Term S h)</code>.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> findvarFDS <span class="keyword">::</span> <span class="variable">EnvFD</span> g h <span class="atom">=&gt;</span> <span class="variable">Int</span> <span class="keyword">-&gt;</span> g <span class="keyword">-&gt;</span> <span class="variable">Either</span> <span class="variable">String</span> <span class="paren1">(<span class="code"><span class="variable">Term</span> <span class="variable">S</span> h</span>)</span>
+<span class="atom">&gt;</span> findvarFDS <span class="keyword">=</span> findvarFD
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> test_findvarFDS <span class="keyword">::</span> <span class="variable">IO</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span> test_findvarFDS <span class="keyword">=</span> mapM_ <span class="paren1">(<span class="code"><span class="keyword">\</span>idx <span class="keyword">-&gt;</span> print <span class="atom">$</span> findvarFDS idx env1</span>)</span> <span class="paren1">[<span class="code">0<span class="keyword">..</span>3</span>]</span></span></code></pre>
+
+<p>Testing above in ghci:</p>
+
+<pre><code>| ghci&gt; test_findvarFDS
+| Right Term Char
+| Right Term Int
+| Right Term Bool
+| Left &quot;Index out of range&quot;
+</code></pre>
+
+<p>Working, as expected.</p>
+
+<p>Lets do this in type families too.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">class</span> <span class="variable">EnvTF</span> g <span class="keyword">where</span>
+<span class="atom">&gt;</span>   <span class="keyword">type</span> <span class="variable">Value</span> g <span class="keyword">::</span> <span class="atom">*</span>
+<span class="atom">&gt;</span>   findvarTF <span class="keyword">::</span> <span class="paren1">(<span class="code"><span class="variable">Sym</span> r, h <span class="keyword">~</span> <span class="variable">Value</span> g</span>)</span> <span class="atom">=&gt;</span> <span class="variable">Int</span> <span class="keyword">-&gt;</span> g <span class="keyword">-&gt;</span> <span class="variable">Either</span> <span class="variable">String</span> <span class="paren1">(<span class="code"><span class="variable">Term</span> r h</span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">instance</span> <span class="variable">EnvTF</span> <span class="paren1">(<span class="code"></span>)</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>    <span class="keyword">type</span> <span class="variable">Value</span> <span class="paren1">(<span class="code"></span>)</span> <span class="keyword">=</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span>    findvarTF _ _ <span class="keyword">=</span> <span class="variable">Left</span> <span class="string">"Index out of range"</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">instance</span> <span class="paren1">(<span class="code"><span class="variable">EnvTF</span> g</span>)</span> <span class="atom">=&gt;</span> <span class="variable">EnvTF</span> <span class="paren1">(<span class="code"><span class="variable">Var</span> t, g</span>)</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>    <span class="keyword">type</span> <span class="variable">Value</span> <span class="paren1">(<span class="code"><span class="variable">Var</span> t, g</span>)</span> <span class="keyword">=</span> <span class="paren1">(<span class="code">t, <span class="variable">Value</span> g</span>)</span>
+<span class="atom">&gt;</span>    findvarTF i <span class="paren1">(<span class="code"><span class="variable">Var</span> typ, g</span>)</span>
+<span class="atom">&gt;</span>       <span class="keyword">|</span> i <span class="atom">==</span> 0    <span class="keyword">=</span> return <span class="atom">$</span> <span class="variable">Term</span> typ z
+<span class="atom">&gt;</span>       <span class="keyword">|</span> otherwise <span class="keyword">=</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>           <span class="variable">Term</span> typ v <span class="keyword">&lt;-</span> findvarTF <span class="paren1">(<span class="code">pred i</span>)</span> g
+<span class="atom">&gt;</span>           return <span class="atom">$</span> <span class="variable">Term</span> typ <span class="paren1">(<span class="code">s v</span>)</span></span></code></pre>
+
+<p>Testing again:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> findvarTFS <span class="keyword">::</span> <span class="paren1">(<span class="code"><span class="variable">EnvTF</span> g, h <span class="keyword">~</span> <span class="variable">Value</span> g</span>)</span> <span class="atom">=&gt;</span> <span class="variable">Int</span> <span class="keyword">-&gt;</span> g <span class="keyword">-&gt;</span> <span class="variable">Either</span> <span class="variable">String</span> <span class="paren1">(<span class="code"><span class="variable">Term</span> <span class="variable">S</span> h</span>)</span>
+<span class="atom">&gt;</span> findvarTFS <span class="keyword">=</span> findvarTF
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> test_findvarTFS <span class="keyword">::</span> <span class="variable">IO</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span> test_findvarTFS <span class="keyword">=</span> mapM_ <span class="paren1">(<span class="code"><span class="keyword">\</span>idx <span class="keyword">-&gt;</span> print <span class="atom">$</span> findvarTFS idx env1</span>)</span> <span class="paren1">[<span class="code">0<span class="keyword">..</span>3</span>]</span></span></code></pre>
+
+<p>Viewing it with ghci:</p>
+
+<pre><code>| ghci&gt; test_findvarTFS
+| Right Term Char
+| Right Term Int
+| Right Term Bool
+| Left &quot;Index out of range&quot;
+</code></pre>
+
+<p>Working again, as expected.</p>
+
+<p>As pointed out in the mailing list, recursive definition for type
+families works, as shown in <code>Value</code> definition of <code>EnvTF</code> instance
+definition.</p>
+
+<p>So far, those things working in functional dependencies are also working
+in type families. From here, introducing higher rank type. Now what we
+want to do is to deserialize <code>Tree</code> data.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">data</span> <span class="variable">Tree</span> <span class="keyword">=</span> <span class="variable">Node</span> <span class="variable">String</span> <span class="paren1">[<span class="code"><span class="variable">Tree</span></span>]</span> <span class="keyword">deriving</span> <span class="variable">Show</span></span></code></pre>
+
+<p>The type of deserialized result is an instance of <code>Sym</code>. The entire
+deserializer function is written in open recursion style. This make it
+easy to extend when pattern matching against new serialized expression.
+Not going through in detail here, better example could be found in <a href="http://okmij.org/ftp/tagless-final/course/SerializeExt.hs" >this
+code</a>. To get
+the feeling of deserializer function, showing arguments and type
+signature.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> deserializeFD' self t g <span class="keyword">=</span> undefined</span></code></pre>
+
+<p>The body of deserializer uses pattern matching, with checking its type.
+Its body contains all possible pattern matches, and possibly delegation
+to <code>self</code> function given as first argument. The actual code could be
+found in tagless deserializer link shown above. What concern here is its
+type signature.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> deserializeFD' <span class="keyword">::</span> forall r<span class="atom">.</span> <span class="variable">DsrlFD</span> r <span class="keyword">-&gt;</span> <span class="variable">DsrlFD</span> r</span></code></pre>
+
+<p>We need to tie the knot to use this deserializer. Since variable
+environment differs in each recursion, higher rank fixed point
+combinator is required.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">type</span> <span class="variable">DsrlFD</span> r <span class="keyword">=</span>
+<span class="atom">&gt;</span>   forall g h<span class="atom">.</span> <span class="paren1">(<span class="code"><span class="variable">Sym</span> r, <span class="variable">EnvFD</span> g h</span>)</span> <span class="atom">=&gt;</span> <span class="variable">Tree</span> <span class="keyword">-&gt;</span> g <span class="keyword">-&gt;</span> <span class="variable">Either</span> <span class="variable">String</span> <span class="paren1">(<span class="code"><span class="variable">Term</span> r h</span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> fixFD <span class="keyword">::</span> <span class="paren1">(<span class="code">forall r<span class="atom">.</span> <span class="variable">DsrlFD</span> r <span class="keyword">-&gt;</span> <span class="variable">DsrlFD</span> r</span>)</span> <span class="keyword">-&gt;</span> <span class="variable">DsrlFD</span> r
+<span class="atom">&gt;</span> fixFD f <span class="keyword">=</span> f <span class="paren1">(<span class="code">fixFD f</span>)</span></span></code></pre>
+
+<p>Now we can tie the knot and get the deserializer function.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> deserializeFD <span class="keyword">::</span> <span class="paren1">(<span class="code"><span class="variable">EnvFD</span> g h, <span class="variable">Sym</span> r</span>)</span> <span class="atom">=&gt;</span> <span class="variable">Tree</span> <span class="keyword">-&gt;</span> g <span class="keyword">-&gt;</span> <span class="variable">Either</span> <span class="variable">String</span> <span class="paren1">(<span class="code"><span class="variable">Term</span> r h</span>)</span>
+<span class="atom">&gt;</span> deserializeFD <span class="keyword">=</span> fixFD deserializeFD'</span></code></pre>
+
+<p>Lets do the same with TypeFamilies. Before writing the contents of
+deserializer function, let's check that we can tie the knot with higher
+rank fixed point combinator, since we already know that need this to
+support open recursion.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">type</span> <span class="variable">DsrlTF</span> r <span class="keyword">=</span>
+<span class="atom">&gt;</span>   forall g h<span class="atom">.</span> <span class="paren1">(<span class="code"><span class="variable">Sym</span> r, <span class="variable">EnvTF</span> g, h <span class="keyword">~</span> <span class="variable">Value</span> g</span>)</span>
+<span class="atom">&gt;</span>   <span class="atom">=&gt;</span> <span class="variable">Tree</span> <span class="keyword">-&gt;</span> g <span class="keyword">-&gt;</span> <span class="variable">Either</span> <span class="variable">String</span> <span class="paren1">(<span class="code"><span class="variable">Term</span> r h</span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> deserializeTF' <span class="keyword">::</span> forall r<span class="atom">.</span> <span class="variable">DsrlTF</span> r <span class="keyword">-&gt;</span> <span class="variable">DsrlTF</span> r
+<span class="atom">&gt;</span> deserializeTF' <span class="keyword">=</span> undefined
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> fixTF <span class="keyword">::</span> <span class="paren1">(<span class="code">forall r<span class="atom">.</span> <span class="variable">DsrlTF</span> r <span class="keyword">-&gt;</span> <span class="variable">DsrlTF</span> r</span>)</span> <span class="keyword">-&gt;</span> <span class="variable">DsrlTF</span> r
+<span class="atom">&gt;</span> fixTF f <span class="keyword">=</span> undefined
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> deserializeTF <span class="keyword">::</span>
+<span class="atom">&gt;</span>   <span class="paren1">(<span class="code"><span class="variable">EnvTF</span> g, h <span class="keyword">~</span> <span class="variable">Value</span> g</span>)</span> <span class="atom">=&gt;</span> <span class="variable">Tree</span> <span class="keyword">-&gt;</span> g <span class="keyword">-&gt;</span> <span class="variable">Either</span> <span class="variable">String</span> <span class="paren1">(<span class="code"><span class="variable">Term</span> r h</span>)</span>
+<span class="atom">&gt;</span> deserializeTF <span class="keyword">=</span> undefined</span></code></pre>
+
+<p>But, when we try to tie the knot, ghci shows an error:</p>
+
+<pre><code>| ghci&gt; :t fixTF deserializeTF'
+| &lt;interactive&gt;:1:7:
+|     Couldn't match expected type `forall g h.
+|                                   (Sym r1, EnvTF g, h ~ Value g) =&gt;
+|                                   Tree -&gt; g -&gt; Either String (Term r1 h)'
+|                 with actual type `forall g h.
+|                                   (Sym r0, EnvTF g, h ~ Value g) =&gt;
+|                                   Tree -&gt; g -&gt; Either String (Term r0 h)'
+|     Expected type: DsrlTF r1 -&gt; Tree -&gt; g -&gt; Either String (Term r1 h)
+|       Actual type: DsrlTF r0 -&gt; Tree -&gt; g0 -&gt; Either String (Term r0 h0)
+|     In the first argument of `fixTF', namely `deserializeTF''
+|     In the expression: fixTF deserializeTF'
+</code></pre>
+
+<p>TypeFamily variant is not working.</p>
+
+<p>The error message showing that <code>r</code>, <code>g</code>, and <code>h ~ Value</code> differing in
+each recursion. In current GHC implementation of type families, it does
+not allow us to overlap this with different value. So far I understand,
+that was the point. Though, I don't think I fully understand what's
+happening here, yet.</p>
+
+<hr/>
+
+<p>By the way ... another codes that could not written in TF but in FD,
+<a href="http://okmij.org/ftp/Haskell/solve-read-show.lhs" >the silver bullet</a> of
+<a href="haskell-sc-scratch/Scratch/Oleg/typecast/" >typecast</a>, in this case,
+used for solving read-show problem.</p>
+ </div> <div class="post-tags"> TAGGED: <a href="/tag/haskell.html">haskell</a>, <a href="/tag/typefamily.html">typefamily</a>, <a href="/tag/functionaldependency.html">functionaldependency</a> </div> <div class="prev-post-link"> Prev: <a href="/posts/Bytestring-and-unicode-chars-from-U0080-to-U00FF.html">Bytestring and unicode chars from U+0080 to U+00FF</a> </div> <div class="next-post-link"> Next: <a href="/posts/Making-sound-with-side-effects.html">Making sound with side effects</a> </div> </div> <footer> <section class="tags"> <h3>Tags</h3> <a href="/tag/algorithm.html">algorithm</a> • <a href="/tag/arc.html">arc</a> • <a href="/tag/arrow.html">arrow</a> • <a href="/tag/cabal.html">cabal</a> • <a href="/tag/ci.html">ci</a> • <a href="/tag/coleslaw.html">coleslaw</a> • <a href="/tag/commonlisp.html">commonlisp</a> • <a href="/tag/continuation.html">continuation</a> • <a href="/tag/datastructure.html">datastructure</a> • <a href="/tag/delimited.html">delimited</a> • <a href="/tag/dph.html">dph</a> • <a href="/tag/dsl.html">dsl</a> • <a href="/tag/emacs.html">emacs</a> • <a href="/tag/french.html">french</a> • <a href="/tag/functionaldependency.html">functionaldependency</a> • <a href="/tag/generic.html">generic</a> • <a href="/tag/ghc.html">ghc</a> • <a href="/tag/ghci.html">ghci</a> • <a href="/tag/git.html">git</a> • <a href="/tag/hakyll.html">hakyll</a> • <a href="/tag/haskell.html">haskell</a> • <a href="/tag/heroku.html">heroku</a> • <a href="/tag/image.html">image</a> • <a href="/tag/linux.html">linux</a> • <a href="/tag/lisp.html">lisp</a> • <a href="/tag/monad.html">monad</a> • <a href="/tag/package.html">package</a> • <a href="/tag/pdf.html">pdf</a> • <a href="/tag/performance.html">performance</a> • <a href="/tag/ps.html">ps</a> • <a href="/tag/repa.html">repa</a> • <a href="/tag/sound.html">sound</a> • <a href="/tag/supercollider.html">supercollider</a> • <a href="/tag/templatehaskell.html">templatehaskell</a> • <a href="/tag/tips.html">tips</a> • <a href="/tag/travis.html">travis</a> • <a href="/tag/tree.html">tree</a> • <a href="/tag/typefamily.html">typefamily</a> • <a href="/tag/utf-8.html">utf-8</a> • <a href="/tag/web.html">web</a> </section> Copyright © 2011-2017 8c6794b6; Unless otherwise noted, site contents licensed under <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"> CC-by-SA</a>. </footer> </body> </html>

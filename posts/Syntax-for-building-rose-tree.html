@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=defice-width, initial-scale=1"> <title>8c6794b6.github.io</title> <link href="/css/style.css" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=Noto+Serif" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=PT+Serif" rel="stylesheet" type="text/css" /> <link rel="icon" type="image/png" href="/static/favicon.png"/>  </head> <body> <header> <h1><a href="/index.html">8c6794b6.github.io</a></h1> <nav> <a href="/index.html">HOME</a> • <a href="/about.html">ABOUT</a> • <a href="/archive.html">ARCHIVE</a> • <a href="/rss.xml">RSS</a> </nav> </header> <div class="contents"> <div class="post-title"> <h2>Syntax for building rose tree</h2> <em class="post-date">2014-05-23</em> </div> <div class="post"> <h3>Introduction</h3>
+
+<p>Suppose that, we want to write contents of following rose tree, by hand:</p>
+
+<pre><code>0
+|
++- 1
+|  |
+|  `- 2
+|
++- 3
+|
++- 4
+|  |
+|  +- 5
+|  |  |
+|  |  +- 6
+|  |  |
+|  |  `- 7
+|  |
+|  `- 8
+|
+`- 9
+</code></pre>
+
+<p>Using <code>Data.Tree.Tree</code> from <code>containers</code> package for our purpose, the
+definition is:</p>
+
+<pre><code>data Tree a = Node { rootLabel :: a
+                   , subForest :: Forest a }
+
+type Forest a = [Tree a]
+</code></pre>
+
+<p>This document explores couple alternative ways to write rose tree data
+structure, mainly focusing on situations when writing by hand.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="comment">{-# LANGUAGE FlexibleContexts #-}</span>
+<span class="atom">&gt;</span> <span class="comment">{-# LANGUAGE FlexibleInstances #-}</span>
+<span class="atom">&gt;</span> <span class="comment">{-# LANGUAGE FunctionalDependencies #-}</span>
+<span class="atom">&gt;</span> <span class="comment">{-# LANGUAGE GeneralizedNewtypeDeriving #-}</span>
+<span class="atom">&gt;</span> <span class="comment">{-# LANGUAGE MultiParamTypeClasses #-}</span>
+<span class="atom">&gt;</span> <span class="comment">{-# LANGUAGE TypeFamilies #-}</span>
+<span class="atom">&gt;</span> <span class="comment">{-# LANGUAGE UndecidableInstances #-}</span>
+<span class="atom">&gt;</span> <span class="keyword">module</span> <span class="variable">Main</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Data</span><span class="atom">.</span><span class="variable">Tree</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Control</span><span class="atom">.</span><span class="variable">Monad</span><span class="atom">.</span><span class="variable">Writer</span></span></code></pre>
+
+<p>It could be nice if we can write the rose tree in single line like:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> t3' <span class="keyword">::</span> <span class="variable">Tree</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> t3' <span class="keyword">=</span> buildBranch <span class="atom">$</span> pnode 0 <span class="paren1">(<span class="code">pnode 1 2</span>)</span> 3 <span class="paren1">(<span class="code">pnode 4 <span class="paren2">(<span class="code">pnode 5 6 7</span>)</span> 8</span>)</span> 9</span></code></pre>
+
+<p>Here, <code>pnode</code> is a polyvariadic function, treating the first argument as
+element in itself, and rest as leaves. The code used for writing <code>t3'</code>
+is shown in Take 3.</p>
+
+<h3>Take 1: The Straightforward Way</h3>
+
+<p>In straightforward way, sample tree may written like below:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> t0 <span class="keyword">::</span> <span class="variable">Tree</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> t0 <span class="keyword">=</span>
+<span class="atom">&gt;</span>     <span class="variable">Node</span> 0
+<span class="atom">&gt;</span>     <span class="paren1">[<span class="code"> <span class="variable">Node</span> 1
+<span class="atom">&gt;</span>       <span class="paren2">[<span class="code"> <span class="variable">Node</span> 2 <span class="paren3">[<span class="code"></span>]</span> </span>]</span>
+<span class="atom">&gt;</span>     , <span class="variable">Node</span> 3 <span class="paren2">[<span class="code"></span>]</span>
+<span class="atom">&gt;</span>     , <span class="variable">Node</span> 4
+<span class="atom">&gt;</span>       <span class="paren2">[<span class="code"> <span class="variable">Node</span> 5
+<span class="atom">&gt;</span>         <span class="paren3">[<span class="code"> <span class="variable">Node</span> 6 <span class="paren4">[<span class="code"></span>]</span>, <span class="variable">Node</span> 7 <span class="paren4">[<span class="code"></span>]</span></span>]</span>
+<span class="atom">&gt;</span>       , <span class="variable">Node</span> 8 <span class="paren3">[<span class="code"></span>]</span> </span>]</span>
+<span class="atom">&gt;</span>     , <span class="variable">Node</span> 9 <span class="paren2">[<span class="code"></span>]</span> </span>]</span></span></code></pre>
+
+<p>The sample tree containing 10 nodes already looks a bit cumbersome to
+write by hand. From my point of view, things making the typing hard
+were:</p>
+
+<ol>
+<li>Use of CAPITAL LETTERS: In general typing lower case letters are
+easier than typing capital letters.</li>
+<li>Use of brackets and commas: I realised that when typing numbers and
+commas, my fingers are making quite a large movements on the
+keyboard. This coulbe be a problem arise when typing numbers only.
+Say, if <code>Char</code> was used instead of <code>Int</code>, may not be a problem.</li>
+</ol>
+
+<h3>Take 2: Slightly Less Straightforward Way</h3>
+
+<p>Pretty simple replacement of type constructors with functions with lower
+case letters. Also using variant of <code>node</code> function named <code>leaf</code> which
+takes empty list as second argument of <code>Node</code>. The sample tree looks
+like below:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> t1 <span class="keyword">::</span> <span class="variable">Tree</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> t1 <span class="keyword">=</span>
+<span class="atom">&gt;</span>     node 0
+<span class="atom">&gt;</span>     <span class="paren1">[<span class="code"> node 1
+<span class="atom">&gt;</span>       <span class="paren2">[<span class="code"> leaf 2 </span>]</span>
+<span class="atom">&gt;</span>     , leaf 3
+<span class="atom">&gt;</span>     , node 4
+<span class="atom">&gt;</span>       <span class="paren2">[<span class="code"> node 5
+<span class="atom">&gt;</span>         <span class="paren3">[<span class="code">leaf 6, leaf 7</span>]</span>
+<span class="atom">&gt;</span>       , leaf 8 </span>]</span>
+<span class="atom">&gt;</span>     , leaf 9 </span>]</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> node <span class="keyword">::</span> a <span class="keyword">-&gt;</span> <span class="paren1">[<span class="code"><span class="variable">Tree</span> a</span>]</span> <span class="keyword">-&gt;</span> <span class="variable">Tree</span> a
+<span class="atom">&gt;</span> node a fs <span class="keyword">=</span> <span class="variable">Node</span> a fs
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> leaf <span class="keyword">::</span> a <span class="keyword">-&gt;</span> <span class="variable">Tree</span> a
+<span class="atom">&gt;</span> leaf a <span class="keyword">=</span> <span class="variable">Node</span> a <span class="paren1">[<span class="code"></span>]</span></span></code></pre>
+
+<p>Confirm that the two trees are identical:</p>
+
+<pre><code>ghci&gt; t1 == t0
+True
+</code></pre>
+
+<p>Now <code>t1</code> does not contain capital letters in its body, though nested
+lists might still look clumsy.</p>
+
+<h3>Take 3: Reducing Commas And Brackets</h3>
+
+<p>Avoid typing commas and brackets (<code>,</code>, <code>[</code>, and <code>]</code>), let the
+<code>do notation</code> to take care of node grouping. The sample tree looks like
+below:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> t2 <span class="keyword">::</span> <span class="variable">Tree</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> t2 <span class="keyword">=</span> buildTree <span class="atom">$</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>     mnode 0 <span class="atom">$</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>         mnode 1 <span class="atom">$</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>             mleaf 2
+<span class="atom">&gt;</span>         mleaf 3
+<span class="atom">&gt;</span>         mnode 4 <span class="atom">$</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>             mnode 5 <span class="atom">$</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>                 mleaf 6 <span class="atom">&gt;&gt;</span> mleaf 7
+<span class="atom">&gt;</span>             mleaf 8
+<span class="atom">&gt;</span>         mleaf 9</span></code></pre>
+
+<p>Implementation is done with <code>Writer</code> monad with simple <code>DiffList</code>:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">newtype</span> <span class="variable">DiffList</span> a <span class="keyword">=</span> <span class="variable">DiffList</span> <span class="paren1">(<span class="code"><span class="paren2">[<span class="code">a</span>]</span> <span class="keyword">-&gt;</span> <span class="paren2">[<span class="code">a</span>]</span></span>)</span>
+<span class="atom">&gt;</span>     <span class="keyword">deriving</span> <span class="paren1">(<span class="code"><span class="variable">Monoid</span></span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">instance</span> <span class="variable">Show</span> a <span class="atom">=&gt;</span> <span class="variable">Show</span> <span class="paren1">(<span class="code"><span class="variable">DiffList</span> a</span>)</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>     show <span class="paren1">(<span class="code"><span class="variable">DiffList</span> f</span>)</span> <span class="keyword">=</span> show <span class="paren1">(<span class="code">f <span class="paren2">[<span class="code"></span>]</span></span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">type</span> <span class="variable">TreeBuilder</span> a <span class="keyword">=</span> <span class="variable">Writer</span> <span class="paren1">(<span class="code"><span class="variable">DiffList</span> a</span>)</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> snoc <span class="keyword">::</span> a <span class="keyword">-&gt;</span> <span class="variable">DiffList</span> a
+<span class="atom">&gt;</span> snoc x <span class="keyword">=</span> <span class="variable">DiffList</span> <span class="paren1">(<span class="code">x<span class="variable">:</span></span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> runTreeBuilder <span class="keyword">::</span> <span class="variable">TreeBuilder</span> <span class="paren1">(<span class="code"><span class="variable">Tree</span> a</span>)</span> <span class="keyword">-&gt;</span> <span class="paren1">[<span class="code"><span class="variable">Tree</span> a</span>]</span>
+<span class="atom">&gt;</span> runTreeBuilder builder <span class="keyword">=</span> <span class="keyword">case</span> runWriter builder <span class="keyword">of</span> <span class="paren1">(<span class="code">_,DiffList f</span>)</span> <span class="keyword">-&gt;</span> f <span class="paren1">[<span class="code"></span>]</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> buildTree <span class="keyword">::</span> <span class="variable">TreeBuilder</span> <span class="paren1">(<span class="code"><span class="variable">Tree</span> a</span>)</span> <span class="keyword">-&gt;</span> <span class="variable">Tree</span> a
+<span class="atom">&gt;</span> buildTree builder <span class="keyword">=</span> <span class="keyword">case</span> runTreeBuilder builder <span class="keyword">of</span>
+<span class="atom">&gt;</span>     <span class="paren1">[<span class="code"></span>]</span>  <span class="keyword">-&gt;</span> error <span class="string">"buildTree: empty tree"</span>
+<span class="atom">&gt;</span>     t<span class="variable">:</span>_ <span class="keyword">-&gt;</span> t
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> mnode <span class="keyword">::</span> a <span class="keyword">-&gt;</span> <span class="variable">TreeBuilder</span> <span class="paren1">(<span class="code"><span class="variable">Tree</span> a</span>)</span> <span class="keyword">-&gt;</span> <span class="variable">TreeBuilder</span> <span class="paren1">(<span class="code"><span class="variable">Tree</span> a</span>)</span>
+<span class="atom">&gt;</span> mnode x builder <span class="keyword">=</span> tell <span class="paren1">(<span class="code">snoc <span class="paren2">(<span class="code"><span class="variable">Node</span> x <span class="paren3">(<span class="code">runTreeBuilder builder</span>)</span></span>)</span></span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> mleaf <span class="keyword">::</span> a <span class="keyword">-&gt;</span> <span class="variable">TreeBuilder</span> <span class="paren1">(<span class="code"><span class="variable">Tree</span> a</span>)</span>
+<span class="atom">&gt;</span> mleaf x <span class="keyword">=</span> tell <span class="paren1">(<span class="code">snoc <span class="paren2">(<span class="code"><span class="variable">Node</span> x <span class="paren3">[<span class="code"></span>]</span></span>)</span></span>)</span></span></code></pre>
+
+<p>Checking whether that <code>t2</code> is identical to <code>t0</code>:</p>
+
+<pre><code>ghci&gt; t2 == t0
+True
+</code></pre>
+
+<h3>Take 4: Removing Do Notation</h3>
+
+<p>Use of <code>do notation</code> has freed us from using commans and brackets,
+though introduced redundancy with <code>do</code>s. Introducing <code>Monoid</code> wrapper
+newtype and polyvariadic function to remove <code>do</code>s. Sample tree may looks
+like below:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> t3 <span class="keyword">::</span> <span class="variable">Tree</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> t3 <span class="keyword">=</span> buildBranch <span class="atom">$</span>
+<span class="atom">&gt;</span>     pnode 0
+<span class="atom">&gt;</span>     <span class="paren1">(<span class="code">pnode 1
+<span class="atom">&gt;</span>      <span class="paren2">(<span class="code">pleaf 2</span>)</span></span>)</span>
+<span class="atom">&gt;</span>     <span class="paren1">(<span class="code">pleaf 3</span>)</span>
+<span class="atom">&gt;</span>     <span class="paren1">(<span class="code">pnode 4
+<span class="atom">&gt;</span>      <span class="paren2">(<span class="code">pnode 5
+<span class="atom">&gt;</span>       <span class="paren3">(<span class="code">pleaf 6</span>)</span> <span class="paren3">(<span class="code">pleaf 7</span>)</span></span>)</span>
+<span class="atom">&gt;</span>      <span class="paren2">(<span class="code">pleaf 8</span>)</span></span>)</span>
+<span class="atom">&gt;</span>     <span class="paren1">(<span class="code">pleaf 9</span>)</span></span></code></pre>
+
+<p>Now <code>do</code>s are removed, thought increase of parenthesis is making the
+code quite _lisp_y. Implementation is heavily inspired by
+<a href="http://okmij.org/ftp/Scheme/xml.html#typed-SXML" >HSXML</a>.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">newtype</span> <span class="variable">Branch</span> a <span class="keyword">=</span> <span class="variable">Branch</span> <span class="paren1">(<span class="code"><span class="variable">DiffList</span> <span class="paren2">(<span class="code"><span class="variable">Tree</span> a</span>)</span></span>)</span>
+<span class="atom">&gt;</span>     <span class="keyword">deriving</span> <span class="paren1">(<span class="code"><span class="variable">Show,</span> <span class="variable">Monoid</span></span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">class</span> <span class="variable">Monoid</span> acc <span class="atom">=&gt;</span> <span class="variable">BuildTree</span> acc out ret <span class="keyword">|</span> ret <span class="keyword">-&gt;</span> out <span class="keyword">where</span>
+<span class="atom">&gt;</span>     build <span class="keyword">::</span> <span class="paren1">(<span class="code">acc<span class="keyword">-&gt;</span>out</span>)</span> <span class="keyword">-&gt;</span> acc <span class="keyword">-&gt;</span> ret
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">instance</span> <span class="variable">Monoid</span> acc <span class="atom">=&gt;</span> <span class="variable">BuildTree</span> acc <span class="paren1">(<span class="code"><span class="variable">Branch</span> a</span>)</span> <span class="paren1">(<span class="code"><span class="variable">Branch</span> a</span>)</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>     build f acc <span class="keyword">=</span> f acc
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">instance</span> <span class="paren1">(<span class="code"><span class="variable">BuildTree</span> acc out ret, e <span class="keyword">~</span> acc</span>)</span> <span class="atom">=&gt;</span> <span class="variable">BuildTree</span> acc out <span class="paren1">(<span class="code">e<span class="keyword">-&gt;</span>ret</span>)</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>     build f acc <span class="keyword">=</span> <span class="keyword">\</span>t <span class="keyword">-&gt;</span> build f <span class="paren1">(<span class="code">acc <span class="atom">&lt;&gt;</span> t</span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> pnode <span class="keyword">::</span> <span class="variable">BuildTree</span> <span class="paren1">(<span class="code"><span class="variable">Branch</span> a</span>)</span> <span class="paren1">(<span class="code"><span class="variable">Branch</span> a</span>)</span> ret <span class="atom">=&gt;</span> a <span class="keyword">-&gt;</span> <span class="variable">Branch</span> a <span class="keyword">-&gt;</span> ret
+<span class="atom">&gt;</span> pnode x <span class="keyword">=</span> build <span class="paren1">(<span class="code"><span class="keyword">\</span><span class="paren2">(<span class="code"><span class="variable">Branch</span> <span class="paren3">(<span class="code"><span class="variable">DiffList</span> b</span>)</span></span>)</span> <span class="keyword">-&gt;</span> <span class="variable">Branch</span> <span class="paren2">(<span class="code">snoc <span class="paren3">(<span class="code"><span class="variable">Node</span> x <span class="paren4">(<span class="code">b <span class="paren5">[<span class="code"></span>]</span></span>)</span></span>)</span></span>)</span></span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> pleaf <span class="keyword">::</span> a <span class="keyword">-&gt;</span> <span class="variable">Branch</span> a
+<span class="atom">&gt;</span> pleaf x <span class="keyword">=</span> <span class="variable">Branch</span> <span class="paren1">(<span class="code">snoc <span class="paren2">(<span class="code"><span class="variable">Node</span> x mempty</span>)</span></span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> buildBranch <span class="keyword">::</span> <span class="variable">Branch</span> a <span class="keyword">-&gt;</span> <span class="variable">Tree</span> a
+<span class="atom">&gt;</span> buildBranch <span class="paren1">(<span class="code"><span class="variable">Branch</span> <span class="paren2">(<span class="code"><span class="variable">DiffList</span> ts</span>)</span></span>)</span> <span class="keyword">=</span> <span class="keyword">case</span> ts <span class="paren1">[<span class="code"></span>]</span> <span class="keyword">of</span>
+<span class="atom">&gt;</span>     <span class="paren1">[<span class="code"></span>]</span>  <span class="keyword">-&gt;</span> error <span class="string">"buildBranch: empty branch"</span>
+<span class="atom">&gt;</span>     t<span class="variable">:</span>_ <span class="keyword">-&gt;</span> t</span></code></pre>
+
+<p>Checking again:</p>
+
+<pre><code>ghci&gt; t3 == t0
+True
+</code></pre>
+
+<h3>Some Thoughts</h3>
+
+<p>Other data type than <code>Data.Tree.Tree</code> could be used, though haven't
+explored.</p>
+
+<p>In take 2, monadic approach may easy to combine with other monads with
+<code>mtl</code>. For instance, use <code>State</code> monad and count the number of leaves
+while traversing.</p>
+
+<p>In take 3, by defining <code>Branch</code> as instance of <code>Num class</code>, <code>t3</code> could
+rewritten in single line, which is shown as <code>t3'</code> at the beginning of
+this document:</p>
+
+<pre><code>t3' = buildBranch $ pnode 0 (pnode 1 2) 3 (pnode 4 (pnode 5 6 7) 8) 9
+</code></pre>
+
+<p>Checking:</p>
+
+<pre><code>ghci&gt; t3' == t0
+True
+</code></pre>
+
+<p>Purpose of making as <code>Num</code> instance is merely for helping syntax. Other
+functions than <code>fromInteger</code> may left <code>undefined</code>:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">instance</span> <span class="variable">Num</span> a <span class="atom">=&gt;</span> <span class="variable">Num</span> <span class="paren1">(<span class="code"><span class="variable">Branch</span> a</span>)</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>     <span class="paren1">(<span class="code"><span class="atom">+</span></span>)</span>         <span class="keyword">=</span> undefined
+<span class="atom">&gt;</span>     <span class="paren1">(<span class="code"><span class="atom">*</span></span>)</span>         <span class="keyword">=</span> undefined
+<span class="atom">&gt;</span>     negate      <span class="keyword">=</span> undefined
+<span class="atom">&gt;</span>     abs         <span class="keyword">=</span> undefined
+<span class="atom">&gt;</span>     signum      <span class="keyword">=</span> undefined
+<span class="atom">&gt;</span>     fromInteger <span class="keyword">=</span> pleaf <span class="atom">.</span> fromInteger</span></code></pre>
+
+<p>GHC has restriction in context reduction stack, as of ghc-7.8.2, default
+size is 21. Polyvariadic function taking more than 22 arguments needs
+<code>-fcontext-stack=N</code> option and increase the context stack with using
+large context stack size <em>N</em>.</p>
+ </div> <div class="post-tags"> TAGGED: <a href="/tag/datastructure.html">datastructure</a>, <a href="/tag/dsl.html">dsl</a>, <a href="/tag/haskell.html">haskell</a>, <a href="/tag/tree.html">tree</a> </div> <div class="prev-post-link"> Prev: <a href="/posts/French-input-methods-and-œ.html">French input methods and œ</a> </div> <div class="next-post-link"> Next: <a href="/posts/Modifying-commit-attributes-and-editing-hunk-in-git.html">Modifying commit attributes and editing hunk in git</a> </div> </div> <footer> <section class="tags"> <h3>Tags</h3> <a href="/tag/algorithm.html">algorithm</a> • <a href="/tag/arc.html">arc</a> • <a href="/tag/arrow.html">arrow</a> • <a href="/tag/cabal.html">cabal</a> • <a href="/tag/ci.html">ci</a> • <a href="/tag/coleslaw.html">coleslaw</a> • <a href="/tag/commonlisp.html">commonlisp</a> • <a href="/tag/continuation.html">continuation</a> • <a href="/tag/datastructure.html">datastructure</a> • <a href="/tag/delimited.html">delimited</a> • <a href="/tag/dph.html">dph</a> • <a href="/tag/dsl.html">dsl</a> • <a href="/tag/emacs.html">emacs</a> • <a href="/tag/french.html">french</a> • <a href="/tag/functionaldependency.html">functionaldependency</a> • <a href="/tag/generic.html">generic</a> • <a href="/tag/ghc.html">ghc</a> • <a href="/tag/ghci.html">ghci</a> • <a href="/tag/git.html">git</a> • <a href="/tag/hakyll.html">hakyll</a> • <a href="/tag/haskell.html">haskell</a> • <a href="/tag/heroku.html">heroku</a> • <a href="/tag/image.html">image</a> • <a href="/tag/linux.html">linux</a> • <a href="/tag/lisp.html">lisp</a> • <a href="/tag/monad.html">monad</a> • <a href="/tag/package.html">package</a> • <a href="/tag/pdf.html">pdf</a> • <a href="/tag/performance.html">performance</a> • <a href="/tag/ps.html">ps</a> • <a href="/tag/repa.html">repa</a> • <a href="/tag/sound.html">sound</a> • <a href="/tag/supercollider.html">supercollider</a> • <a href="/tag/templatehaskell.html">templatehaskell</a> • <a href="/tag/tips.html">tips</a> • <a href="/tag/travis.html">travis</a> • <a href="/tag/tree.html">tree</a> • <a href="/tag/typefamily.html">typefamily</a> • <a href="/tag/utf-8.html">utf-8</a> • <a href="/tag/web.html">web</a> </section> Copyright © 2011-2017 8c6794b6; Unless otherwise noted, site contents licensed under <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"> CC-by-SA</a>. </footer> </body> </html>

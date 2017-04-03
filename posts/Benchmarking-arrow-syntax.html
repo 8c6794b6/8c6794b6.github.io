@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=defice-width, initial-scale=1"> <title>8c6794b6.github.io</title> <link href="/css/style.css" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=Noto+Serif" rel="stylesheet" type="text/css" /> <link href="http://fonts.googleapis.com/css?family=PT+Serif" rel="stylesheet" type="text/css" /> <link rel="icon" type="image/png" href="/static/favicon.png"/>  </head> <body> <header> <h1><a href="/index.html">8c6794b6.github.io</a></h1> <nav> <a href="/index.html">HOME</a> • <a href="/about.html">ABOUT</a> • <a href="/archive.html">ARCHIVE</a> • <a href="/rss.xml">RSS</a> </nav> </header> <div class="contents"> <div class="post-title"> <h2>Benchmarking arrow syntax</h2> <em class="post-date">2011-11-16</em> </div> <div class="post"> <p>Recently I read a paper about <a href="http://cs.yale.edu/c2/images/uploads/AudioProc-TR.pdf" >&quot;Audio Processing and Sound Synthesis in
+Haskell&quot;</a> which
+uses <code>Arrow</code> and <code>[Double]</code> for its building block of signal data. While
+reading the document, it shows that using Arrow syntax will make the
+code slow, due to its wrapping and unwrapping in desugared tuples.</p>
+
+<p>Does arrow syntax make the code slow?</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="comment">{-# LANGUAGE Arrows, BangPatterns, NoImplicitPrelude #-}</span>
+<span class="atom">&gt;</span> <span class="keyword">module</span> <span class="variable">BenchArrowSyntax</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Control</span><span class="atom">.</span><span class="variable">Arrow</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Control</span><span class="atom">.</span><span class="variable">Category</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Prelude</span> hiding <span class="paren1">(<span class="code"><span class="paren2">(<span class="code"><span class="atom">.</span></span>)</span>, id</span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Control</span><span class="atom">.</span><span class="variable">DeepSeq</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Criterion</span><span class="atom">.</span><span class="variable">Main</span></span></code></pre>
+
+<p>Comparing performance of code written in below styles:</p>
+
+<ol>
+<li>Pure function, no Arrows (<em>plain</em>).</li>
+<li>Arrows, without syntax sugar (<em>bitter</em>).</li>
+<li>Arrows, with syntax sugar (<em>sweet</em>).</li>
+<li>Arrows, with syntax sugar, inlined (<em>sweet-inline</em>).</li>
+</ol>
+
+<p>The GHC version used to benchmark this code was 7.0.3. The main function
+looks like this:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> main <span class="keyword">::</span> <span class="variable">IO</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span> main <span class="keyword">=</span>
+<span class="atom">&gt;</span>  <span class="keyword">let</span> <span class="atom">!</span>xs <span class="keyword">=</span> <span class="keyword">let</span> ys <span class="keyword">=</span> <span class="paren1">[<span class="code">1<span class="keyword">..</span>10000</span>]</span> <span class="keyword">in</span> ys <span class="atom">`deepseq`</span> ys
+<span class="atom">&gt;</span>  <span class="keyword">in</span>  defaultMain
+<span class="atom">&gt;</span>        <span class="paren1">[<span class="code"> bench <span class="string">"plain"</span> <span class="paren2">(<span class="code">whnf <span class="paren3">(<span class="code">map plain</span>)</span> xs</span>)</span>
+<span class="atom">&gt;</span>        , bench <span class="string">"bitter"</span> <span class="paren2">(<span class="code">whnf <span class="paren3">(<span class="code">unA bitter</span>)</span> xs</span>)</span>
+<span class="atom">&gt;</span>        , bench <span class="string">"sweet"</span> <span class="paren2">(<span class="code">whnf <span class="paren3">(<span class="code">unA sweet</span>)</span> xs</span>)</span>
+<span class="atom">&gt;</span>        , bench <span class="string">"sweet-inline"</span> <span class="paren2">(<span class="code">whnf <span class="paren3">(<span class="code">unB sweet_inline</span>)</span> xs</span>)</span>
+<span class="atom">&gt;</span>        </span>]</span></span></code></pre>
+
+<p>Showing the result of running the compiled code:</p>
+
+<pre><code>$ ghc --make -O2 -o a.out -main-is BenchArrowSyntax BenchArrowSyntax.lhs
+[1 of 1] Compiling BenchArrowSyntax ( bench_arrow_syntax.lhs, bench_arrow_syntax.o )
+Linking a.out ...
+$ ./a.out
+warming up
+estimating clock resolution...
+mean is 16.06060 us (40001 iterations)
+found 2976 outliers among 39999 samples (7.4%)
+  1930 (4.8%) high mild
+  1041 (2.6%) high severe
+estimating cost of a clock call...
+mean is 103.2901 ns (61 iterations)
+
+benchmarking plain
+mean: 29.50057 ns, lb 29.43500 ns, ub 29.60982 ns, ci 0.950
+std dev: 422.9860 ps, lb 275.5593 ps, ub 700.1025 ps, ci 0.950
+
+benchmarking bitter
+mean: 29.60260 ns, lb 29.57317 ns, ub 29.63793 ns, ci 0.950
+std dev: 164.7924 ps, lb 139.0684 ps, ub 196.2178 ps, ci 0.950
+
+benchmarking sweet
+mean: 261.4728 ns, lb 261.1549 ns, ub 261.9058 ns, ci 0.950
+std dev: 1.876539 ns, lb 1.454937 ns, ub 3.033409 ns, ci 0.950
+
+benchmarking sweet-inline
+mean: 135.2866 ns, lb 134.9794 ns, ub 135.5847 ns, ci 0.950
+std dev: 1.552157 ns, lb 1.412139 ns, ub 1.726597 ns, ci 0.950
+</code></pre>
+
+<p>It shows that the code written with arrow syntax runs about 9 times
+slower than the others, and there's not so much difference between plain
+function from arrow codes written without syntax sugar. What's going on
+with arrow syntax?</p>
+
+<p>Below 2 functions were used in this benchmark. Simple addition and
+multiplication for <code>Int</code>.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> func1 <span class="keyword">::</span> <span class="variable">Int</span> <span class="keyword">-&gt;</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> func1 <span class="keyword">=</span> <span class="paren1">(<span class="code"><span class="atom">+</span>3</span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> func2 <span class="keyword">::</span> <span class="variable">Int</span> <span class="keyword">-&gt;</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> func2 <span class="keyword">=</span> <span class="paren1">(<span class="code"><span class="atom">*</span>7</span>)</span></span></code></pre>
+
+<p>The type to implement <code>Arrow</code> instance for <code>bitter</code> and <code>sweet</code>. It is a
+simple newtype wrapper for mapping function over list.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">newtype</span> <span class="variable">A</span> a b <span class="keyword">=</span> <span class="variable">A</span> <span class="paren1">{<span class="code">unA <span class="keyword">::</span> <span class="paren2">[<span class="code">a</span>]</span> <span class="keyword">-&gt;</span> <span class="paren2">[<span class="code">b</span>]</span></span>}</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">instance</span> <span class="variable">Category</span> <span class="variable">A</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>   id <span class="keyword">=</span> <span class="variable">A</span> id
+<span class="atom">&gt;</span>   <span class="variable">A</span> f <span class="atom">.</span> <span class="variable">A</span> g <span class="keyword">=</span> <span class="variable">A</span> <span class="paren1">(<span class="code">f <span class="atom">.</span> g</span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">instance</span> <span class="variable">Arrow</span> <span class="variable">A</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>   arr f <span class="keyword">=</span> <span class="variable">A</span> <span class="paren1">(<span class="code">map f</span>)</span>
+<span class="atom">&gt;</span>   first <span class="paren1">(<span class="code"><span class="variable">A</span> f</span>)</span> <span class="keyword">=</span> <span class="variable">A</span> <span class="atom">$</span> uncurry zip <span class="atom">.</span> first f <span class="atom">.</span> unzip</span></code></pre>
+
+<p>First, the plain function. In other word, a function with <code>(-&gt;)</code> type.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> plain <span class="keyword">::</span> <span class="paren1">(<span class="code"><span class="keyword">-&gt;</span></span>)</span> <span class="variable">Int</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> plain <span class="keyword">=</span> func2 <span class="atom">.</span> func1</span></code></pre>
+
+<p>Dumped core of <code>plain</code>, removed couple type signatures and variable
+suffixes for clarity.</p>
+
+<pre><code>| plain :: Int -&gt; Int
+| plain = \(x :: Int) -&gt; case x of _ { I# x1 -&gt; I# (*# (+# x1 3) 7) }
+</code></pre>
+
+<p>Next, arrow without syntax. Manually wrapping functions with <code>arr</code>, and
+combining with <code>(&gt;&gt;&gt;)</code> operator.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> bitter <span class="keyword">::</span> <span class="variable">A</span> <span class="variable">Int</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> bitter <span class="keyword">=</span> arr func1 <span class="atom">&gt;&gt;&gt;</span> arr func2</span></code></pre>
+
+<p>Excerpt of dumped core of <code>bitter</code>. Again, GHC type prefix and variable
+suffixes are removed.</p>
+
+<pre><code>| bitter :: A Int Int
+| bitter =
+|   bitter1
+|   `cast` (sym (A Int Int)
+|           :: ([Int] -&gt; [Int]) ~ BenchArrowSyntax.A Int Int)
+|
+| bitter1 :: [Int] -&gt; [Int]
+| bitter1 = \(x :: [Int]) -&gt; map bitter2 x
+|
+| bitter2 :: Int -&gt; Int
+| bitter2 = \(x :: Int) -&gt; case x of _ { I# x1 -&gt; I# (*# (+# x1 3) 7) }
+</code></pre>
+
+<p>Though delegation from <code>bitter</code> to <code>bitter1</code> and <code>bitter2</code> exists, from
+what we see in the function body of <code>bitter2</code>, the guts of its
+definition remains same as <code>plain</code>.</p>
+
+<p>And then, with arrow syntax. In its body, result of each arrow are
+bounded to varialbe with explicit name. Requires <code>Arrows</code> LANGUAGE
+pragma.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> sweet <span class="keyword">::</span> <span class="variable">A</span> <span class="variable">Int</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> sweet <span class="keyword">=</span> proc x <span class="keyword">-&gt;</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>   y <span class="keyword">&lt;-</span> arr func1 <span class="atom">-&lt;</span> x
+<span class="atom">&gt;</span>   z <span class="keyword">&lt;-</span> arr func2 <span class="atom">-&lt;</span> y
+<span class="atom">&gt;</span>   returnA <span class="atom">-&lt;</span> z</span></code></pre>
+
+<p>Excerpt dumped core of <code>sweet</code>. We see zipping and unzipping done during
+the desugaring of syntax, in <code>main12</code> and <code>$fArrowA3</code>.</p>
+
+<pre><code>| sweet :: A Int Int
+| sweet =
+|   main12 `cast` (sym (NTCo:A Int Int) :: ([Int] -&gt; [Int]) ~ A Int Int)
+|
+| main12 :: [Int] -&gt; [Int]
+| main12 =
+|   \(x :: [Int]) -&gt;
+|    case $fArrowA3 (map main17 x) of _
+|      { (# ww1, ww2 #) -&gt;
+|        case $fArrowA3 (map main16 (zip (map main15 ww1) ww2)) of _
+|           { (# ww4, ww5 #) -&gt; map main14 (zip (map main13 ww4) ww5)
+|      }
+|    }
+|
+| main17 :: Int -&gt; (Int, ())
+| main17 = \(x :: Int) -&gt; (x, ())
+|
+| main16 :: (Int, ()) -&gt; (Int, ())
+| main16 =
+|   \(x :: (Int, ())) -&gt;
+|    (case x of _ { (y, ds1) -&gt; case ds1 of _ { () -&gt; y } }, ())
+|
+| main15 :: Int -&gt; Int
+| main15 = \(x :: Int) -&gt; case x of _ { I# x1 -&gt; I# (+# x1 3) }
+|
+| main14 :: (Int, ()) -&gt; Int
+| main14 =
+|   \(x :: (Int, ())) -&gt;
+|    case x of _ { (z2, ds1) -&gt;
+|      case ds1 of _ { () -&gt; z2 }
+|    }
+|
+| main13 :: Int -&gt; Int
+| main13 = \ (x :: Int) -&gt; case x of _ { I# x1 -&gt; I# (*# x1 7) }
+|
+| Rec {
+| $fArrowA3 :: forall b d. [(b, d)] -&gt; (# [b], [d] #)
+| $fArrowA3 =
+|   \(w :: [(b, d)]) -&gt;
+|    case w of _ {
+|      [] -&gt; (# [], [] #);
+|      : y ys -&gt;
+|        case y of _ { (a1, b) -&gt;
+|        let {
+|          ds1 :: ([b], [d])
+|          ds1 =
+|            case $fArrowA3 ys of _ { (# ww1, ww2 #) -&gt; (ww1, ww2) } } in
+|        (# : a1 (case ds1 of _ { (as, bs) -&gt; as }),
+|           : b (case ds1 of _ { (as, bs) -&gt; bs }) #)
+|        }
+|    }
+| end Rec }
+</code></pre>
+
+<p>Finally, Arrow syntax with INLINE pragma. The only difference between
+newtype <code>A</code> and <code>B</code> is, the use of <code>INLINE</code> in function <code>first</code>. The
+function body of <code>sweet</code> and <code>sweet_inline</code>, and definitions for <code>Arrow</code>
+class in A and B are identical.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">newtype</span> <span class="variable">B</span> a b <span class="keyword">=</span> <span class="variable">B</span> <span class="paren1">{<span class="code">unB <span class="keyword">::</span> <span class="paren2">[<span class="code">a</span>]</span> <span class="keyword">-&gt;</span> <span class="paren2">[<span class="code">b</span>]</span></span>}</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">instance</span> <span class="variable">Category</span> <span class="variable">B</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>   id <span class="keyword">=</span> <span class="variable">B</span> id
+<span class="atom">&gt;</span>   <span class="variable">B</span> f <span class="atom">.</span> <span class="variable">B</span> g <span class="keyword">=</span> <span class="variable">B</span> <span class="paren1">(<span class="code">f <span class="atom">.</span> g</span>)</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">instance</span> <span class="variable">Arrow</span> <span class="variable">B</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>   arr f <span class="keyword">=</span> <span class="variable">B</span> <span class="paren1">(<span class="code">map f</span>)</span>
+<span class="atom">&gt;</span>   <span class="comment">{-# INLINE first #-}</span>
+<span class="atom">&gt;</span>   first <span class="paren1">(<span class="code"><span class="variable">B</span> f</span>)</span> <span class="keyword">=</span> <span class="variable">B</span> <span class="atom">$</span> uncurry zip <span class="atom">.</span> first f <span class="atom">.</span> unzip
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> sweet_inline <span class="keyword">::</span> <span class="variable">B</span> <span class="variable">Int</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> sweet_inline <span class="keyword">=</span> proc x <span class="keyword">-&gt;</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>   y <span class="keyword">&lt;-</span> arr func1 <span class="atom">-&lt;</span> x
+<span class="atom">&gt;</span>   z <span class="keyword">&lt;-</span> arr func2 <span class="atom">-&lt;</span> y
+<span class="atom">&gt;</span>   returnA <span class="atom">-&lt;</span> z</span></code></pre>
+
+<p>Excerpt dumped core of <code>sweet_inline</code>. Note that <code>zip</code> function is not
+used. Instead, more <code>Rec</code> blocks are used. <code>sweet_inline</code> runs 2x faster
+than <code>sweet</code>, a big difference made from single <code>INLINE</code> pragma.</p>
+
+<pre><code>| sweet_inline :: B Int Int
+| sweet_inline =
+|   main8 `cast` (sym (NTCo:B Int Int) :: ([Int] -&gt; [Int]) ~ B Int Int)
+|
+| main8 :: [Int] -&gt; [Int]
+| main8 =
+|   \(x :: [Int]) -&gt;
+|    case $wgo x of _ { (# ww1, ww2 #) -&gt;
+|      case main_go1 ww1 ww2 of _ { (x1, y) -&gt;
+|        main_go x1 y
+|      }
+|    }
+|
+| Rec {
+| $wgo :: [Int] -&gt; (# [Int], [()] #)
+| $wgo =
+|   \(w :: [Int]) -&gt;
+|    case w of _ {
+|      [] -&gt; (# [] @ Int, [] @ () #);
+|      : y ys -&gt;
+|        let {
+|          ys1 :: ([Int], [()])
+|          ys1 =
+|            case $wgo ys
+|            of _ { (# ww1, ww2 #) -&gt;
+|            (ww1, ww2)
+|            } } in
+|        (# : y (case ys1 of _ { (as, bs) -&gt; as }),
+|           : () (case ys1 of _ { (as, bs) -&gt; bs }) #)
+|    }
+| end Rec }
+|
+| Rec {
+| main_go1 :: [Int] -&gt; [()] -&gt; ([Int], [()])
+| main_go1 =
+|   \(ds :: [Int]) -&gt;
+|    case ds of _ {
+|      [] -&gt; z;
+|      : y ys -&gt;
+|        let {
+|          _x :: Int
+|          _x = y of _ { I# x -&gt; I# (+# x 3) } } in
+|        let {
+|          ys1 :: [()] -&gt; ([Int], [()])
+|          ys1 = main_go1 ys } in
+|        \ (ds1 :: [()]) -&gt;
+|          case ds1 of _ {
+|            [] -&gt; n_r2wU;
+|            : y1 ys2 -&gt;
+|              let {
+|                ys3 :: ([Int], [()])
+|                ys3 = ys1 ys2 } in
+|              (: (case y1 of _ { () -&gt; _x })
+|                 (case ys3 of _ { (as, bs) -&gt; as }),
+|               : ()
+|                 (case ys3 of _ { (as, bs) -&gt; bs }))
+|          }
+|    }
+| end Rec }
+|
+| n_r2wU :: ([Int], [()])
+| n_r2wU = ([], [])
+|
+| Rec {
+| main_go :: [Int] -&gt; [()] -&gt; [Int]
+| main_go =
+|   \(ds :: [Int]) -&gt;
+|    case ds of _ {
+|      [] -&gt; z1;
+|      : y ys -&gt;
+|        let {
+|          _x :: Int
+|          _x = case y of _ { I# x -&gt; I# (*# x 7) } } in
+|        let {
+|          ys1 :: [()] -&gt; [Int]
+|          ys1 = main_go ys } in
+|        \ (ds1 :: [()]) -&gt;
+|          case ds1 of _ {
+|            [] -&gt; [];
+|            : y1 ys2 -&gt;
+|              : (case y1 of _ { () -&gt; _x })
+|                (ys1 ys2)
+|          }
+|    }
+| end Rec }
+</code></pre>
+
+<p>So, indeed, arrow syntax made the code slow, as written in the paper,
+mainly due to those use of tupling and untupling to reference varialbes
+by names, as we can find in <code>sweet</code> and <code>sweet_inline</code>. When arrow is
+used without syntax sugar, and there's no tuple packing nor unpacking,
+its performance is almost same as pure function variant, as we see in
+comparison of <code>plain</code> and <code>bitter</code>.</p>
+
+<p>When do want to use arrow syntax, even we know that it runs slower? The
+main cause of slow down was packing and unpacking of tuples. When we see
+that these use of tupes are inevitable, it may show a better looking
+code. I have not yet met a practical situation heavily using arrow
+syntax, which seems valueable enough for performance trade-off.</p>
+ </div> <div class="post-tags"> TAGGED: <a href="/tag/haskell.html">haskell</a>, <a href="/tag/arrow.html">arrow</a>, <a href="/tag/performance.html">performance</a> </div> <div class="prev-post-link"> Prev: <a href="/posts/Making-sound-with-side-effects.html">Making sound with side effects</a> </div> <div class="next-post-link"> Next: <a href="/posts/Running-happstack-app-with-heroku.html">Running happstack app with heroku</a> </div> </div> <footer> <section class="tags"> <h3>Tags</h3> <a href="/tag/algorithm.html">algorithm</a> • <a href="/tag/arc.html">arc</a> • <a href="/tag/arrow.html">arrow</a> • <a href="/tag/cabal.html">cabal</a> • <a href="/tag/ci.html">ci</a> • <a href="/tag/coleslaw.html">coleslaw</a> • <a href="/tag/commonlisp.html">commonlisp</a> • <a href="/tag/continuation.html">continuation</a> • <a href="/tag/datastructure.html">datastructure</a> • <a href="/tag/delimited.html">delimited</a> • <a href="/tag/dph.html">dph</a> • <a href="/tag/dsl.html">dsl</a> • <a href="/tag/emacs.html">emacs</a> • <a href="/tag/french.html">french</a> • <a href="/tag/functionaldependency.html">functionaldependency</a> • <a href="/tag/generic.html">generic</a> • <a href="/tag/ghc.html">ghc</a> • <a href="/tag/ghci.html">ghci</a> • <a href="/tag/git.html">git</a> • <a href="/tag/hakyll.html">hakyll</a> • <a href="/tag/haskell.html">haskell</a> • <a href="/tag/heroku.html">heroku</a> • <a href="/tag/image.html">image</a> • <a href="/tag/linux.html">linux</a> • <a href="/tag/lisp.html">lisp</a> • <a href="/tag/monad.html">monad</a> • <a href="/tag/package.html">package</a> • <a href="/tag/pdf.html">pdf</a> • <a href="/tag/performance.html">performance</a> • <a href="/tag/ps.html">ps</a> • <a href="/tag/repa.html">repa</a> • <a href="/tag/sound.html">sound</a> • <a href="/tag/supercollider.html">supercollider</a> • <a href="/tag/templatehaskell.html">templatehaskell</a> • <a href="/tag/tips.html">tips</a> • <a href="/tag/travis.html">travis</a> • <a href="/tag/tree.html">tree</a> • <a href="/tag/typefamily.html">typefamily</a> • <a href="/tag/utf-8.html">utf-8</a> • <a href="/tag/web.html">web</a> </section> Copyright © 2011-2017 8c6794b6; Unless otherwise noted, site contents licensed under <a rel="license" href="http://creativecommons.org/licenses/by-sa/4.0/"> CC-by-SA</a>. </footer> </body> </html>

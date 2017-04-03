@@ -1,0 +1,630 @@
+<?xml version="1.0"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"> <channel> <title>8c6794b6.github.io</title> <link></link> <atom:link href="/rss.xml" rel="self" type="application/rss+xml" /> <language>en-us</language> <pubDate>Mon, 03 Apr 2017 16:21:50 +0900</pubDate> <item> <title>Delimited continuations with monadic functions in Common Lisp</title> <link>/posts/Delimited-continuations-with-monadic-functions-in-Common-Lisp.html</link> <pubDate>2017-02-07</pubDate> <author>8c6794b6</author> <guid isPermaLink="true">/posts/Delimited-continuations-with-monadic-functions-in-Common-Lisp.html</guid> <category><![CDATA[ continuation ]]></category><category><![CDATA[ delimited ]]></category><category><![CDATA[ monad ]]></category><category><![CDATA[ commonlisp ]]></category><category><![CDATA[ lisp ]]></category> <description><![CDATA[ <h3>Introduction</h3>
+
+<p>Exploring
+<a href="https://en.wikipedia.org/wiki/Delimited_continuation" >delimited continuation</a> in
+Common Lisp, in
+particular,
+<a href="http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.43.8753" ><code>shift</code> and <code>reset</code> from Danvy and Filinski</a>. There
+is <a href="http://quickdocs.org/cl-cont/" >cl-cont</a> package, which supports
+shift/reset style continuation with rewriting expression inside
+<code>with-call/cc</code> macro. The implementation shown in this post is simple,
+short (less than 50 lines), and uses monadic functions to capture
+continuations.</p>
+
+<h3>Monad for Continuation</h3>
+
+<p>As
+<a href="http://homepages.inf.ed.ac.uk/wadler/topics/monads.html" >Wadler mentioned in various papers</a>,
+monads could be used to express continuations. Monads consists of type
+constructor <code>M</code> and following two operations:</p>
+
+<pre><code><span class="code"><span class="function">unit</span> <span class="keyword">::</span> a <span class="keyword">-&gt;</span> <span class="variable">M</span> a
+<span class="paren1">(<span class="code">★</span>)</span>  <span class="keyword">::</span> <span class="variable">M</span> a <span class="keyword">-&gt;</span> <span class="paren1">(<span class="code">a <span class="keyword">-&gt;</span> <span class="variable">M</span> b</span>)</span> <span class="keyword">-&gt;</span> <span class="variable">M</span> b</span></code></pre>
+
+<p>It is possible to express concept of Monads in other programming
+languages than Haskell. Several implementation already exist, such as
+in <a href="http://okmij.org/ftp/Scheme/monad-in-Scheme.html" >Scheme</a>
+and <a href="http://okmij.org/ftp/Scheme/monad-in-Scheme.html" >JavaScript</a>, to
+name a few. In impure languages, there are not much needs for monad,
+since the problems solved by monads in purely functional language are
+solved with different techniques. Though, one of the programming
+techniques which could be solved with monad, and missing in most
+language is, expressing first class continuation.</p>
+
+<p>One of the programming languages supporting first class continuation is
+Scheme. Scheme has <code>call-with-current-continuation</code>, which captures
+undelimited continuation as first class value. Some of the Scheme
+implementations also support delimited continuations. Delimited
+continuations are not in the Scheme language specifications so far,
+though it
+is
+<a href="http://okmij.org/ftp/continuations/implementations.html" >possible to implement it with undelimited continuations</a>.</p>
+
+<h3>Wrapping Expression Into CPS</h3>
+
+<p>In a programming language without builtin support for continuation, one
+need to express the computation in Continuation-Passing-Style (CPS) to
+capture the continuation, and that is where monad is used for. Firstly,
+defining a structure to represent continuation. The structure <code>CONT</code> has
+single field, a function taking the current continuation.</p>
+
+<pre><code><span class="code"><span class="paren1">(<span class="code"><i><span class="symbol">defstruct</span></i> <span class="paren2">(<span class="code">cont <span class="paren3">(<span class="code"><span class="keyword">:constructor</span> make-cont <span class="paren4">(<span class="code">fn</span>)</span></span>)</span></span>)</span>
+  <span class="paren2">(<span class="code">fn #'values <span class="keyword">:type</span> <i><span class="symbol">function</span></i></span>)</span></span>)</span>
+
+<span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> run-cont <span class="paren2">(<span class="code">c k</span>)</span>
+  <span class="paren2">(<span class="code">funcall <span class="paren3">(<span class="code">cont-fn c</span>)</span> k</span>)</span></span>)</span></span></code></pre>
+
+<p>Defining <code>unit</code> and <code>(★)</code> to make <code>CONT</code> as an instance of monad. In the
+code shown below, <code>unit</code> is renamed to <code>returnc</code>, and <code>(★)</code> is renamed
+to <code>bindc</code>.</p>
+
+<pre><code><span class="code"><span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> returnc <span class="paren2">(<span class="code">x</span>)</span>
+  <span class="paren2">(<span class="code">make-cont <span class="paren3">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren4">(<span class="code">k</span>)</span>
+               <span class="paren4">(<span class="code">funcall k x</span>)</span></span>)</span></span>)</span></span>)</span>
+
+<span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> bindc <span class="paren2">(<span class="code">c f</span>)</span>
+  <span class="paren2">(<span class="code">make-cont <span class="paren3">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren4">(<span class="code">k</span>)</span>
+               <span class="paren4">(<span class="code">run-cont c <span class="paren5">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren6">(<span class="code">x</span>)</span>
+                             <span class="paren6">(<span class="code">run-cont <span class="paren1">(<span class="code">funcall f x</span>)</span> k</span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span></code></pre>
+
+<p>Definition of <code>returnc</code> makes CPS representation of <code>x</code> wrapped with
+<code>CONT</code> structure. <code>bindc</code> runs the continuation <code>c</code>, then pass the
+result to <code>f</code>, and runs the continuation returned by <code>f</code> with the
+current continuation <code>k</code>. Note that in <code>bindc</code>, current continuation <code>k</code>
+is not passed to <code>c</code> but to the returned value of <code>f</code>.</p>
+
+<p>Some examples:</p>
+
+<pre><code>&gt; (run-cont (returnc 'foo) #'values)
+FOO
+&gt; (run-cont (bindc (returnc 21) (lambda (x) (returnc (* x 2)))) #'values)
+42</code></pre>
+
+<p>Adding two syntax helper macros, <code>letc*</code> and <code>progc</code>. The macro <code>letc*</code>
+is similar to <code>let*</code>, but instead of binding result of pure expressions,
+<code>letc*</code> binds the variable to the argument passed to the continuation.</p>
+
+<pre><code><span class="code"><span class="paren1">(<span class="code"><i><span class="symbol">defmacro</span></i> letc* <span class="paren2">(<span class="code">bindings &amp;body body</span>)</span>
+  <span class="paren2">(<span class="code"><i><span class="symbol">if</span></i> <span class="paren3">(<span class="code">null bindings</span>)</span>
+      `<span class="paren3">(<span class="code"><i><span class="symbol">progn</span></i> ,@body</span>)</span>
+      <span class="paren3">(<span class="code">destructuring-bind <span class="paren4">(<span class="code">name c</span>)</span> <span class="paren4">(<span class="code">car bindings</span>)</span>
+        `<span class="paren4">(<span class="code">bindc ,c <span class="paren5">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren6">(<span class="code">,name</span>)</span>
+                     <span class="paren6">(<span class="code">letc* ,<span class="paren1">(<span class="code">cdr bindings</span>)</span> ,@body</span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span></code></pre>
+
+<p>The second example shown above could be written with <code>letc*</code> as follows:</p>
+
+<pre><code>&gt; (run-cont (letc* ((x (returnc 21)))
+              (returnc (* x 2)))
+            #'values)
+42</code></pre>
+
+<p><code>progc</code> is similar to <code>letc*</code>, but discards the variable, intended to be
+used in the codes where side effects of continuations are the main
+concern.</p>
+
+<pre><code><span class="code"><span class="paren1">(<span class="code"><i><span class="symbol">defmacro</span></i> progc <span class="paren2">(<span class="code">&amp;body body</span>)</span>
+  <span class="paren2">(<span class="code"><i><span class="symbol">if</span></i> <span class="paren3">(<span class="code">null <span class="paren4">(<span class="code">cdr body</span>)</span></span>)</span>
+      <span class="paren3">(<span class="code">car body</span>)</span>
+      <span class="paren3">(<span class="code"><i><span class="symbol">let</span></i> <span class="paren4">(<span class="code"><span class="paren5">(<span class="code">garg <span class="paren6">(<span class="code">gensym</span>)</span></span>)</span></span>)</span>
+        `<span class="paren4">(<span class="code">bindc ,<span class="paren5">(<span class="code">car body</span>)</span>
+                <span class="paren5">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren6">(<span class="code">,garg</span>)</span>
+                  <span class="paren6">(<span class="code">declare <span class="paren1">(<span class="code">ignore ,garg</span>)</span></span>)</span>
+                  <span class="paren6">(<span class="code">progc ,@<span class="paren1">(<span class="code">cdr body</span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span></code></pre>
+
+<h3>Shift And Reset</h3>
+
+<p>With monadic interfaces for continuation, <code>shift</code> and <code>reset</code> could be
+expressed as below. The function <code>reset</code> unwrap the <code>CONT</code> structure if
+the given argument is <code>CONT</code>, otherwise returns the given value itself.</p>
+
+<pre><code><span class="code"><span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> reset <span class="paren2">(<span class="code">k</span>)</span>
+  <span class="paren2">(<span class="code"><i><span class="symbol">if</span></i> <span class="paren3">(<span class="code">cont-p k</span>)</span>
+      <span class="paren3">(<span class="code">run-cont k #'values</span>)</span>
+      k</span>)</span></span>)</span></span></code></pre>
+
+<p>The macro <code>shift</code> binds the current continuation to given <code>var</code> as a
+function defined with <code>flet</code>, and then invoke the <code>expr</code>. Inside <code>expr</code>,
+bounded continuation could be invoked as an ordinary function. In other
+words, <code>shift</code> captures the continuation from the captured place until
+the first appearance of enclosing <code>reset</code>.</p>
+
+<pre><code><span class="code"><span class="paren1">(<span class="code"><i><span class="symbol">defmacro</span></i> shift <span class="paren2">(<span class="code">var expr</span>)</span>
+  <span class="paren2">(<span class="code"><i><span class="symbol">let</span></i> <span class="paren3">(<span class="code"><span class="paren4">(<span class="code">gk <span class="paren5">(<span class="code">gensym</span>)</span></span>)</span>
+        <span class="paren4">(<span class="code">garg <span class="paren5">(<span class="code">gensym</span>)</span></span>)</span></span>)</span>
+    `<span class="paren3">(<span class="code">make-cont <span class="paren4">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren5">(<span class="code">,gk</span>)</span>
+                  <span class="paren5">(<span class="code">declare <span class="paren6">(<span class="code"><i><span class="symbol">function</span></i> ,gk</span>)</span></span>)</span>
+                  <span class="paren5">(<span class="code"><i><span class="symbol">flet</span></i> <span class="paren6">(<span class="code"><span class="paren1">(<span class="code">,var <span class="paren2">(<span class="code">,garg</span>)</span>
+                           <span class="paren2">(<span class="code">funcall ,gk ,garg</span>)</span></span>)</span></span>)</span>
+                    <span class="paren6">(<span class="code">declare <span class="paren1">(<span class="code">ignorable <span class="paren2">(<span class="code"><i><span class="symbol">function</span></i> ,var</span>)</span></span>)</span></span>)</span>
+                    ,expr</span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span></code></pre>
+
+<p>Evaluating some sample expressions with <code>shift</code> and <code>reset</code>. The
+resulting value of <code>shift</code> is a <code>CONT</code>:</p>
+
+<pre><code>&gt; (shift k (k 2))
+#S(CONT :FN #&lt;FUNCTION (LAMBDA (#:G656)) {1004B9A55B}&gt;)</code></pre>
+
+<p>To perform the computation in <code>CONT</code>, one can apply <code>reset</code>:</p>
+
+<pre><code>&gt; (reset (shift k (k 2))
+2</code></pre>
+
+<p>The resulting <code>CONT</code> object from <code>shift</code> could be passed to <code>bindc</code>, as
+those made from <code>returnc</code>:</p>
+
+<pre><code>&gt; (reset (letc* ((x (shift k (k 2))))
+           (returnc (+ x 3))))
+5</code></pre>
+
+<p>When the expression in <code>shift</code> returns without calling captured
+continuation, the whole computation will escape immediately. Instead of
+the sum of <code>x</code> and <code>y</code> or an error from <code>+</code>, following expression
+evaluates as symbol <code>FOO</code>:</p>
+
+<pre><code>&gt; (reset (letc* ((x (returnc 100))
+                 (y (shift k 'foo)))
+           (returnc (+ x y))))
+FOO</code></pre>
+
+<p>Since captured continuation is an ordinary function, it could be invoked
+multiple times. In the following expression, the captured computation
+with <code>shift</code> could be viewed as <code>(lambda (x) (+ x 3))</code>. The captured
+continuation is applied twice, which results in <code>(+ (+ 2 3) 3)</code>:</p>
+
+<pre><code>&gt; (reset (letc* ((x (shift k (k (k 2)))))
+           (returnc (+ x 3))))
+8</code></pre>
+
+<p>Inside the expression of <code>shift</code>, further computation could be done with
+returned value from captured computation. Following expression applies
+captured continuation twice as in previous example, then multiplies by
+<code>2</code>:</p>
+
+<pre><code>&gt; (reset (letc* ((x (shift k (* 2 (k (k 2))))))
+           (returnc (+ x 3))))
+16</code></pre>
+
+<p>In the implementation of <code>shift</code> and <code>reset</code> shown here, continuations
+are captured with monad, hence some wrapping with <code>returnc</code> and
+unwrapping with <code>letc*</code> are required. In an implementation which has
+builtin support of <code>shift</code> and <code>reset</code>
+(e.g.: <a href="https://racket-lang.org/" >Racket</a>), the last example could be
+written as:</p>
+
+<pre><code>&gt; (reset (+ (shift k (* 2 (k (k 2)))) 3))
+16</code></pre>
+
+<h3>Example: Nondeterminism</h3>
+
+<p>One common use of continuation is for nondeterministic
+programming. Showing an implementation of <code>choice</code> from
+the
+<a href="http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.43.8753" >Danvy and Filinski's paper</a>,
+and its use with function <code>triple</code>. The problem we have is to find out
+all triples of distinct positive integers <code>i</code>, <code>j</code>, and <code>k</code> less than or
+equal to a given integer <code>n</code> that sums to a given integer <code>s</code>:</p>
+
+<pre><code><span class="code"><span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> fail <span class="paren2">(<span class="code"></span>)</span>
+  <span class="paren2">(<span class="code">shift k 'no</span>)</span></span>)</span>
+
+<span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> choice <span class="paren2">(<span class="code">n</span>)</span>
+  <span class="paren2">(<span class="code">shift k <span class="paren3">(<span class="code"><i><span class="symbol">loop</span></i> for i from 1 to n do <span class="paren4">(<span class="code">k i</span>)</span> finally 'no</span>)</span></span>)</span></span>)</span>
+
+<span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> triple <span class="paren2">(<span class="code">n s</span>)</span>
+  <span class="paren2">(<span class="code">letc* <span class="paren3">(<span class="code"><span class="paren4">(<span class="code">i <span class="paren5">(<span class="code">choice n</span>)</span></span>)</span>
+          <span class="paren4">(<span class="code">j <span class="paren5">(<span class="code">choice <span class="paren6">(<span class="code">- i 1</span>)</span></span>)</span></span>)</span>
+          <span class="paren4">(<span class="code">k <span class="paren5">(<span class="code">choice <span class="paren6">(<span class="code">- j 1</span>)</span></span>)</span></span>)</span></span>)</span>
+    <span class="paren3">(<span class="code"><i><span class="symbol">if</span></i> <span class="paren4">(<span class="code">= s <span class="paren5">(<span class="code">+ i j k</span>)</span></span>)</span>
+        <span class="paren4">(<span class="code">returnc <span class="paren5">(<span class="code">list i j k</span>)</span></span>)</span>
+        <span class="paren4">(<span class="code">fail</span>)</span></span>)</span></span>)</span></span>)</span></span></code></pre>
+
+<p>To print the results of <code>triple</code>, one may write as follows:</p>
+
+<pre><code><span class="code">&gt; <span class="paren1">(<span class="code">reset <span class="paren2">(<span class="code">letc* <span class="paren3">(<span class="code">ijk <span class="paren4">(<span class="code">triple 9 15</span>)</span></span>)</span></span>)</span>
+           <span class="paren2">(<span class="code">returnc <span class="paren3">(<span class="code">print ijk</span>)</span></span>)</span></span>)</span>)
+<span class="paren1">(<span class="code">6 5 4</span>)</span>
+<span class="paren1">(<span class="code">7 5 3</span>)</span>
+<span class="paren1">(<span class="code">7 6 2</span>)</span>
+<span class="paren1">(<span class="code">8 4 3</span>)</span>
+<span class="paren1">(<span class="code">8 5 2</span>)</span>
+<span class="paren1">(<span class="code">8 6 1</span>)</span>
+<span class="paren1">(<span class="code">9 4 2</span>)</span>
+<span class="paren1">(<span class="code">9 5 1</span>)</span>
+NIL</span></code></pre>
+
+<p>Note that unlike the original example in the paper, the version of
+<code>shift</code> in this post returns a value of <code>CONT</code> structure. The expression
+<code>(triple 9 15)</code> is evaluated as <code>CONT</code> structure, not the answer values
+returned by <code>(returnc (list i j k))</code>. The answers need to be unwrapped
+with <code>letc*</code> or <code>bindc</code> to print with <code>print</code> function.</p>
+
+<h3>Example: Coroutine</h3>
+
+<p>Another famous problem solved with continuation is, so-called the
+<em>same-fringe</em> problem. Two binary trees have the same fringe if they
+have exactly the same leaves reading from left to right. The problem is
+to decide whether two binary trees have the same fringe. Basically, we
+want to return from the tree traversal as soon as we detect that the
+trees are different.</p>
+
+<pre><code><span class="code"><span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> donep <span class="paren2">(<span class="code">x</span>)</span> <span class="paren2">(<span class="code">eq 'done x</span>)</span></span>)</span>
+
+<span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> nextp <span class="paren2">(<span class="code">x</span>)</span> <span class="paren2">(<span class="code">not <span class="paren3">(<span class="code">donep x</span>)</span></span>)</span></span>)</span>
+
+<span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> next <span class="paren2">(<span class="code">n k</span>)</span> <span class="paren2">(<span class="code"><i><span class="symbol">lambda</span></i> <span class="paren3">(<span class="code"></span>)</span> <span class="paren3">(<span class="code">values n k</span>)</span></span>)</span></span>)</span>
+
+<span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> walkerc <span class="paren2">(<span class="code">tree</span>)</span>
+  <span class="paren2">(<span class="code"><i><span class="symbol">cond</span></i>
+    <span class="paren3">(<span class="code"><span class="paren4">(<span class="code">null tree</span>)</span> <span class="paren4">(<span class="code">returnc 'done</span>)</span></span>)</span>
+    <span class="paren3">(<span class="code"><span class="paren4">(<span class="code">atom tree</span>)</span> <span class="paren4">(<span class="code">shift k <span class="paren5">(<span class="code">next tree #'k</span>)</span></span>)</span></span>)</span>
+    <span class="paren3">(<span class="code">t <span class="paren4">(<span class="code">progc
+         <span class="paren5">(<span class="code">walkerc <span class="paren6">(<span class="code">car tree</span>)</span></span>)</span>
+         <span class="paren5">(<span class="code">walkerc <span class="paren6">(<span class="code">cdr tree</span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span></code></pre>
+
+<p>The function <code>walkerc</code> takes a tree, returns a <code>CONT</code> value. Each
+element of the tree is converted as a closure with the function <code>next</code>.
+The closure returns two values: the element and the captured
+continuation. The resulting <code>CONT</code> could be viewed as a coroutine
+object, which traverses the tree from right to left order.</p>
+
+<p>With <code>walkerc</code>, function <code>same-fringe</code> could be written as below:</p>
+
+<pre><code><span class="code"><span class="paren1">(<span class="code"><i><span class="symbol">defun</span></i> same-fringe <span class="paren2">(<span class="code">t1 t2</span>)</span>
+  <span class="paren2">(<span class="code"><i><span class="symbol">labels</span></i> <span class="paren3">(<span class="code"><span class="paren4">(<span class="code">rec <span class="paren5">(<span class="code">r1 r2</span>)</span>
+             <span class="paren5">(<span class="code"><i><span class="symbol">if</span></i> <span class="paren6">(<span class="code">nextp r1</span>)</span>
+                 <span class="paren6">(<span class="code">and <span class="paren1">(<span class="code">nextp r2</span>)</span>
+                      <span class="paren1">(<span class="code">multiple-value-bind <span class="paren2">(<span class="code">n1 k1</span>)</span> <span class="paren2">(<span class="code">funcall r1</span>)</span>
+                        <span class="paren2">(<span class="code">multiple-value-bind <span class="paren3">(<span class="code">n2 k2</span>)</span> <span class="paren3">(<span class="code">funcall r2</span>)</span>
+                          <span class="paren3">(<span class="code">and <span class="paren4">(<span class="code">eql n1 n2</span>)</span>
+                               <span class="paren4">(<span class="code">rec <span class="paren5">(<span class="code">funcall k1 nil</span>)</span>
+                                    <span class="paren5">(<span class="code">funcall k2 nil</span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span>)</span>
+                 <span class="paren6">(<span class="code">donep r2</span>)</span></span>)</span></span>)</span></span>)</span>
+    <span class="paren3">(<span class="code">rec <span class="paren4">(<span class="code">reset <span class="paren5">(<span class="code">walkerc t1</span>)</span></span>)</span>
+         <span class="paren4">(<span class="code">reset <span class="paren5">(<span class="code">walkerc t2</span>)</span></span>)</span></span>)</span></span>)</span></span>)</span></span></code></pre>
+
+<p>Sample runs:</p>
+
+<pre><code><span class="code">&gt; <span class="paren1">(<span class="code">same-fringe '<span class="paren2">(<span class="code"><span class="paren3">(<span class="code">1</span>)</span> <span class="paren3">(<span class="code">2 <span class="paren4">(<span class="code">3 <span class="paren5">(<span class="code">4</span>)</span> 5</span>)</span></span>)</span></span>)</span> '<span class="paren2">(<span class="code"><span class="paren3">(<span class="code">1 <span class="paren4">(<span class="code">2</span>)</span> <span class="paren4">(<span class="code">3 4</span>)</span> 5</span>)</span></span>)</span></span>)</span>
+T
+&gt; <span class="paren1">(<span class="code">same-fringe '<span class="paren2">(<span class="code"><span class="paren3">(<span class="code">1</span>)</span> <span class="paren3">(<span class="code">2 <span class="paren4">(<span class="code">3 <span class="paren5">(<span class="code">4</span>)</span> 5</span>)</span></span>)</span></span>)</span> '<span class="paren2">(<span class="code"><span class="paren3">(<span class="code">1 <span class="paren4">(<span class="code">2</span>)</span> <span class="paren4">(<span class="code">4</span>)</span> 5</span>)</span></span>)</span></span>)</span>
+NIL</span></code></pre>
+
+<h3>Some thoughts</h3>
+
+<p>Both non-deterministic example and coroutine example could be directly written
+in continuation passing style (CPS), which shall be slightly efficient since
+direct CPS does not require to make the <code>cont</code> structure.</p>
+
+<p>Te implementation shown in this post is similar to the one done
+by
+<a href="https://groups.google.com/forum/#!topic/comp.lang.lisp/D72jdiAmiBE" >Matthew D Swank</a>,
+written in 2006.</p>
+
+<!--
+Local Variables:
+mode: markdown;
+fill column: 72;
+End;
+-->
+ ]]></description> </item><item> <title>Migrating to Coleslaw</title> <link>/posts/Migrating-to-Coleslaw.html</link> <pubDate>2016-12-27</pubDate> <author>8c6794b6</author> <guid isPermaLink="true">/posts/Migrating-to-Coleslaw.html</guid> <category><![CDATA[ git ]]></category><category><![CDATA[ lisp ]]></category><category><![CDATA[ coleslaw ]]></category><category><![CDATA[ commonlisp ]]></category><category><![CDATA[ web ]]></category> <description><![CDATA[ <p>Made updates to this gh-page. The site is still generated with static site
+generator, though the generator has changed
+from <a href="https://jaspervdj.be/hakyll/" >Hakyll</a>
+to <a href="http://github.com/kingcons/coleslaw" >Coleslaw</a>.  The site uses
+hand-made scratchy CSS with color scheme borrowed
+from <a href="http://ethanschoonover.com/solarized" >Solarized</a>.</p>
+
+<p>Coleslaw is a static site generator written in Common Lisp. As of the
+version included in Quicklisp 2016-12-08, Coleslaw supports plain
+HTML, <a href="https://daringfireball.net/projects/markdown/" >Markdown</a>
+and <a href="http://docutils.sourceforge.net/rst.html" >reStructuredText</a> for
+writing contents. Basic usage of Coleslaw is written
+in <a href="https://github.com/kingcons/coleslaw/blob/master/README.md" >README</a>
+file. Coleslaw uses <code>.coleslawrc</code> file to configure the site. The
+configuration file could be placed under the user's home directory (i.e.:
+<code>$HOME/.coleslawrc</code>), or under the directory containing all the other
+files for building the site (e.g.: <code>/path/to/my/site/.coleslawrc</code>).  It
+uses <a href="https://github.com/archimag/cl-closure-template" >Common Lisp port</a>
+of <a href="https://developers.google.com/closure/templates/" >Closure Templates</a>
+for defining theme templates. Markdown parser used by Coleslaw
+is <a href="https://github.com/3b/3bmd" >3bmd</a>.</p>
+
+<p>Coleslaw recommends the use of <em>plugins</em> to customize and extend the
+site. The <a href="../archive.html" >archive page of this site</a> and the pages
+showing the posts for each tag are built with simple plugins. Plugins are
+simply a Common Lisp source code, which should be a package with
+Coleslaw's naming convention. The naming convention is
+<code>coleslaw-NAME_OF_PLUGIN</code>, where <code>NAME_OF_PLUGIN</code> is name of the plugin
+(e.g.: Package name of the <code>archive</code> plugin is <code>coleslaw-archive</code>).
+Suppose that, the directory containing the static site is structured as
+below:</p>
+
+<pre><code>/path/to/my/site/
+├── .coleslawrc
+├── 404.page
+├── about.page
+├── plugins
+│   ├── archive.lisp
+│   └── tags.lisp
+├── posts
+│   ├── 2011-10-21-what-to-count-in-source-code.post
+│   ├── ...
+│   └── 2016-12-27-migrating-to-coleslaw.post
+├── static
+│   ├── bench-avl-insert-member.html
+│   └── ...
+├── the.archive
+└── themes
+    └── simple
+        ├── archive.tmpl
+        ├── base.tmpl
+        ├── css
+        │   └── style.css
+        ├── index.tmpl
+        ├── post.tmpl
+        └── tag.tmpl</code></pre>
+
+<p>And the contents of <code>.coleslawrc</code> similar to below:</p>
+
+<pre><code><span class="code"><span class="paren1">(<span class="code"><span class="keyword">:author</span> <span class="string">"8c6794b6"</span>
+ <span class="keyword">:charset</span> <span class="string">"UTF-8"</span>
+ <span class="keyword">:deploy-dir</span> <span class="string">"/path/for/deploy/"</span>
+ <span class="keyword">:domain</span> <span class="string">"http://my.url.com"</span>
+ <span class="keyword">:plugins</span> <span class="paren2">(<span class="code"><span class="paren3">(<span class="code">mathjax</span>)</span>
+           <span class="paren3">(<span class="code">static-pages</span>)</span>
+           <span class="paren3">(<span class="code">sitemap</span>)</span>
+           <span class="paren3">(<span class="code">archive</span>)</span>
+           <span class="paren3">(<span class="code">tags</span>)</span></span>)</span>
+ <span class="keyword">:routing</span> <span class="paren2">(<span class="code"><span class="paren3">(<span class="code"><span class="keyword">:post</span>           <span class="string">"posts/~a"</span></span>)</span>
+           <span class="paren3">(<span class="code"><span class="keyword">:tag-index</span>      <span class="string">"tag/~a"</span></span>)</span>
+           <span class="paren3">(<span class="code"><span class="keyword">:month-index</span>    <span class="string">"date/~a"</span></span>)</span>
+           <span class="paren3">(<span class="code"><span class="keyword">:numeric-index</span>  <span class="string">"~d"</span></span>)</span>
+           <span class="paren3">(<span class="code"><span class="keyword">:feed</span>           <span class="string">"~a.xml"</span></span>)</span>
+           <span class="paren3">(<span class="code"><span class="keyword">:tag-feed</span>       <span class="string">"tag/~a.xml"</span></span>)</span></span>)</span>
+ <span class="keyword">:staging-dir</span> <span class="string">"/tmp/coleslaw-staging/"</span>
+ <span class="keyword">:title</span> <span class="string">"8c6794b6.github.io"</span>
+ <span class="keyword">:theme</span> <span class="string">"simple"</span></span>)</span></span></code></pre>
+
+<p>By evaluating <code>(coleslaw:main #p&quot;/path/to/my/site&quot;)</code> in Common Lisp,
+coleslaw will generate the site contents. Some of the works done are:</p>
+
+<ul>
+<li><p>Load plugins. Coleslaw will look for <code>coleslaw-mathjax</code>,
+  <code>coleslaw-static-pages</code>, <code>coleslaw-sitemap</code>, <code>coleslaw-archive</code>, and
+  <code>coleslaw-tags</code> under <code>/path/to/my/site/plugins</code> and installed
+  coleslaw's source directory. Coleslaw seeks the plugins under the
+  directory named <code>plugins</code> of the site contents, and under the Coleslaw's
+  source directory. Plugins <code>mathjax</code>, <code>static-pages</code>, and <code>sitemap</code> are
+  bundled within default coleslaw installation.</p></li>
+<li><p>Search the specified theme. Coleslaw will search the
+  <code>/path/to/my/site/themes</code> first, then if not found, search for the theme
+  under Coleslaw's default installation. The name of the theme is
+  specified in the file <code>.coleslawrc</code>. There is
+  a
+  <a href="https://github.com/kingcons/coleslaw/blob/master/docs/themes.md" >guide</a>
+  for writing theme in the Coleslaw source. The theme <code>simple</code> is the one
+  used for this site.</p></li>
+<li><p>Copy the files under the directory named <code>static</code> in <code>/path/to/my/site</code>
+  to the deploy directory.</p></li>
+<li><p>Apply functions according to file extensions. Files for post pages have
+  <code>.post</code> in its file name, static pages has <code>.page</code>, and so on.</p></li>
+</ul>
+
+<p>For <code>archive</code> and <code>tags</code> plugins, which are made for this site, the source
+codes and templates are tightly coupled, so the plugins are not much
+reusable.</p>
+
+<!--
+Local Variables:
+mode: markdown;
+fill-column: 74;
+End:
+-->
+ ]]></description> </item><item> <title>What to count in source code</title> <link>/posts/What-to-count-in-source-code.html</link> <pubDate>2011-10-21</pubDate> <author>8c6794b6</author> <guid isPermaLink="true">/posts/What-to-count-in-source-code.html</guid> <category><![CDATA[ haskell ]]></category><category><![CDATA[ arc ]]></category><category><![CDATA[ lisp ]]></category> <description><![CDATA[ <p>Below is a sample arc code:</p>
+
+<pre><code> | (defop said req
+ |   (aform [onlink &quot;click here&quot; (pr &quot;you said: &quot; (arg _ &quot;foo&quot;))]
+ |     (input &quot;foo&quot;)
+ |     (submit)))
+</code></pre>
+
+<p>In an article <a href="http://paulgraham.com/arcchallenge.html" >arc challenge</a>,
+Paul Graham was counting size of codetree of arc program. He counted
+above arc program as 21 nodes: 14 leaves + 7 interior.</p>
+
+<p>How can we count the size of haskell codetree?</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">module</span> <span class="variable">Main</span> <span class="keyword">where</span>
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Control</span><span class="atom">.</span><span class="variable">Monad</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Data</span><span class="atom">.</span><span class="variable">Generics</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Data</span><span class="atom">.</span><span class="variable">Tree</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">System</span><span class="atom">.</span><span class="variable">Environment</span> <span class="paren1">(<span class="code">getArgs</span>)</span></span></code></pre>
+
+<p>We could use other module than Language.Haskell.Syntax. e.g.
+Language.Haskell.Exts from haskell-src-exts.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Language</span><span class="atom">.</span><span class="variable">Haskell</span><span class="atom">.</span><span class="variable">Parser</span>
+<span class="atom">&gt;</span> <span class="keyword">import</span> <span class="variable">Language</span><span class="atom">.</span><span class="variable">Haskell</span><span class="atom">.</span><span class="variable">Syntax</span></span></code></pre>
+
+<p>This code could be run from command line. Parses the contents and count
+the number of codesize in all given file paths.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> main <span class="keyword">::</span> <span class="variable">IO</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span> main <span class="keyword">=</span>  getArgs <span class="atom">&gt;&gt;=</span> mapM_ <span class="paren1">(<span class="code">readFile <span class="atom">&gt;=&gt;</span> count namesAndLits</span>)</span></span></code></pre>
+
+<p>Below is arc expression written with Tree data type. Last node &quot;submit&quot;
+has a child element with empty string, since it was parenthesized
+explicitly.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> arc <span class="keyword">::</span> <span class="variable">Tree</span> <span class="variable">String</span>
+<span class="atom">&gt;</span> arc <span class="keyword">=</span>
+<span class="atom">&gt;</span>   <span class="variable">Node</span> <span class="string">"defop"</span>
+<span class="atom">&gt;</span>     <span class="paren1">[<span class="code"><span class="variable">Node</span> <span class="string">"said"</span> <span class="paren2">[<span class="code"></span>]</span>
+<span class="atom">&gt;</span>     ,<span class="variable">Node</span> <span class="string">"req"</span> <span class="paren2">[<span class="code"></span>]</span>
+<span class="atom">&gt;</span>     ,<span class="variable">Node</span> <span class="string">"aform"</span>
+<span class="atom">&gt;</span>       <span class="paren2">[<span class="code"><span class="variable">Node</span> <span class="string">"onlink"</span>
+<span class="atom">&gt;</span>         <span class="paren3">[<span class="code"><span class="variable">Node</span> <span class="string">"click here"</span> <span class="paren4">[<span class="code"></span>]</span>
+<span class="atom">&gt;</span>         ,<span class="variable">Node</span> <span class="string">"pr"</span>
+<span class="atom">&gt;</span>           <span class="paren4">[<span class="code"><span class="variable">Node</span> <span class="string">"you said: "</span> <span class="paren5">[<span class="code"></span>]</span>
+<span class="atom">&gt;</span>           ,<span class="variable">Node</span> <span class="string">"arg"</span>
+<span class="atom">&gt;</span>             <span class="paren5">[<span class="code"><span class="variable">Node</span> <span class="string">"_"</span> <span class="paren6">[<span class="code"></span>]</span>
+<span class="atom">&gt;</span>             ,<span class="variable">Node</span> <span class="string">"foo"</span> <span class="paren6">[<span class="code"></span>]</span></span>]</span></span>]</span></span>]</span>
+<span class="atom">&gt;</span>         ,<span class="variable">Node</span> <span class="string">"input"</span>
+<span class="atom">&gt;</span>           <span class="paren3">[<span class="code"><span class="variable">Node</span> <span class="string">"foo"</span> <span class="paren4">[<span class="code"></span>]</span></span>]</span>
+<span class="atom">&gt;</span>         ,<span class="variable">Node</span> <span class="string">"submit"</span>
+<span class="atom">&gt;</span>           <span class="paren3">[<span class="code"><span class="variable">Node</span> <span class="string">""</span> <span class="paren4">[<span class="code"></span>]</span></span>]</span></span>]</span></span>]</span></span></code></pre>
+
+<p>Viewing this expression:</p>
+
+<pre><code>| *Main&gt; putStrLn $ drawTree arc
+| defop
+| |
+| +- said
+| |
+| +- req
+| |
+| `- aform
+|    |
+|    +- onlink
+|    |  |
+|    |  +- click here
+|    |  |
+|    |  `- pr
+|    |     |
+|    |     +- you said:
+|    |     |
+|    |     `- arg
+|    |        |
+|    |        +- _
+|    |        |
+|    |        `- foo
+|    |
+|    +- input
+|    |  |
+|    |  `- foo
+|    |
+|    `- submit
+|       |
+|       `-
+</code></pre>
+
+<p>To count number of leaves:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> numLeaf <span class="keyword">::</span> <span class="variable">Tree</span> a <span class="keyword">-&gt;</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> numLeaf <span class="keyword">=</span> length <span class="atom">.</span> flatten</span></code></pre>
+
+<p>And number of interior nodes:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> numInterior <span class="keyword">::</span> <span class="variable">Tree</span> a <span class="keyword">-&gt;</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> numInterior t <span class="keyword">=</span> <span class="keyword">case</span> t <span class="keyword">of</span>
+<span class="atom">&gt;</span>   <span class="variable">Node</span> _ <span class="paren1">[<span class="code"></span>]</span> <span class="keyword">-&gt;</span> 0
+<span class="atom">&gt;</span>   <span class="variable">Node</span> _ xs <span class="keyword">-&gt;</span> 1 <span class="atom">+</span> sum <span class="paren1">(<span class="code">map numInterior xs</span>)</span></span></code></pre>
+
+<p>And getting the sum:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> countArc <span class="keyword">::</span> <span class="variable">Tree</span> a <span class="keyword">-&gt;</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> countArc t <span class="keyword">=</span> numLeaf t <span class="atom">+</span> numInterior t</span></code></pre>
+
+<p>Number of expression is:</p>
+
+<pre><code>| *Main&gt; countArc arc
+| 22
+</code></pre>
+
+<p>It's 22, not 21, due to the addition of extra empty node in the end.</p>
+
+<p>So, that was how we can count expression of lisp. Then how to count like
+for haskell expression? One way is to count occurance of specific data
+types found in Language.Haskell.Syntax module. When we found HsName
+datatype in source code, increase the number of codesize by 1. Below is
+the definition of HsName.</p>
+
+<pre><code>| data HsName = HsIdent String | HsSymbol String
+</code></pre>
+
+<p>Since most data types in Language.Haskell.Syntax are defined as instance
+of Data and Typeable, we can use generic functions.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> anyName <span class="keyword">::</span> <span class="variable">HsName</span> <span class="keyword">-&gt;</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> anyName _ <span class="keyword">=</span> 1</span></code></pre>
+
+<p>Traversing over module:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> names <span class="keyword">::</span> <span class="variable">HsModule</span> <span class="keyword">-&gt;</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> names <span class="keyword">=</span> everything <span class="paren1">(<span class="code"><span class="atom">+</span></span>)</span> <span class="paren1">(<span class="code">0 <span class="atom">`mkQ`</span> anyName</span>)</span></span></code></pre>
+
+<p>Worker for parsing contents of source code, and applying the counter
+function.</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> count <span class="keyword">::</span> <span class="paren1">(<span class="code"><span class="variable">HsModule</span> <span class="keyword">-&gt;</span> <span class="variable">Int</span></span>)</span> <span class="keyword">-&gt;</span> <span class="variable">String</span> <span class="keyword">-&gt;</span> <span class="variable">IO</span> <span class="paren1">(<span class="code"></span>)</span>
+<span class="atom">&gt;</span> count f code <span class="keyword">=</span> <span class="keyword">do</span>
+<span class="atom">&gt;</span>   <span class="keyword">case</span> parseModule code <span class="keyword">of</span>
+<span class="atom">&gt;</span>     <span class="variable">ParseOk</span> mdl<span class="keyword">@</span><span class="paren1">(<span class="code"><span class="variable">HsModule</span> _ name _ _ _</span>)</span> <span class="keyword">-&gt;</span>
+<span class="atom">&gt;</span>       putStrLn <span class="atom">$</span> unwords <span class="paren1">[<span class="code">show <span class="atom">$</span> f mdl, <span class="string">"</span><span class="string">\t</span><span class="string">"</span>, show name</span>]</span>
+<span class="atom">&gt;</span>     <span class="variable">ParseFailed</span> loc err <span class="keyword">-&gt;</span> print loc <span class="atom">&gt;&gt;</span> putStrLn err</span></code></pre>
+
+<p>Try it:</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> sample1 <span class="keyword">::</span> <span class="variable">String</span>
+<span class="atom">&gt;</span> sample1 <span class="keyword">=</span> <span class="string">"x = 100"</span></span></code></pre>
+
+<pre><code>| *Main&gt; count names sample1
+| 2        Module &quot;Main&quot;
+</code></pre>
+
+<p>Seems like working. How about another expression?</p>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> sample2 <span class="keyword">::</span> <span class="variable">String</span>
+<span class="atom">&gt;</span> sample2 <span class="keyword">=</span> <span class="string">"x = 100 + 2"</span></span></code></pre>
+
+<p>Outputs:</p>
+
+<pre><code>| *Main&gt; count names sample2
+| 3        Module &quot;Main&quot;
+</code></pre>
+
+<p>Why above codesize counted as 3? Not 4, code size of sample1 + 2?</p>
+
+<p>We should have missed some data type to count. For second try, counting
+HsLiteral and HsName.</p>
+
+<pre><code>| data HsLiteral
+|   = HsChar Char
+|   | HsString String
+|   | HsInt Integer
+|   | HsFrac Rational
+|   | HsCharPrim Char
+|   | HsStringPrim String
+|   | HsIntPrim Integer
+|   | HsFloatPrim Rational
+|   | HsDoublePrim Rational
+</code></pre>
+
+<pre><code><span class="code"><span class="atom">&gt;</span> anyLiteral <span class="keyword">::</span> <span class="variable">HsLiteral</span> <span class="keyword">-&gt;</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> anyLiteral _ <span class="keyword">=</span> 1
+<span class="atom">&gt;</span>
+<span class="atom">&gt;</span> namesAndLits <span class="keyword">::</span> <span class="variable">HsModule</span> <span class="keyword">-&gt;</span> <span class="variable">Int</span>
+<span class="atom">&gt;</span> namesAndLits <span class="keyword">=</span> everything <span class="paren1">(<span class="code"><span class="atom">+</span></span>)</span> <span class="paren1">(<span class="code">const 0 <span class="atom">`extQ`</span> anyName <span class="atom">`extQ`</span> anyLiteral</span>)</span></span></code></pre>
+
+<p>Trying again:</p>
+
+<pre><code>| *Main&gt; count namesAndLits sample1
+| 3        Module &quot;Main&quot;
+| *Main&gt; count namesAndLits sample2
+| 5        Module &quot;Main&quot;
+</code></pre>
+
+<p>Getting better, but this is counting leaves only.</p>
+
+<p>Since all haskell expression in general is a function that takes single
+argument, and giving back another function, every expression other than
+constant value has child element. I'm not sure what we should count as
+interior node in expression.</p>
+
+<!--
+Local Variables:
+mode: markdown
+End:
+-->
+ ]]></description> </item> </channel> </rss>
